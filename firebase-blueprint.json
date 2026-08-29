@@ -1,0 +1,87 @@
+{
+  "entities": {
+    "Clinic": {
+      "collection": "clinics",
+      "fields": {
+        "name": { "type": "string" },
+        "doctorName": { "type": "string" },
+        "specialty": { "type": "string" },
+        "doctorStatus": { "type": "string", "enum": ["IN", "OUT"] },
+        "cabinNumber": { "type": "string" },
+        "delayMinutes": { "type": "number" },
+        "delayReason": { "type": "string" },
+        "avgConsultationMinutes": { "type": "number" },
+        "consultationFee": { "type": "number" },
+        "currentRunningToken": { "type": "string" },
+        "activeSessionId": { "type": "string" },
+        "totalPatientsToday": { "type": "number" },
+        "revenueToday": { "type": "number" }
+      }
+    },
+    "Patient": {
+      "collection": "patients",
+      "fields": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "age": { "type": "number" },
+        "gender": { "type": "string" },
+        "email": { "type": "string" },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "QueueSession": {
+      "collection": "queue_sessions",
+      "fields": {
+        "clinicId": { "type": "string" },
+        "date": { "type": "string" },
+        "activeTokenId": { "type": "string" },
+        "activeTokenNumber": { "type": "string" },
+        "status": { "type": "string" },
+        "totalTokensIssued": { "type": "number" },
+        "rollingAvgMinutes": { "type": "number" },
+        "completedCount": { "type": "number" }
+      }
+    },
+    "Token": {
+      "collection": "tokens",
+      "fields": {
+        "clinicId": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "tokenNumber": { "type": "string" },
+        "sequenceNumber": { "type": "number" },
+        "patientId": { "type": "string" },
+        "patientName": { "type": "string" },
+        "patientPhone": { "type": "string" },
+        "patientAge": { "type": "number" },
+        "patientGender": { "type": "string" },
+        "tokenType": { "type": "string", "enum": ["ONLINE", "WALK_IN", "VIP"] },
+        "status": { "type": "string", "enum": ["WAITING", "SERVING", "COMPLETED", "HOLD", "NO_SHOW", "CANCELLED"] },
+        "isVip": { "type": "boolean" },
+        "isHold": { "type": "boolean" },
+        "amountPaid": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "paymentStatus": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "calledAt": { "type": "string" },
+        "completedAt": { "type": "string" },
+        "consultationDurationSeconds": { "type": "number" },
+        "preConsultationNotes": { "type": "object" },
+        "doctorNotes": { "type": "string" },
+        "whatsappSentCount": { "type": "number" }
+      }
+    },
+    "WhatsAppLog": {
+      "collection": "whatsapp_logs",
+      "fields": {
+        "tokenId": { "type": "string" },
+        "patientName": { "type": "string" },
+        "phone": { "type": "string" },
+        "templateName": { "type": "string" },
+        "messageBody": { "type": "string" },
+        "status": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "metaMessageId": { "type": "string" }
+      }
+    }
+  }
+}

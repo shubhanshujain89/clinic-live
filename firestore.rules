@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Clinic records
+    match /clinics/{clinicId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Patients master records
+    match /patients/{patientId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Queue sessions
+    match /queue_sessions/{sessionId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Queue tokens
+    match /tokens/{tokenId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // WhatsApp webhook / notification logs
+    match /whatsapp_logs/{logId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Default fallback
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
