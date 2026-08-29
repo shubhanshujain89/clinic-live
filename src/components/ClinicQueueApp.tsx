@@ -13,6 +13,7 @@ import {
   auth,
   signInWithPopup,
   googleProvider,
+  onAuthStateChanged,
   User
 } from '../lib/firebase';
 import {
@@ -38,18 +39,22 @@ import { LogOut } from 'lucide-react';
 interface ClinicQueueAppProps {
   userId: string;
   role: string;
+  clinicId?: string;
   onLogout: () => void;
 }
 
-export function ClinicQueueApp({ userId, role, onLogout }: ClinicQueueAppProps) {
+export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLogout }: ClinicQueueAppProps) {
   const [currentRole, setCurrentRole] = useState<UserRole>('DOCTOR');
   const [isBookingActive, setIsBookingActive] = useState(false);
+  const [clinicId, setClinicId] = useState<string>(selectedClinicId || DEFAULT_CLINIC_ID);
   const [clinic, setClinic] = useState<Clinic>(INITIAL_CLINIC_DATA);
   const [session, setSession] = useState<QueueSession | null>(INITIAL_SESSION_DATA);
   const [tokens, setTokens] = useState<TokenItem[]>(INITIAL_TOKENS_DATA);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedTrackTokenId, setSelectedTrackTokenId] = useState<string>('tok_03');
   const [isSeeding, setIsSeeding] = useState(false);
+  const isStaffRole = role === 'staff';
+  const roleSwitchOptions = isStaffRole ? ['RECEPTIONIST'] : ['DOCTOR', 'RECEPTIONIST', 'TV_DISPLAY'];
 
   // Modals state
   const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
@@ -57,6 +62,10 @@ export function ClinicQueueApp({ userId, role, onLogout }: ClinicQueueAppProps) 
   const [isWhatsAppLogsOpen, setIsWhatsAppLogsOpen] = useState(false);
   const [tokenToPrint, setTokenToPrint] = useState<TokenItem | null>(null);
   const [tokenIntakeNotesToView, setTokenIntakeNotesToView] = useState<TokenItem | null>(null);
+
+  useEffect(() => {
+    setClinicId(selectedClinicId || DEFAULT_CLINIC_ID);
+  }, [selectedClinicId]);
 
   // Set role based on login
   useEffect(() => {
@@ -67,19 +76,23 @@ export function ClinicQueueApp({ userId, role, onLogout }: ClinicQueueAppProps) 
     }
   }, [role]);
 
+  useEffect(() => {
+    if (isStaffRole && currentRole === 'DOCTOR') {
+      setCurrentRole('RECEPTIONIST');
+    }
+  }, [isStaffRole, currentRole]);
+
   // Get current user info
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        setCurrentUser(user);
-      }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
     });
     return () => unsubscribe();
   }, []);
 
   // Real-time Firestore Listeners
   useEffect(() => {
-    const clinicRef = doc(db, 'clinics', DEFAULT_CLINIC_ID);
+    const clinicRef = doc(db, 'clinics', clinicId);
     const unsubClinic = onSnapshot(
       clinicRef,
       (docSnap) => {
@@ -94,7 +107,7 @@ export function ClinicQueueApp({ userId, role, onLogout }: ClinicQueueAppProps) 
       }
     );
 
-    const sessionRef = doc(db, 'queue_sessions', 'sess_today');
+    const sessionRef = doc(db, 'queue_sessions', `sess_${clinicId}`);
     const unsubSession = onSnapshot(
       sessionRef,
       (docSnap) => {
@@ -114,9 +127,12 @@ export function ClinicQueueApp({ userId, role, onLogout }: ClinicQueueAppProps) 
         if (!snapshot.empty) {
           const items: TokenItem[] = [];
           snapshot.forEach((d) => {
-            items.push(d.data() as TokenItem);
+            const item = d.data() as TokenItem;
+            if (item.clinicId === clinicId) {
+              items.push(item);
+            }
           });
-          setTokens(items);
+          setTokens(items.length ? items : INITIAL_TOKENS_DATA.filter((token) => token.clinicId === clinicId));
         } else {
           seedClinicDatabase(false);
         }
@@ -131,7 +147,7 @@ export function ClinicQueueApp({ userId, role, onLogout }: ClinicQueueAppProps) 
       unsubSession();
       unsubTokens();
     };
-  }, []);
+  }, [clinicId]);
 
   const handleGoogleSignIn = async () => {
     try {
@@ -174,7 +190,7 @@ export function ClinicQueueApp({ userId, role, onLogout }: ClinicQueueAppProps) 
             </div>
             <div className="flex items-center gap-4">
               <div className="flex gap-2">
-                {['DOCTOR', 'RECEPTIONIST', 'TV_DISPLAY'].map(r => (
+                {roleSwitchOptions.map(r => (
                   <button
                     key={r}
                     onClick={() => setCurrentRole(r as UserRole)}
@@ -262,12 +278,17 @@ export function ClinicQueueApp({ userId, role, onLogout }: ClinicQueueAppProps) 
           <AddPatientModal
             clinic={clinic}
             onClose={() => setIsAddPatientOpen(false)}
+            onAdded={(token) => {
+              setTokens((prev) => [token, ...prev]);
+              setIsAddPatientOpen(false);
+            }}
           />
         )}
 
         {isDelayModalOpen && (
           <DelayBroadcastModal
             clinic={clinic}
+            tokens={tokens}
             onClose={() => setIsDelayModalOpen(false)}
           />
         )}

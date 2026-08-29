@@ -1,10 +1,12 @@
 import React from 'react';
 import { Heart, LogIn, Calendar, LogOut } from 'lucide-react';
+import { useSiteConfig } from '../lib/siteConfig';
 
 interface GlobalHeaderProps {
   currentPage: string;
   onNavigate: (page: string) => void;
   onLogout?: () => void;
+  onOpenProfile?: () => void;
   isLoggedIn?: boolean;
   userName?: string;
 }
@@ -13,9 +15,11 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   currentPage,
   onNavigate,
   onLogout,
+  onOpenProfile,
   isLoggedIn,
   userName
 }) => {
+  const { settings } = useSiteConfig();
   const navTabs = [
     { key: 'landing', label: 'Home' },
     { key: 'what-we-provide', label: 'What We Provide' },
@@ -37,9 +41,9 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
             </div>
             <div className="text-left">
               <h1 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">
-                ClinicFlow Pro
+                {settings.siteName}
               </h1>
-              <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Enterprise Healthcare</p>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">{settings.siteTagline}</p>
             </div>
           </button>
 
@@ -88,10 +92,13 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
 
             {isLoggedIn && (
               <>
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/80 ring-1 ring-slate-700 text-slate-200">
+                <button
+                  onClick={onOpenProfile}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/80 ring-1 ring-slate-700 text-slate-200 hover:text-white hover:bg-slate-700/80 transition-all duration-200"
+                >
                   <Heart className="w-4 h-4 text-emerald-400" />
                   <span className="text-sm font-semibold">{userName}</span>
-                </div>
+                </button>
                 <button
                   onClick={onLogout}
                   className="px-4 py-2 rounded-xl font-semibold text-slate-200 hover:text-white hover:bg-red-500/10 hover:border hover:border-red-400/40 transition-all duration-200 flex items-center gap-2"
@@ -110,12 +117,29 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
             >
               <Calendar className="w-5 h-5" />
             </button>
-            <button
-              onClick={() => onNavigate('login')}
-              className="p-2 rounded-xl text-slate-200 hover:bg-slate-800/80 transition-colors"
-            >
-              <LogIn className="w-5 h-5" />
-            </button>
+            {!isLoggedIn ? (
+              <button
+                onClick={() => onNavigate('login')}
+                className="p-2 rounded-xl text-slate-200 hover:bg-slate-800/80 transition-colors"
+              >
+                <LogIn className="w-5 h-5" />
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={onOpenProfile}
+                  className="px-3 py-2 rounded-xl bg-slate-800/80 ring-1 ring-slate-700 text-slate-200 text-sm font-semibold"
+                >
+                  {userName || 'Profile'}
+                </button>
+                <button
+                  onClick={onLogout}
+                  className="px-3 py-2 rounded-xl text-slate-200 hover:bg-red-500/10 hover:text-red-300 transition-colors"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </>
+            )}
           </div>
         </div>
 

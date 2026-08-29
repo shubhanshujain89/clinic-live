@@ -1,5 +1,17 @@
 export type UserRole = 'DOCTOR' | 'RECEPTIONIST' | 'PATIENT' | 'TV_DISPLAY';
 
+export type FeaturePlan = 'TRIAL' | 'BASIC' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
+
+export interface ClinicPack {
+  id: string;
+  plan: FeaturePlan;
+  label: string;
+  validityDays: number;
+  status: 'ACTIVE' | 'EXPIRED' | 'PAUSED';
+  startDate: string;
+  expiryDate: string;
+}
+
 export type DoctorStatus = 'IN' | 'OUT';
 
 export type TokenType = 'ONLINE' | 'WALK_IN' | 'VIP';
@@ -85,9 +97,25 @@ export interface Clinic {
   phone?: string;
   address?: string;
   qrCodeUrl?: string;
+  featurePlan?: FeaturePlan;
+  subscriptionPack?: ClinicPack | null;
   whatsappNotificationsEnabled?: boolean;
   hasPaymentGateway?: boolean;
   clinicUpiId?: string;
+}
+
+export interface ClinicPayment {
+  id: string;
+  clinicId: string;
+  clinicName: string;
+  pack: FeaturePlan;
+  amount: number;
+  durationDays: number;
+  status: 'PAID' | 'PENDING';
+  paidAt: string;
+  startDate: string;
+  expiryDate: string;
+  notes?: string;
 }
 
 export interface QueueSession {

@@ -6,48 +6,44 @@ import {
   CheckCircle2,
   Clock3,
   Heart,
+  Play,
   ShieldCheck,
   Sparkles,
   Stethoscope,
   Users,
 } from 'lucide-react';
+import { useSiteConfig } from '../lib/siteConfig';
 
 interface LandingPageProps {
   onNavigate: (page: string, role?: string) => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
-  const quickLinks = [
-    { key: 'what-we-provide', title: 'What We Provide', text: 'Queue, dashboards, notifications, reporting', accent: 'emerald' },
-    { key: 'why-choose-us', title: 'Why Choose Us', text: 'Efficiency, visibility, and measurable outcomes', accent: 'cyan' },
-    { key: 'benefits', title: 'Benefits', text: 'Results for clinics, doctors, and patients', accent: 'purple' },
-    { key: 'contact', title: 'Contact Us', text: 'Talk to our team and plan your rollout', accent: 'amber' },
-  ];
-
+  const { content } = useSiteConfig();
   const trustMetrics = [
-    { value: '400+', label: 'Clinics worldwide' },
-    { value: '60%', label: 'Faster patient flow' },
-    { value: '4.9/5', label: 'Experience rating' },
-    { value: '24/7', label: 'Operational support' },
+    { value: '400+', label: 'Clinics onboarded' },
+    { value: '60%', label: 'Less waiting stress' },
+    { value: '4.9/5', label: 'Patient experience' },
+    { value: '24/7', label: 'Live operational view' },
   ];
 
   const featurePillars = [
     {
       icon: Stethoscope,
       title: 'Real-time queue visibility',
-      text: 'Monitor patient status instantly across doctors, staff, and reception without gaps or confusion.',
+      text: 'Track every token, doctor, and waiting room update instantly with a calm, transparent workflow.',
       tone: 'emerald',
     },
     {
       icon: Heart,
-      title: 'Patient-first design',
-      text: 'Clear updates, transparent wait times, and a more reassuring experience for every visit.',
+      title: 'Patient-first experience',
+      text: 'Give patients clarity, faster movement, and confidence with live wait updates and WhatsApp alerts.',
       tone: 'cyan',
     },
     {
       icon: ShieldCheck,
-      title: 'Enterprise control',
-      text: 'Multi-clinic support, granular access control, secure workflows, and operational consistency.',
+      title: 'Operational control',
+      text: 'Manage multi-doctor clinics, reception flow, and queue rules from one secure dashboard.',
       tone: 'purple',
     },
   ];
@@ -56,38 +52,38 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
     {
       step: '01',
       title: 'Set up your clinic',
-      desc: 'Configure doctors, departments, staff roles, and operational rules in guided steps.',
+      desc: 'Add doctors, assign departments, and configure your queue flow in a few guided steps.',
       icon: Users,
     },
     {
       step: '02',
-      title: 'Automate patient flow',
-      desc: 'Patients book, check in, and receive queue updates instantly without manual overhead.',
+      title: 'Scan and book',
+      desc: 'Patients scan the QR code, choose a doctor, and receive a token without app downloads.',
       icon: BellRing,
     },
     {
       step: '03',
-      title: 'Measure and scale',
-      desc: 'Track performance, identify bottlenecks, and optimize every aspect with live analytics.',
+      title: 'Monitor and improve',
+      desc: 'Track turn times, patient flow, and clinic activity with live insights and reporting.',
       icon: Activity,
     },
   ];
 
   const proof = [
     {
-      quote: 'Patient wait times dropped by 58% in the first month. The team works with clarity.',
-      name: 'Dr. Nisha Rao',
-      role: 'Medical Director, CareNest',
+      quote: 'Wait times came down immediately. Patients feel informed, and our reception team finally has control.',
+      name: 'Clinic Director',
+      role: 'Multi-location healthcare team',
     },
     {
-      quote: 'Our reception team now runs with calm, confidence, and complete visibility.',
-      name: 'Amit Verma',
-      role: 'Operations Lead, PrimeCare',
+      quote: 'We replaced chaos with a structured queue. The system is simple for patients and effortless for staff.',
+      name: 'Operations Lead',
+      role: 'Care delivery operations',
     },
     {
-      quote: 'Premium experience for patients. Powerful control for administrators. Simple for everyone.',
-      name: 'Sonia Patel',
-      role: 'Founder, Asteria Clinics',
+      quote: 'Our experience now feels premium. Patients notice the clarity, and the clinic runs smoother every day.',
+      name: 'Healthcare Partner',
+      role: 'Clinic experience team',
     },
   ];
 
@@ -121,43 +117,43 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
       `}</style>
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.02)_1px,transparent_1px)] bg-[size:52px_52px] [mask-image:radial-gradient(circle_at_center,black,transparent_85%)]" />
 
-      <section className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-32">
-        <div className="grid items-center gap-12 lg:grid-cols-[1.3fr_0.7fr]">
+      <section className="relative mx-auto max-w-7xl px-4 pb-10 pt-5 sm:px-6 lg:px-8 lg:pb-10">
+        <div className="grid items-center gap-8 lg:grid-cols-[1.3fr_0.7fr]">
           <div className="text-center lg:text-left">
-            <div className="animate-in-up mb-8 inline-flex items-center gap-2.5 rounded-full border border-emerald-400/25 bg-emerald-500/8 px-4 py-2.5 text-sm font-medium text-emerald-200">
+            <div className="animate-in-up mb-5 inline-flex items-center gap-2.5 rounded-full border border-emerald-400/25 bg-emerald-500/8 px-3 py-2 text-xs font-medium text-emerald-200 sm:text-sm">
               <Sparkles className="h-4 w-4" />
               Trusted by global healthcare networks
             </div>
 
-            <h1 className="animate-in-up delay-100 mb-8 text-6xl font-black leading-[1.15] tracking-tight text-white md:text-7xl xl:text-8xl">
-              Healthcare queues,
-              <span className="mt-3 block bg-gradient-to-r from-emerald-200 via-cyan-200 to-sky-100 bg-clip-text text-transparent">
-                reimagined
+            <h1 className="animate-in-up delay-100 mb-5 text-4xl font-black leading-[1.1] tracking-tight text-white md:text-5xl xl:text-6xl">
+              {content.heroTitle.split(',')[0] || 'Healthcare queues'}
+              <span className="mt-2 block bg-gradient-to-r from-emerald-200 via-cyan-200 to-sky-100 bg-clip-text text-transparent">
+                {content.heroTitle.includes(',') ? content.heroTitle.split(',').slice(1).join(',').trim() || 'reimagined' : 'reimagined'}
               </span>
             </h1>
 
-            <p className="animate-in-up delay-200 mx-auto max-w-3xl text-lg leading-8 text-slate-300 lg:mx-0">
-              Transform clinic operations. Eliminate waiting frustration. Deliver a modern, frictionless patient experience at scale.
+            <p className="animate-in-up delay-200 mx-auto max-w-2xl text-base leading-7 text-slate-300 lg:mx-0 lg:text-lg">
+              {content.heroSubtitle}
             </p>
 
-            <div className="animate-in-up delay-300 mt-10 flex flex-col items-center gap-4 sm:flex-row lg:items-start">
+            <div className="animate-in-up delay-300 mt-6 flex flex-col items-center gap-3 sm:flex-row lg:items-start">
               <button
                 onClick={() => onNavigate('booking')}
-                className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 via-cyan-500 to-sky-500 px-8 py-5 text-base font-bold text-slate-950 shadow-[0_20px_60px_rgba(34,211,238,0.3)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(16,185,129,0.35)]"
+                className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 via-cyan-500 to-sky-500 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-[0_20px_60px_rgba(34,211,238,0.3)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(16,185,129,0.35)]"
               >
                 Book appointment now
               </button>
               <button
                 onClick={() => onNavigate('login')}
-                className="inline-flex items-center justify-center rounded-xl border border-slate-600 bg-slate-900/60 px-8 py-5 text-base font-bold text-white transition duration-300 hover:border-emerald-400/50 hover:bg-emerald-500/8"
+                className="inline-flex items-center justify-center rounded-xl border border-slate-600 bg-slate-900/60 px-6 py-3.5 text-sm font-bold text-white transition duration-300 hover:border-emerald-400/50 hover:bg-emerald-500/8"
               >
                 Sign in
               </button>
             </div>
 
-            <div className="animate-in-up delay-400 mt-8 flex flex-wrap items-center justify-center gap-3 text-xs font-medium text-slate-300 lg:justify-start">
+            <div className="animate-in-up delay-400 mt-6 flex flex-wrap items-center justify-center gap-2 text-[11px] font-medium text-slate-300 lg:justify-start">
               {['Real-time visibility', 'Zero setup delays', 'Enterprise security'].map((item) => (
-                <div key={item} className="flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-900/40 px-3 py-2">
+                <div key={item} className="flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-900/40 px-3 py-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
                   {item}
                 </div>
@@ -193,9 +189,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
 
               <div className="space-y-2.5">
                 {[
-                  ['Aisha Patel', 'Consultation', '4 min'],
-                  ['Rohit Mehra', 'X-Ray', '11 min'],
-                  ['Neha Shah', 'Lab', '8 min'],
+                  ['Patient 01', 'Consultation', '4 min'],
+                  ['Patient 02', 'Diagnostic review', '11 min'],
+                  ['Patient 03', 'Lab check-in', '8 min'],
                 ].map(([name, stage, time]) => (
                   <div key={name} className="flex items-center justify-between rounded-2xl border border-slate-700/50 bg-slate-800/50 p-3">
                     <div>
@@ -226,12 +222,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
-        <div className="grid gap-5 md:grid-cols-3">
+      <section className="mx-auto max-w-7xl px-4 pb-10 pt-6 sm:px-6 lg:px-8">
+        <div className="grid gap-4 md:grid-cols-3">
           {featurePillars.map(({ icon: Icon, title, text, tone }) => (
             <div
               key={title}
-              className={`group rounded-3xl border p-6 transition duration-300 hover:border-emerald-400/40 hover:-translate-y-1 ${
+              className={`group rounded-2xl border p-4 transition duration-300 hover:border-emerald-400/40 hover:-translate-y-1 ${
                 tone === 'emerald'
                   ? 'border-emerald-500/20 bg-emerald-500/10'
                   : tone === 'cyan'
@@ -239,110 +235,172 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
                     : 'border-violet-500/20 bg-violet-500/10'
               }`}
             >
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950/60 ring-1 ring-white/10 group-hover:ring-2 group-hover:ring-emerald-400/40 transition">
-                <Icon className={`h-6 w-6 transition ${
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950/60 ring-1 ring-white/10 transition group-hover:ring-2 group-hover:ring-emerald-400/40">
+                <Icon className={`h-5 w-5 transition ${
                   tone === 'emerald' ? 'text-emerald-300 group-hover:text-emerald-200' : tone === 'cyan' ? 'text-cyan-300 group-hover:text-cyan-200' : 'text-violet-300 group-hover:text-violet-200'
                 }`} />
               </div>
-              <h3 className="mb-2 text-2xl font-bold text-white">{title}</h3>
-              <p className="text-base leading-7 text-slate-300">{text}</p>
+              <h3 className="mb-1.5 text-lg font-bold text-white">{title}</h3>
+              <p className="text-sm leading-6 text-slate-300">{text}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="rounded-3xl border border-slate-700/60 bg-slate-900/50 p-8 shadow-[0_20px_100px_rgba(15,23,42,0.3)]">
-          <div className="mb-7 text-center text-[11px] font-bold uppercase tracking-[0.28em] text-slate-400">
-            Trusted by leading healthcare networks worldwide
-          </div>
-          <div className="grid grid-cols-2 gap-4 text-center md:grid-cols-4">
-            {['CareNest', 'Asteria', 'PrimeCare', 'Nova Health'].map((brand) => (
-              <div key={brand} className="rounded-2xl border border-slate-700/50 bg-slate-800/60 px-4 py-6 text-sm font-bold text-slate-200 transition hover:border-emerald-400/30 hover:bg-slate-800/80">
-                {brand}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {trustMetrics.map((metric, idx) => (
-            <div key={metric.label} className={`rounded-3xl border border-slate-700/60 bg-slate-900/50 p-6 text-center transition hover:border-emerald-400/30 hover:bg-slate-900/70 animate-in-up delay-${idx * 100}`}>
-              <div className="text-4xl font-black text-white">{metric.value}</div>
-              <div className="mt-2 text-sm text-slate-400">{metric.label}</div>
+            <div key={metric.label} className={`rounded-2xl border border-slate-700/60 bg-slate-900/50 p-4 text-center transition hover:border-emerald-400/30 hover:bg-slate-900/70 animate-in-up delay-${idx * 100}`}>
+              <div className="text-2xl font-black text-white">{metric.value}</div>
+              <div className="mt-1 text-xs text-slate-400">{metric.label}</div>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
-        <div className="mb-10 text-center">
-          <div className="text-[11px] font-bold uppercase tracking-[0.28em] text-emerald-400">How it works</div>
-          <h2 className="mt-4 text-4xl font-bold text-white md:text-5xl">Get started in three steps</h2>
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mb-6 text-center">
+          <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-400">How it works</div>
+          <h2 className="mt-2 text-3xl font-bold text-white md:text-4xl">Get started in three steps</h2>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3">
           {workflow.map(({ step, title, desc, icon: Icon }, idx) => (
-            <div key={step} className={`rounded-3xl border border-slate-700/60 bg-slate-900/50 p-7 transition hover:border-emerald-400/30 hover:bg-slate-900/70 hover:-translate-y-1 animate-in-up delay-${idx * 100}`}>
-              <div className="mb-5 flex items-center justify-between">
-                <div className="text-sm font-bold tracking-[0.24em] text-emerald-400">{step}</div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-600/60 bg-slate-800/70 group-hover:border-emerald-400/30">
-                  <Icon className="h-5 w-5 text-cyan-300" />
+            <div key={step} className={`rounded-2xl border border-slate-700/60 bg-slate-900/50 p-5 transition hover:border-emerald-400/30 hover:bg-slate-900/70 hover:-translate-y-1 animate-in-up delay-${idx * 100}`}>
+              <div className="mb-4 flex items-center justify-between">
+                <div className="text-xs font-bold tracking-[0.24em] text-emerald-400">{step}</div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-600/60 bg-slate-800/70">
+                  <Icon className="h-4 w-4 text-cyan-300" />
                 </div>
               </div>
-              <h3 className="mb-3 text-2xl font-bold text-white">{title}</h3>
-              <p className="leading-7 text-slate-300">{desc}</p>
+              <h3 className="mb-2 text-xl font-bold text-white">{title}</h3>
+              <p className="text-sm leading-6 text-slate-300">{desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
-        <div className="mb-10 text-center">
-          <div className="text-[11px] font-bold uppercase tracking-[0.28em] text-cyan-400">Trusted partners</div>
-          <h2 className="mt-4 text-4xl font-bold text-white md:text-5xl">Why leading clinics choose us</h2>
-        </div>
+      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="grid items-center gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+          <div>
+            <div className="mb-4 text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-400">Built for outpatient clinics</div>
+            <h2 className="mb-4 text-3xl font-black text-white md:text-4xl">Queue management that feels calm, fast, and patient-friendly.</h2>
+            <p className="mb-6 max-w-xl text-base leading-7 text-slate-300">
+              From the moment a patient scans a QR code to the final consultation, every step is visible, organised, and low-friction.
+            </p>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {proof.map((card, idx) => (
-            <div key={card.name} className={`rounded-3xl border border-slate-700/60 bg-gradient-to-b from-slate-900/70 to-slate-800/50 p-7 transition hover:border-emerald-400/30 hover:from-slate-900/80 hover:to-slate-800/70 animate-in-up delay-${idx * 100}`}>
-              <div className="mb-5 text-5xl text-emerald-400/60">"</div>
-              <p className="mb-7 text-lg leading-8 text-slate-200">{card.quote}</p>
-              <div className="border-t border-slate-700/50 pt-5">
-                <div className="font-bold text-white">{card.name}</div>
-                <div className="text-sm text-slate-400">{card.role}</div>
+            <div className="space-y-3">
+              {[
+                'No patient app downloads required',
+                'Real-time queue sync across reception, doctor, and waiting area',
+                'Instant WhatsApp updates when it is time to enter the clinic',
+                'Multi-doctor support and live operational insights',
+              ].map((item) => (
+                <div key={item} className="flex items-start gap-3 rounded-2xl border border-slate-700/50 bg-slate-900/50 p-3 text-slate-200">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-400" />
+                  <span className="text-sm leading-6">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative overflow-hidden rounded-[28px] border border-slate-700/60 bg-slate-900/70 p-4 shadow-[0_35px_120px_rgba(15,23,42,0.8)]">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Patient flow</div>
+                <div className="mt-1 text-xl font-bold text-white">Live queue status</div>
+              </div>
+              <div className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300">
+                Live
               </div>
             </div>
-          ))}
+
+            <div className="rounded-2xl border border-slate-700/50 bg-slate-950/80 p-4">
+              <div className="mb-4 flex items-center justify-between rounded-xl border border-slate-700/60 bg-slate-900/80 px-3 py-2">
+                <div>
+                  <div className="text-xs text-slate-400">Current token</div>
+                  <div className="text-lg font-bold text-white">A-014</div>
+                </div>
+                <div className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-300">
+                  4 waiting
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {[
+                  ['Priya Sharma', 'Now consulting'],
+                  ['Arjun Nair', 'Waiting'],
+                  ['Meera Iyer', 'Next up'],
+                ].map(([name, status]) => (
+                  <div key={name} className="flex items-center justify-between rounded-xl border border-slate-700/60 bg-slate-900/70 px-3 py-2.5">
+                    <div className="font-medium text-white">{name}</div>
+                    <div className="text-xs text-slate-300">{status}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-24 pt-12 sm:px-6 lg:px-8">
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {quickLinks.map((item, idx) => (
-            <button
-              key={item.key}
-              onClick={() => onNavigate(item.key)}
-              className={`group text-left rounded-3xl border p-6 transition duration-300 hover:border-emerald-400/40 hover:-translate-y-2 animate-in-up delay-${idx * 100} ${
-                item.accent === 'emerald'
-                  ? 'border-emerald-500/25 bg-emerald-500/10'
-                  : item.accent === 'cyan'
-                    ? 'border-cyan-500/25 bg-cyan-500/10'
-                    : item.accent === 'purple'
-                      ? 'border-violet-500/25 bg-violet-500/10'
-                      : 'border-amber-500/25 bg-amber-500/10'
-              }`}
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-6 text-center">
+          <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-cyan-400">See it in action</div>
+          <h2 className="mt-2 text-3xl font-bold text-white md:text-4xl">Watch how a modern clinic queue works</h2>
+        </div>
+
+        <div className="overflow-hidden rounded-[32px] border border-slate-700/60 bg-slate-900/70 p-3 shadow-[0_40px_120px_rgba(15,23,42,0.6)]">
+          <div className="relative overflow-hidden rounded-[24px] border border-slate-700/60 bg-slate-950/80">
+            <video
+              className="block h-[360px] w-full object-cover md:h-[500px]"
+              poster="https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1200&q=80"
+              controls
+              preload="metadata"
             >
-              <h3 className="mb-3 text-2xl font-bold text-white group-hover:text-emerald-300 transition">{item.title}</h3>
-              <p className="mb-5 text-base leading-7 text-slate-300">{item.text}</p>
-              <span className="inline-flex items-center gap-2 text-sm font-semibold text-white group-hover:gap-3 transition">
-                Explore
-                <ArrowRight className="h-4 w-4" />
-              </span>
-            </button>
-          ))}
+              <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" type="video/mp4" />
+            </video>
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/10 to-slate-950/30" />
+            <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 md:p-7">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300">QCare-style demo</div>
+                <div className="mt-2 text-xl font-bold text-white md:text-2xl">Scan • Queue • Notify</div>
+              </div>
+              <div className="flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/60 px-3 py-2 text-xs font-medium text-slate-100 backdrop-blur-sm">
+                <Play className="h-3.5 w-3.5 text-emerald-300" />
+                1-minute overview
+              </div>
+            </div>
+          </div>
         </div>
       </section>
+
+
+      <section className="mx-auto max-w-7xl px-4 pb-12 pt-4 sm:px-6 lg:px-8">
+        <div className="rounded-[28px] border border-emerald-400/20 bg-gradient-to-r from-emerald-500/10 via-slate-900/80 to-cyan-500/10 p-6 md:p-8">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300">Ready to modernise queue flow?</div>
+              <h2 className="mt-3 text-3xl font-black text-white md:text-4xl">Turn every wait into a smoother patient experience.</h2>
+            </div>
+            <div className="flex flex-col items-stretch gap-3 sm:flex-row">
+              <button
+                onClick={() => onNavigate('booking')}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 via-cyan-500 to-sky-500 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-[0_18px_60px_rgba(34,211,238,0.3)] transition hover:-translate-y-1"
+              >
+                Start free trial
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onNavigate('login')}
+                className="inline-flex items-center justify-center rounded-xl border border-slate-600 bg-slate-900/60 px-6 py-3.5 text-sm font-bold text-white transition hover:border-emerald-400/50 hover:bg-emerald-500/8"
+              >
+                Talk to sales
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </div>
   );
 };

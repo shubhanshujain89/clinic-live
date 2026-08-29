@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Stethoscope,
   Activity,
@@ -49,6 +49,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   onGoogleSignIn,
   onViewPreNotes,
 }) => {
+  const isBasicPlan = clinic.featurePlan === 'BASIC';
   const [doctorRxNotes, setDoctorRxNotes] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [selectedTokenForModal, setSelectedTokenForModal] = useState<TokenItem | null>(null);
@@ -118,7 +119,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
     setIsSavingEdit(true);
     try {
       const formattedWeight = editWeight.trim() ? `${editWeight.trim()} kg` : undefined;
-      const formattedTemp = editTemp.trim() ? `${editTemp.trim()} °F` : undefined;
+      const formattedTemp = editTemp.trim() ? `${editTemp.trim()} Â°F` : undefined;
       const formattedBp =
         editBpSys.trim() && editBpDia.trim()
           ? `${editBpSys.trim()}/${editBpDia.trim()} mmHg`
@@ -174,6 +175,14 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   const waitingTokens = tokens.filter(t => t.status === 'WAITING');
   const completedTokens = tokens.filter(t => t.status === 'COMPLETED');
   const holdTokens = tokens.filter(t => t.status === 'HOLD');
+
+  const averageWaitMinutes = waitingTokens.length
+    ? Number((waitingTokens.reduce((sum, token) => {
+        const tokenCreatedAt = token.createdAt ? new Date(token.createdAt).getTime() : Date.now();
+        const elapsedMinutes = Math.max(0, (Date.now() - tokenCreatedAt) / 60000);
+        return sum + elapsedMinutes;
+      }, 0) / waitingTokens.length).toFixed(1))
+    : 0;
 
   const totalPatientsToday = tokens.length;
   const totalRevenue = tokens
@@ -322,6 +331,101 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
     return `${mins.toString().padStart(2, '0')}:${remSecs.toString().padStart(2, '0')}`;
   };
 
+  const nextToken = [...waitingTokens].sort((a, b) => {
+    const pA = a.priority ?? 10;
+    const pB = b.priority ?? 10;
+    if (pA !== pB) return pA - pB;
+    return (a.sequenceNumber || 0) - (b.sequenceNumber || 0);
+  })[0];
+
+  const handleCallNextToken = async () => {
+    if (activeToken || !nextToken) return;
+    await updateDoc(doc(db, 'tokens', nextToken.id), {
+      status: 'SERVING',
+      calledAt: new Date().toISOString(),
+    });
+    await updateDoc(doc(db, 'clinics', clinic.id), {
+      currentRunningToken: nextToken.tokenNumber,
+      currentRunningTokenId: nextToken.id,
+    });
+  };
+
+  const handleStartConsultation = async () => {
+    if (activeToken || !nextToken) return;
+    await updateDoc(doc(db, 'tokens', nextToken.id), {
+      status: 'SERVING',
+      calledAt: new Date().toISOString(),
+    });
+    await updateDoc(doc(db, 'clinics', clinic.id), {
+      currentRunningToken: nextToken.tokenNumber,
+      currentRunningTokenId: nextToken.id,
+    });
+  };
+
+  const handleHoldConsultation = async () => {
+    if (!activeToken) return;
+    await updateDoc(doc(db, 'tokens', activeToken.id), { status: 'HOLD', isHold: true });
+    await updateDoc(doc(db, 'clinics', clinic.id), { currentRunningToken: 'None', currentRunningTokenId: '' });
+  };
+
+  const handleAddDelay = async () => {
+    const delaySteps = [0, 5, 10, 15, 30];
+    const currentDelay = clinic.delayMinutes || 0;
+    const index = delaySteps.indexOf(currentDelay);
+    const nextDelay = index >= 0
+      ? delaySteps[index + 1] ?? currentDelay
+      : delaySteps.find((step) => step > currentDelay) ?? currentDelay;
+    await updateDoc(doc(db, 'clinics', clinic.id), { delayMinutes: nextDelay });
+  };
+
+  const handleToggleBreak = async () => {
+    await updateDoc(doc(db, 'clinics', clinic.id), {
+      doctorStatus: clinic.doctorStatus === 'OUT' ? 'IN' : 'OUT',
+    });
+  };
+  if (isBasicPlan) {
+    return (
+      <div className="space-y-6 max-w-5xl mx-auto pb-12">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <div className="text-xs uppercase tracking-[0.2em] text-violet-300 font-bold">Basic plan</div>
+              <h1 className="text-2xl font-black text-white mt-2">Doctor live tracking</h1>
+            </div>
+            <div className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-300">
+              Active queue only
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+            <div className="text-xs uppercase tracking-wider text-teal-300 font-bold">Currently running</div>
+            <div className="mt-4 text-4xl font-black text-white">{activeToken ? activeToken.tokenNumber : 'None'}</div>
+            <div className="mt-2 text-sm text-slate-300">{activeToken ? activeToken.patientName : 'No patient in consultation'}</div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+            <div className="text-xs uppercase tracking-wider text-sky-300 font-bold">In queue</div>
+            <div className="mt-4 space-y-2">
+              {waitingTokens.length > 0 ? waitingTokens.slice(0, 5).map(token => (
+                <div key={token.id} className="flex items-center justify-between rounded-xl bg-slate-950 px-3 py-2 border border-slate-800">
+                  <div>
+                    <div className="font-semibold text-white">{token.patientName}</div>
+                    <div className="text-xs text-slate-400">{token.patientPhone}</div>
+                  </div>
+                  <div className="text-sm font-bold text-teal-300">{token.tokenNumber}</div>
+                </div>
+              )) : (
+                <div className="text-sm text-slate-400 py-2">No patients waiting.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       
@@ -380,7 +484,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         
         {/* Metric 1: Total Patients Today */}
         <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 sm:p-5 shadow-lg">
@@ -398,7 +502,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
           </div>
           <div className="mt-2 text-xs text-slate-500 flex items-center gap-1">
             <span>{waitingTokens.length} in queue</span>
-            <span>•</span>
+            <span>â€¢</span>
             <span>{holdTokens.length} on hold</span>
           </div>
         </div>
@@ -426,7 +530,22 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
           </div>
         </div>
 
-        {/* Metric 3: Today's Revenue */}
+        {/* Metric 3: Average Wait Time */}
+        <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 sm:p-5 shadow-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Avg Wait</span>
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-2xl sm:text-3xl font-black text-white">{averageWaitMinutes}</span>
+            <span className="text-xs text-slate-400">mins</span>
+          </div>
+          <div className="mt-2 text-xs text-slate-500">Queue pacing</div>
+        </div>
+
+        {/* Metric 4: Today's Revenue */}
         <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 sm:p-5 shadow-lg">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Clinic Revenue</span>
@@ -436,16 +555,16 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
           </div>
           <div className="mt-2 flex items-baseline justify-between">
             <span className="text-2xl sm:text-3xl font-black text-emerald-400">
-              ₹{totalRevenue.toLocaleString()}
+              â‚¹{totalRevenue.toLocaleString()}
             </span>
             <span className="text-xs text-emerald-500/80 font-medium">100% Pre-paid</span>
           </div>
           <div className="mt-2 text-xs text-slate-500">
-            Avg Fee: ₹{clinic.consultationFee} / patient
+            Avg Fee: â‚¹{clinic.consultationFee} / patient
           </div>
         </div>
 
-        {/* Metric 4: Rolling Consultation Speed */}
+        {/* Metric 5: Rolling Consultation Speed */}
         <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 sm:p-5 shadow-lg">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Avg Consultation</span>
@@ -577,7 +696,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                           activeToken.bloodPressure || activeToken.preConsultationNotes?.bloodPressure || activeToken.preConsultationNotes?.bpReading,
                           activeToken.temperature || activeToken.preConsultationNotes?.temperature || activeToken.preConsultationNotes?.feverTemp,
                           activeToken.weight || activeToken.preConsultationNotes?.weight
-                        ].filter(Boolean).join(' • ') || 'Normal'}
+                        ].filter(Boolean).join(' â€¢ ') || 'Normal'}
                       </span>
                     </div>
                   </div>
@@ -701,7 +820,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                       <div>
                         <div className="text-sm font-semibold text-slate-200">{tok.patientName}</div>
                         <div className="text-xs text-slate-500">
-                          {tok.tokenType} • {tok.patientAge ? `${tok.patientAge}y` : 'Adult'}
+                          {tok.tokenType} â€¢ {tok.patientAge ? `${tok.patientAge}y` : 'Adult'}
                         </div>
                       </div>
                     </div>
@@ -806,7 +925,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
 
                           {notes.duration && (
                             <span className="text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
-                              ⏱️ {notes.duration}
+                              â±ï¸ {notes.duration}
                             </span>
                           )}
 
@@ -853,7 +972,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                 onClick={() => setSelectedTokenForModal(null)}
                 className="p-1 rounded-lg text-slate-400 hover:text-white bg-slate-800 text-xs"
               >
-                ✕
+                âœ•
               </button>
             </div>
 
@@ -897,7 +1016,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                         selectedTokenForModal.bloodPressure || selectedTokenForModal.preConsultationNotes.bloodPressure || selectedTokenForModal.preConsultationNotes.bpReading,
                         selectedTokenForModal.temperature || selectedTokenForModal.preConsultationNotes.temperature || selectedTokenForModal.preConsultationNotes.feverTemp,
                         selectedTokenForModal.weight || selectedTokenForModal.preConsultationNotes.weight
-                      ].filter(Boolean).join(' • ') || 'Normal'}
+                      ].filter(Boolean).join(' â€¢ ') || 'Normal'}
                     </span>
                   </div>
                 </div>
@@ -1117,7 +1236,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                   </div>
                 </div>
 
-                {/* Temperature with predefined °F */}
+                {/* Temperature with predefined Â°F */}
                 <div>
                   <label className="text-[11px] text-slate-400 font-medium block mb-1 flex items-center gap-1">
                     <Thermometer className="w-3 h-3 text-amber-400" />
@@ -1133,7 +1252,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-3 pr-10 text-xs text-white placeholder-slate-600 focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono"
                     />
                     <span className="absolute right-3 text-xs font-bold text-amber-400 select-none pointer-events-none">
-                      °F
+                      Â°F
                     </span>
                   </div>
                 </div>

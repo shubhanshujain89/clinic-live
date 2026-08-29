@@ -1,28 +1,67 @@
 import { db, doc, setDoc, collection, getDocs, deleteDoc } from './firebase';
 import { Clinic, TokenItem, QueueSession } from '../types/queue';
 
-export const DEFAULT_CLINIC_ID = 'clinic_apex_main';
+export const DEFAULT_CLINIC_ID = 'clinic_basic_demo';
 
-export const INITIAL_CLINIC_DATA: Clinic = {
-  id: DEFAULT_CLINIC_ID,
-  name: 'Apex Super Specialty Care & Cardiology',
-  doctorName: 'Dr. Aryan Sharma, MD, DM',
-  specialty: 'Cardiologist & Internal Medicine Specialist',
-  cabinNumber: 'Consultation Cabin 2 (Floor 1)',
-  doctorStatus: 'IN',
-  delayMinutes: 0,
-  delayReason: '',
-  avgConsultationMinutes: 8.5,
-  consultationFee: 750,
-  currentRunningToken: 'A-103',
-  currentRunningTokenId: 'tok_03',
-  activeSessionId: 'sess_today',
-  totalPatientsToday: 12,
-  revenueToday: 7850,
-  phone: '+91 98765 43210',
-  address: 'Suite 402, Metro Health Towers, Cyber City',
-  whatsappNotificationsEnabled: true,
-};
+export const DEMO_CLINIC_ACCOUNTS = [
+  { clinicId: 'clinic_basic_demo', clinicName: 'Primary Care Clinic', plan: 'TRIAL', role: 'doctor', email: 'doctor@clinic.local', label: 'Lead Doctor' },
+  { clinicId: 'clinic_basic_demo', clinicName: 'Primary Care Clinic', plan: 'TRIAL', role: 'staff', email: 'staff@clinic.local', label: 'Front Desk' },
+];
+
+export const DEMO_CLINICS: Clinic[] = [
+  {
+    id: 'clinic_basic_demo',
+    name: 'Primary Care Clinic',
+    doctorName: 'Lead Doctor',
+    specialty: 'General Medicine & Family Practice',
+    cabinNumber: 'Cabin 1, Ground Floor',
+    doctorStatus: 'IN',
+    delayMinutes: 0,
+    delayReason: '',
+    avgConsultationMinutes: 12,
+    consultationFee: 500,
+    currentRunningToken: 'B-101',
+    currentRunningTokenId: 'tok_basic_01',
+    activeSessionId: 'sess_clinic_basic_demo',
+    totalPatientsToday: 9,
+    revenueToday: 4200,
+    phone: '+91 98765 10001',
+    address: 'Clinic address to be configured',
+    featurePlan: 'TRIAL',
+    whatsappNotificationsEnabled: false,
+    clinicUpiId: 'clinic@upi',
+  },
+];
+
+export const HOURS_OPTIONS = [
+  '9:00 AM - 6:00 PM',
+  '9:30 AM - 7:00 PM',
+  '10:00 AM - 7:00 PM',
+  '8:00 AM - 5:00 PM',
+  '24 Hours',
+];
+
+export const DEMO_DOCTORS = [
+  {
+    id: 'doc_basic_01',
+    name: 'Lead Doctor',
+    specialization: 'General Medicine & Family Practice',
+    clinicId: 'clinic_basic_demo',
+    qualification: 'MBBS, MD',
+    experience: '8',
+    phone: '+91 98765 43210',
+    email: 'doctor@clinic.local',
+    bio: 'Experienced physician focused on preventive care and family health.',
+    consultationFee: 500,
+    availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    availableHours: '9:00 AM - 6:00 PM',
+    rating: 4.8,
+    status: 'active',
+    createdAt: new Date().toISOString(),
+  },
+];
+
+export const INITIAL_CLINIC_DATA: Clinic = DEMO_CLINICS[0];
 
 export const INITIAL_SESSION_DATA: QueueSession = {
   id: 'sess_today',
@@ -276,18 +315,43 @@ export const INITIAL_TOKENS_DATA: TokenItem[] = [
 
 export async function seedClinicDatabase(force: boolean = false) {
   try {
-    const clinicRef = doc(db, 'clinics', DEFAULT_CLINIC_ID);
-    await setDoc(clinicRef, INITIAL_CLINIC_DATA, { merge: !force });
+    const clinicEntries = DEMO_CLINICS;
+    for (const clinic of clinicEntries) {
+      const clinicRef = doc(db, 'clinics', clinic.id);
+      await setDoc(clinicRef, clinic, { merge: !force });
 
-    const sessionRef = doc(db, 'queue_sessions', 'sess_today');
-    await setDoc(sessionRef, INITIAL_SESSION_DATA, { merge: !force });
+      const sessionRef = doc(db, 'queue_sessions', clinic.activeSessionId || `sess_${clinic.id}`);
+      await setDoc(sessionRef, {
+        id: clinic.activeSessionId || `sess_${clinic.id}`,
+        clinicId: clinic.id,
+        date: new Date().toISOString().split('T')[0],
+        activeTokenId: clinic.currentRunningTokenId,
+        activeTokenNumber: clinic.currentRunningToken,
+        status: 'ACTIVE',
+        totalTokensIssued: clinic.totalPatientsToday || 10,
+        rollingAvgMinutes: clinic.avgConsultationMinutes,
+        completedCount: Math.max(2, Math.floor((clinic.totalPatientsToday || 10) * 0.5)),
+        totalRevenue: clinic.revenueToday || 0,
+      }, { merge: !force });
+    }
 
-    // Seed tokens
-    for (const token of INITIAL_TOKENS_DATA) {
+    const tokenSeed = INITIAL_TOKENS_DATA.map((token) => ({
+      ...token,
+      clinicId: token.clinicId === DEFAULT_CLINIC_ID ? DEMO_CLINICS[0].id : token.clinicId,
+    }));
+
+    for (const token of tokenSeed) {
       const tokenRef = doc(db, 'tokens', token.id);
       await setDoc(tokenRef, token, { merge: !force });
     }
-    return { success: true, count: INITIAL_TOKENS_DATA.length };
+
+    // Seed doctors
+    for (const doctor of DEMO_DOCTORS) {
+      const doctorRef = doc(db, 'doctors', doctor.id);
+      await setDoc(doctorRef, doctor, { merge: !force });
+    }
+
+    return { success: true, count: tokenSeed.length };
   } catch (err) {
     console.error('Failed to seed clinic database:', err);
     return { success: false, error: err };
@@ -300,6 +364,22 @@ export async function resetClinicDatabase() {
     for (const d of tokensSnapshot.docs) {
       await deleteDoc(d.ref);
     }
+
+    const sessionSnapshot = await getDocs(collection(db, 'queue_sessions'));
+    for (const d of sessionSnapshot.docs) {
+      await deleteDoc(d.ref);
+    }
+
+    const clinicSnapshot = await getDocs(collection(db, 'clinics'));
+    for (const d of clinicSnapshot.docs) {
+      await deleteDoc(d.ref);
+    }
+
+    const doctorSnapshot = await getDocs(collection(db, 'doctors'));
+    for (const d of doctorSnapshot.docs) {
+      await deleteDoc(d.ref);
+    }
+
     await seedClinicDatabase(true);
     return { success: true };
   } catch (err) {

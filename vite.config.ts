@@ -53,6 +53,8 @@ function whatsappApiPlugin(): Plugin {
   };
 }
 
+const backendPort = Number(process.env.BACKEND_PORT || process.env.PORT || 4000);
+
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss(), whatsappApiPlugin()],
@@ -64,6 +66,12 @@ export default defineConfig(() => {
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      proxy: {
+        '/api': {
+          target: `http://localhost:${backendPort}`,
+          changeOrigin: true,
+        },
+      },
     },
   };
 });
