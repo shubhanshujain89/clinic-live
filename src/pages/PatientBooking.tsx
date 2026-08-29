@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, Stethoscope, ChevronRight, Check, Heart } from 'lucide-react';
-import { db } from '../lib/firebase';
-import { collection, getDocs, addDoc, query, where, getDoc, doc } from 'firebase/firestore';
+import { db, collection, getDocs, query, where } from '../lib/firebase';
 
 interface Clinic {
   id: string;
@@ -40,12 +39,9 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
   
   const [bookingData, setBookingData] = useState({
     patientName: '',
-    email: '',
     phone: '',
-    date: '',
-    time: '',
+    age: '',
     symptoms: '',
-    attachments: '' as any
   });
 
   const [bookingId, setBookingId] = useState('');
@@ -116,27 +112,28 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
   };
 
   const handleBookAppointment = async () => {
-    if (!selectedClinic || !selectedDoctor || !bookingData.patientName || !bookingData.email || !bookingData.phone || !bookingData.date || !bookingData.time) {
-      alert('Please fill in all required fields');
+    if (!selectedClinic || !selectedDoctor || !bookingData.patientName.trim() || !bookingData.phone.trim()) {
+      alert('Patient name and mobile number are required.');
       return;
     }
 
     try {
-      const docRef = await addDoc(collection(db, 'appointments'), {
-        clinicId: selectedClinic.id,
-        doctorId: selectedDoctor.id,
-        patientName: bookingData.patientName,
-        email: bookingData.email,
-        phone: bookingData.phone,
-        appointmentDate: bookingData.date,
-        appointmentTime: bookingData.time,
-        symptoms: bookingData.symptoms,
-        status: 'scheduled',
-        consultationFee: selectedDoctor.consultationFee,
-        createdAt: new Date().toISOString()
+      const response = await fetch('/api/patient/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinicId: selectedClinic.id,
+          doctorId: selectedDoctor.id,
+          patientName: bookingData.patientName,
+          phone: bookingData.phone,
+          age: bookingData.age ? Number(bookingData.age) : undefined,
+          reason: bookingData.symptoms,
+        }),
       });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Unable to book appointment.');
 
-      setBookingId(docRef.id);
+      setBookingId(payload.trackingId);
       setStep('confirm');
     } catch (error) {
       console.error('Error booking appointment:', error);
@@ -146,7 +143,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white flex items-center justify-center">
+      <div className="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white flex items-center justify-center py-8">
         <p className="text-slate-400">Loading clinics...</p>
       </div>
     );
@@ -331,7 +328,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Phone *</label>
+                  <label className="block text-sm font-semibold mb-2">Mobile Number *</label>
                   <input
                     type="tel"
                     value={bookingData.phone}
@@ -343,46 +340,27 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2">Email *</label>
+                <label className="block text-sm font-semibold mb-2">Age (optional)</label>
                 <input
-                  type="email"
-                  value={bookingData.email}
-                  onChange={(e) => setBookingData({ ...bookingData, email: e.target.value })}
+                  type="number"
+                  min="0"
+                  max="120"
+                  value={bookingData.age}
+                  onChange={(e) => setBookingData({ ...bookingData, age: e.target.value })}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none"
-                  placeholder="your@email.com"
+                  placeholder="Age"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Preferred Date *</label>
-                  <input
-                    type="date"
-                    value={bookingData.date}
-                    onChange={(e) => setBookingData({ ...bookingData, date: e.target.value })}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Preferred Time *</label>
-                  <input
-                    type="time"
-                    value={bookingData.time}
-                    onChange={(e) => setBookingData({ ...bookingData, time: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none"
-                  />
-                </div>
-              </div>
-
               <div>
-                <label className="block text-sm font-semibold mb-2">Symptoms / Reason for Visit</label>
+                <label className="block text-sm font-semibold mb-2">Short reason for visit (optional)</label>
                 <textarea
                   value={bookingData.symptoms}
                   onChange={(e) => setBookingData({ ...bookingData, symptoms: e.target.value })}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none resize-none"
-                  rows={4}
-                  placeholder="Describe your symptoms..."
+                  rows={3}
+                  maxLength={240}
+                  placeholder="Brief reason for your visit"
                 />
               </div>
             </div>
@@ -427,7 +405,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
             <div className="bg-slate-800/50 border border-emerald-400/30 rounded-xl p-6 space-y-4">
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Booking ID:</span>
+                  <span className="text-slate-400">Tracking ID:</span>
                   <span className="font-mono font-bold">{bookingId}</span>
                 </div>
                 <div className="flex justify-between">
@@ -439,27 +417,17 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
                   <span className="font-bold">{selectedClinic?.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Date & Time:</span>
-                  <span className="font-bold">{bookingData.date} at {bookingData.time}</span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-slate-400">Consultation Fee:</span>
                   <span className="font-bold text-emerald-400">₹{selectedDoctor?.consultationFee}</span>
                 </div>
               </div>
 
               <div className="border-t border-slate-700 pt-4">
-                <p className="text-sm text-slate-400 mb-3">Confirmation details have been sent to {bookingData.email}</p>
-                <p className="text-sm text-slate-400">You will also receive WhatsApp updates at {bookingData.phone}</p>
+                <p className="text-sm text-slate-400">Use this tracking ID to view your live queue status.</p>
+                <a className="text-sm text-emerald-400 font-semibold" href={`/track/${bookingId}`}>Open live tracker</a>
               </div>
             </div>
 
-            <button
-              onClick={onBack}
-              className="w-full px-4 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-lg font-semibold hover:shadow-lg hover:shadow-emerald-500/50 transition"
-            >
-              Back to Home
-            </button>
           </div>
         )}
       </div>

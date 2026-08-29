@@ -113,14 +113,16 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
         soundManager.playChime();
       }
 
-      await WhatsAppService.sendWhatsAppNotification(
-        newToken,
-        'TOKEN_ISSUED',
-        clinic.name,
-        clinic.doctorName,
-        clinic.cabinNumber,
-        '10-15 mins'
-      );
+      if (clinic.featurePlan !== 'BASIC') {
+        await WhatsAppService.sendWhatsAppNotification(
+          newToken,
+          'TOKEN_ISSUED',
+          clinic.name,
+          clinic.doctorName,
+          clinic.cabinNumber,
+          '10-15 mins'
+        );
+      }
 
       onAdded(newToken);
       onClose();

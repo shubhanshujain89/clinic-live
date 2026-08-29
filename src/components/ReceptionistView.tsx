@@ -54,6 +54,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
   onViewTokenDetails,
   onPrintTokenSlip,
 }) => {
+  const isBasicPlan = clinic.featurePlan === 'BASIC';
   const [filterTab, setFilterTab] = useState<'ALL' | 'WAITING' | 'SERVING' | 'HOLD' | 'COMPLETED'>('WAITING');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAdvancing, setIsAdvancing] = useState(false);
@@ -159,6 +160,13 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
   });
   const holdTokens = tokens.filter(t => t.status === 'HOLD');
   const completedTokens = tokens.filter(t => t.status === 'COMPLETED');
+  const averageWaitMinutes = waitingTokens.length
+    ? Number((waitingTokens.reduce((sum, token) => {
+        const tokenCreatedAt = token.createdAt ? new Date(token.createdAt).getTime() : Date.now();
+        const elapsedMinutes = Math.max(0, (Date.now() - tokenCreatedAt) / 60000);
+        return sum + elapsedMinutes;
+      }, 0) / waitingTokens.length).toFixed(1))
+    : 0;
 
   // Filter list
   const filteredTokens = tokens.filter(token => {
@@ -375,6 +383,10 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
 
   // Send Manual WhatsApp Alert
   const handleSendWhatsAppAlert = async (token: TokenItem) => {
+    if (isBasicPlan) {
+      showToast('WhatsApp alerts are not included in the Basic plan.');
+      return;
+    }
     try {
       await WhatsAppService.sendWhatsAppNotification(
         token,
@@ -389,6 +401,71 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
       console.error('Error sending WhatsApp alert:', err);
     }
   };
+
+  if (isBasicPlan) {
+    return (
+      <div className="space-y-6 max-w-5xl mx-auto pb-12">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <div className="text-xs uppercase tracking-[0.2em] text-violet-300 font-bold">Basic plan</div>
+              <h1 className="text-2xl font-black text-white mt-2">Reception minimal queue</h1>
+            </div>
+            <div className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-300">
+              Only core queue tools enabled
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <button
+            onClick={onOpenAddWalkIn}
+            className="bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-bold p-4 rounded-2xl"
+          >
+            <UserPlus className="w-5 h-5 mb-2 text-teal-400 mx-auto" />
+            <div>Add Patient</div>
+          </button>
+          <button
+            onClick={handleCallNextToken}
+            disabled={isAdvancing || waitingTokens.length === 0}
+            className="bg-gradient-to-r from-teal-500 to-emerald-400 hover:from-teal-400 hover:to-emerald-300 text-slate-950 font-black p-4 rounded-2xl disabled:opacity-50"
+          >
+            <Play className="w-5 h-5 mb-2 mx-auto" />
+            <div>Next</div>
+          </button>
+          <button
+            onClick={handleHoldActiveToken}
+            disabled={!activeToken}
+            className="bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-bold p-4 rounded-2xl disabled:opacity-50"
+          >
+            <Pause className="w-5 h-5 mb-2 text-amber-400 mx-auto" />
+            <div>Skip</div>
+          </button>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+            <h2 className="text-lg font-bold text-white">Live tracking</h2>
+            <span className="text-xs text-slate-400">Name & mobile only</span>
+          </div>
+          <div className="divide-y divide-slate-800">
+            {tokens.filter(token => token.status !== 'COMPLETED').map(token => (
+              <div key={token.id} className="flex items-center justify-between px-4 py-3">
+                <div>
+                  <div className="font-semibold text-white">{token.patientName}</div>
+                  <div className="text-xs text-slate-400">{token.patientPhone}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs uppercase tracking-wider text-teal-300">{token.status}</div>
+                  <div className="text-xs text-slate-400">{token.tokenNumber}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">

@@ -39,6 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   isSeeding = false,
 }) => {
   const isDoctorIn = clinic?.doctorStatus === 'IN';
+  const isBasicPlan = clinic?.featurePlan === 'BASIC';
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/75 text-white shadow-[0_12px_40px_rgba(15,23,42,0.35)] backdrop-blur-xl">
@@ -98,29 +99,33 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Reception Desk</span>
             </button>
 
-            <button
-              onClick={() => onSelectRole('PATIENT')}
-              className={`flex items-center space-x-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
-                currentRole === 'PATIENT'
-                  ? 'bg-gradient-to-r from-teal-400 to-emerald-300 text-slate-950 shadow-lg shadow-teal-500/20 font-bold'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
-              }`}
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>Patient Tracker</span>
-            </button>
+            {!isBasicPlan && (
+              <button
+                onClick={() => onSelectRole('PATIENT')}
+                className={`flex items-center space-x-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                  currentRole === 'PATIENT'
+                    ? 'bg-gradient-to-r from-teal-400 to-emerald-300 text-slate-950 shadow-lg shadow-teal-500/20 font-bold'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>Patient Tracker</span>
+              </button>
+            )}
 
-            <button
-              onClick={() => onSelectRole('TV_DISPLAY')}
-              className={`flex items-center space-x-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
-                currentRole === 'TV_DISPLAY'
-                  ? 'bg-gradient-to-r from-amber-300 to-orange-300 text-slate-950 shadow-lg shadow-amber-500/20 font-bold'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
-              }`}
-            >
-              <Tv className="w-3.5 h-3.5" />
-              <span>TV Signage</span>
-            </button>
+            {!isBasicPlan && (
+              <button
+                onClick={() => onSelectRole('TV_DISPLAY')}
+                className={`flex items-center space-x-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                  currentRole === 'TV_DISPLAY'
+                    ? 'bg-gradient-to-r from-amber-300 to-orange-300 text-slate-950 shadow-lg shadow-amber-500/20 font-bold'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                <Tv className="w-3.5 h-3.5" />
+                <span>TV Signage</span>
+              </button>
+            )}
           </nav>
 
           {/* Right Action Items */}
@@ -134,15 +139,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             </div>
 
-            {/* WhatsApp logs preview trigger */}
-            <button
-              onClick={onToggleWhatsAppLogs}
-              title="Meta WhatsApp Cloud API Logs"
-              className="relative p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 transition-colors"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full" />
-            </button>
+            {!isBasicPlan && (
+              <button
+                onClick={onToggleWhatsAppLogs}
+                title="Meta WhatsApp Cloud API Logs"
+                className="relative p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 transition-colors"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full" />
+              </button>
+            )}
 
             {/* Seed / Reset Demo Data */}
             <button
@@ -211,29 +217,33 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>Reception Desk</span>
           </button>
 
-          <button
-            onClick={() => onSelectRole('PATIENT')}
-            className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap ${
-              currentRole === 'PATIENT'
-                ? 'bg-teal-500 text-slate-950 font-bold'
-                : 'text-slate-300 bg-slate-800'
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Patient Tracker</span>
-          </button>
+          {!isBasicPlan && (
+            <button
+              onClick={() => onSelectRole('PATIENT')}
+              className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap ${
+                currentRole === 'PATIENT'
+                  ? 'bg-teal-500 text-slate-950 font-bold'
+                  : 'text-slate-300 bg-slate-800'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Patient Tracker</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => onSelectRole('TV_DISPLAY')}
-            className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap ${
-              currentRole === 'TV_DISPLAY'
-                ? 'bg-amber-400 text-slate-950 font-bold'
-                : 'text-slate-300 bg-slate-800'
-            }`}
-          >
-            <Tv className="w-3.5 h-3.5" />
-            <span>TV Display</span>
-          </button>
+          {!isBasicPlan && (
+            <button
+              onClick={() => onSelectRole('TV_DISPLAY')}
+              className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap ${
+                currentRole === 'TV_DISPLAY'
+                  ? 'bg-amber-400 text-slate-950 font-bold'
+                  : 'text-slate-300 bg-slate-800'
+              }`}
+            >
+              <Tv className="w-3.5 h-3.5" />
+              <span>TV Display</span>
+            </button>
+          )}
         </div>
 
         {/* Live Date & Time ticker on smaller screens */}

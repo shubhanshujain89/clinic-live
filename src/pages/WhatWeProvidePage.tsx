@@ -1,11 +1,13 @@
 import React from 'react';
 import { Heart, Zap, Users, Shield, Phone, CheckCircle2 } from 'lucide-react';
+import { useSiteConfig } from '../lib/siteConfig';
 
 interface Props {
   onNavigate: (page: string) => void;
 }
 
 export const WhatWeProvidePage: React.FC<Props> = ({ onNavigate }) => {
+  const { content } = useSiteConfig();
   const features = [
     {
       icon: Zap,
@@ -40,27 +42,19 @@ export const WhatWeProvidePage: React.FC<Props> = ({ onNavigate }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="mb-10 flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-emerald-400 uppercase tracking-[0.2em] text-xs font-semibold mb-3">What We Provide</p>
-            <h1 className="text-4xl md:text-5xl font-bold">Complete clinic operations, simplified.</h1>
-          </div>
-          <button
-            onClick={() => onNavigate('landing')}
-            className="px-5 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 font-semibold transition"
-          >
-            Back to Home
-          </button>
+    <div className="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
+      <section className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+        <div className="mb-5">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">What We Provide</p>
+          <h1 className="text-2xl font-bold md:text-3xl">{content.whatWeProvideTitle}</h1>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid gap-4 md:grid-cols-3">
           {features.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 hover:border-emerald-400/50 transition">
-              <Icon className="w-10 h-10 text-emerald-400 mb-4" />
-              <h2 className="text-xl font-bold mb-3">{title}</h2>
-              <p className="text-slate-400 leading-relaxed">{desc}</p>
+            <div key={title} className="rounded-2xl border border-slate-700 bg-slate-800/50 p-4 transition hover:border-emerald-400/50">
+              <Icon className="mb-3 h-8 w-8 text-emerald-400" />
+              <h2 className="mb-2 text-base font-bold">{title}</h2>
+              <p className="text-sm leading-relaxed text-slate-400">{desc}</p>
             </div>
           ))}
         </div>

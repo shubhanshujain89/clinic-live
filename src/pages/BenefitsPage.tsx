@@ -1,11 +1,13 @@
 import React from 'react';
 import { Heart, Users, ChevronRight } from 'lucide-react';
+import { useSiteConfig } from '../lib/siteConfig';
 
 interface Props {
   onNavigate: (page: string) => void;
 }
 
 export const BenefitsPage: React.FC<Props> = ({ onNavigate }) => {
+  const { content } = useSiteConfig();
   const clinics = [
     'Streamline operations with smart queue orchestration',
     'Manage multi-clinic workflows from one unified dashboard',
@@ -21,19 +23,13 @@ export const BenefitsPage: React.FC<Props> = ({ onNavigate }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div className="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
+      <section className="max-w-7xl mx-auto px-4 pt-6 pb-16 sm:px-6 lg:px-8">
         <div className="mb-10 flex items-center justify-between gap-4 flex-wrap">
           <div>
             <p className="text-emerald-400 uppercase tracking-[0.2em] text-xs font-semibold mb-3">Benefits</p>
-            <h1 className="text-4xl md:text-5xl font-bold">What you gain with ClinicFlow Pro.</h1>
+            <h1 className="text-4xl md:text-5xl font-bold">{content.benefitsTitle}</h1>
           </div>
-          <button
-            onClick={() => onNavigate('landing')}
-            className="px-5 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 font-semibold transition"
-          >
-            Back to Home
-          </button>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">

@@ -1,6 +1,0 @@
-{
-  "name": "Live Clinic Queue & Token Management System",
-  "description": "Real-time clinic token queue with doctor and receptionist consoles, patient live tracking, pre-consultation notes, ETA calculation, and smart TV signage.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

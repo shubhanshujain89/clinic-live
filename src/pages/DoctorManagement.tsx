@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Edit, Trash2, Star, Search, Upload } from 'lucide-react';
-import { db } from '../lib/firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from '../lib/firebase';
 
 interface Doctor {
   id: string;
@@ -150,6 +149,13 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
     <div className="min-h-screen text-white">
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <button
+          onClick={onBack}
+          className="mb-6 inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-emerald-400 hover:text-white"
+        >
+          ← Back to clinic list
+        </button>
+
         {/* Page Title */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold flex items-center gap-3 mb-2">
@@ -280,95 +286,95 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
               </button>
             </div>
             
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Full Name</label>
+                  <label className="block text-xs font-semibold mb-1">Full Name</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
                     placeholder="Dr. John Doe"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Specialization</label>
+                  <label className="block text-xs font-semibold mb-1">Specialization</label>
                   <input
                     type="text"
                     value={formData.specialization}
                     onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
                     placeholder="Cardiology"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Qualification</label>
+                  <label className="block text-xs font-semibold mb-1">Qualification</label>
                   <input
                     type="text"
                     value={formData.qualification}
                     onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
                     placeholder="MBBS, MD"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Experience (years)</label>
+                  <label className="block text-xs font-semibold mb-1">Experience (years)</label>
                   <input
                     type="text"
                     value={formData.experience}
                     onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
                     placeholder="10"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Phone</label>
+                  <label className="block text-xs font-semibold mb-1">Phone</label>
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Email</label>
+                  <label className="block text-xs font-semibold mb-1">Email</label>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2">Consultation Fee (₹)</label>
+                <label className="block text-xs font-semibold mb-1">Consultation Fee (₹)</label>
                 <input
                   type="number"
                   value={formData.consultationFee}
                   onChange={(e) => setFormData({ ...formData, consultationFee: e.target.value })}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
                   placeholder="500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2">Bio</label>
+                <label className="block text-xs font-semibold mb-1">Bio</label>
                 <textarea
                   value={formData.bio}
                   onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none resize-none"
-                  rows={3}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none resize-none"
+                  rows={2}
                   placeholder="Brief bio..."
                 />
               </div>
@@ -404,13 +410,18 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
 
               <div>
                 <label className="block text-sm font-semibold mb-2">Available Hours</label>
-                <input
-                  type="text"
+                <select
                   value={formData.availableHours}
                   onChange={(e) => setFormData({ ...formData, availableHours: e.target.value })}
                   className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none"
-                  placeholder="9:00 AM - 5:00 PM"
-                />
+                >
+                  <option value="">Select Hours</option>
+                  <option value="9:00 AM - 6:00 PM">9:00 AM - 6:00 PM</option>
+                  <option value="9:30 AM - 7:00 PM">9:30 AM - 7:00 PM</option>
+                  <option value="10:00 AM - 7:00 PM">10:00 AM - 7:00 PM</option>
+                  <option value="8:00 AM - 5:00 PM">8:00 AM - 5:00 PM</option>
+                  <option value="24 Hours">24 Hours</option>
+                </select>
               </div>
 
               <div>
