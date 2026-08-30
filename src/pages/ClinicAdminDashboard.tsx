@@ -159,6 +159,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
   useEffect(() => {
     let cancelled = false;
+    let listenersStarted = false;
     let cleanupListeners: (() => void) | undefined;
 
     const syncFromStorage = () => {
@@ -188,9 +189,11 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     };
 
     const startListeners = async () => {
-      if (cancelled || !auth.currentUser) {
+      if (cancelled || listenersStarted) {
         return;
       }
+      listenersStarted = true;
+      void fetchClinics();
 
       const clinicsRef = collection(db, 'clinics');
       const unsubscribeClinicsListener = onSnapshot(clinicsRef, (snapshot) => {
@@ -355,6 +358,9 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     };
 
     initializeFromDatabase();
+    if (auth.currentUser) {
+      startListeners();
+    }
     window.addEventListener('site-config-changed', syncFromStorage);
     window.addEventListener('storage', syncFromStorage);
 

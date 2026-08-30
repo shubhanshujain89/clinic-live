@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auth, onAuthStateChanged, User, signInWithEmailAndPassword } from './lib/firebase';
+import { auth, onAuthStateChanged, User, signInWithEmailAndPassword, signOut } from './lib/firebase';
 import { GlobalHeader } from './components/GlobalHeader';
 import { useSiteConfig } from './lib/siteConfig';
 import { LandingPage } from './pages/LandingPage';
@@ -50,6 +50,12 @@ export default function App() {
         } else if (!isPublicPage) {
           setCurrentPage('landing');
         }
+      } else {
+        setUserSession({
+          userId: user.uid,
+          role: user.role || 'CLINIC_ADMIN',
+          clinicId: user.clinicId,
+        });
       }
       setIsLoading(false);
     });
@@ -129,6 +135,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    void signOut(auth);
     setUserSession(null);
     setProfileOpen(false);
     setSiteAdminLogin({ username: '', password: '' });
