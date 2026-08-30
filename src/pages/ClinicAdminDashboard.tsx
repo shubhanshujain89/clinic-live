@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, Plus, Edit, Trash2, Users, Clock, Search, Filter } from 'lucide-react';
-import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from '../lib/firebase';
+import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, auth, onAuthStateChanged } from '../lib/firebase';
 import { defaultContentSections, defaultSiteSettings, loadContentSections, loadSiteSettings, saveContentSections, saveSiteSettings, initializeSiteConfig, loadSiteSettingsFromDatabase, loadContentSectionsFromDatabase } from '../lib/siteConfig';
 import { FeaturePlan } from '../types/queue';
 
@@ -158,6 +158,9 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   });
 
   useEffect(() => {
+    let cancelled = false;
+    let cleanupListeners: (() => void) | undefined;
+
     const syncFromStorage = () => {
       const loadedSettings = loadSiteSettings();
       const loadedContent = loadContentSections();
@@ -167,183 +170,211 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       setSavedContentSections(loadedContent);
     };
 
-    // Initialize from database on startup (for cross-device sync)
     const initializeFromDatabase = async () => {
       try {
         const { settings, content } = await initializeSiteConfig();
-        setSiteSettings(settings);
-        setContentSections(content);
-        setSavedSiteSettings(settings);
-        setSavedContentSections(content);
+        if (!cancelled) {
+          setSiteSettings(settings);
+          setContentSections(content);
+          setSavedSiteSettings(settings);
+          setSavedContentSections(content);
+        }
       } catch (error) {
         console.error('Failed to initialize site config from database:', error);
-        // Fallback to localStorage
-        syncFromStorage();
+        if (!cancelled) {
+          syncFromStorage();
+        }
       }
+    };
+
+    const startListeners = async () => {
+      if (cancelled || !auth.currentUser) {
+        return;
+      }
+
+      const clinicsRef = collection(db, 'clinics');
+      const unsubscribeClinicsListener = onSnapshot(clinicsRef, (snapshot) => {
+        const clinicList = snapshot.docs.map((docItem) => {
+          const item = docItem.data() as Record<string, any>;
+          const featurePlan = (item.subscriptionPack?.plan || item.subscriptionPack || item.featurePlan || item.feature_plan || 'TRIAL') as FeaturePlan;
+          const packMeta = getPackMeta(featurePlan);
+          const packRecord = item.subscriptionPack && typeof item.subscriptionPack === 'object'
+            ? {
+                id: item.subscriptionPack.id || `${featurePlan}-${docItem.id}`,
+                plan: featurePlan,
+                label: item.subscriptionPack.label || packMeta.label,
+                validityDays: Number(item.subscriptionPack.validityDays || item.subscriptionPack.validity_days || packMeta.validityDays || 30),
+                status: item.subscriptionPack.status || 'ACTIVE',
+                startDate: item.subscriptionPack.startDate || item.subscriptionPack.start_date || item.createdAt || item.created_at || new Date().toISOString(),
+                expiryDate: item.subscriptionPack.expiryDate || item.subscriptionPack.expiry_date || new Date(Date.now() + Number(item.subscriptionPack.validityDays || item.subscriptionPack.validity_days || packMeta.validityDays || 30) * 24 * 60 * 60 * 1000).toISOString(),
+              }
+            : buildClinicPack(featurePlan, item.createdAt || item.created_at || new Date().toISOString());
+
+          return {
+            id: docItem.id,
+            name: item.name || '',
+            address: item.address || '',
+            phone: item.phone || '+91 ',
+            email: item.email || '',
+            specializations: Array.isArray(item.specializations) ? item.specializations : (typeof item.specializations === 'string' ? item.specializations.split(',').map((part: string) => part.trim()).filter(Boolean) : (typeof item.specialty === 'string' && item.specialty ? [item.specialty] : [])),
+            operatingHours: item.operatingHours || item.operating_hours || HOURS_OPTIONS[0],
+            featurePlan,
+            subscriptionPack: packRecord,
+            logo: item.logo || '',
+            createdAt: item.createdAt || item.created_at || new Date().toISOString(),
+          } as Clinic;
+        });
+        if (!cancelled) {
+          setClinics(clinicList);
+          setLoading(false);
+        }
+      }, (error) => {
+        console.error('Error fetching clinics:', error);
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+      setUnsubscribeClinics(unsubscribeClinicsListener);
+
+      const appointmentsRef = collection(db, 'appointments');
+      const unsubscribeAppointmentsListener = onSnapshot(appointmentsRef, (snapshot) => {
+        if (!cancelled) {
+          setAppointments(snapshot.docs.map((docItem) => {
+            const item = docItem.data() as Record<string, any>;
+            return {
+              clinicId: String(item.clinicId || item.clinic_id || ''),
+              appointmentType: String(item.appointmentType || item.appointment_type || '').toUpperCase(),
+              status: String(item.status || '').toLowerCase(),
+            };
+          }));
+        }
+      }, (error) => {
+        console.error('Error fetching appointment records:', error);
+      });
+      setUnsubscribeAppointments(unsubscribeAppointmentsListener);
+
+      const paymentsRef = collection(db, 'payments');
+      const unsubscribePaymentsListener = onSnapshot(paymentsRef, (snapshot) => {
+        const paymentList = snapshot.docs.map((docItem) => {
+          const item = docItem.data() as Record<string, any>;
+          return {
+            id: docItem.id,
+            clinicId: item.clinicId || item.clinic_id || '',
+            clinicName: item.clinicName || item.clinic_name || 'Unnamed clinic',
+            pack: (item.pack || item.plan || 'TRIAL') as FeaturePlan,
+            amount: Number(item.amount || 0),
+            durationDays: Number(item.durationDays || item.duration_days || 30),
+            status: (item.status || 'PAID') as 'PAID' | 'PENDING',
+            paidAt: item.paidAt || item.paid_at || item.createdAt || new Date().toISOString(),
+            startDate: item.startDate || item.start_date || item.paidAt || item.paid_at || new Date().toISOString(),
+            expiryDate: item.expiryDate || item.expiry_date || new Date(Date.now() + Number(item.durationDays || item.duration_days || 30) * 24 * 60 * 60 * 1000).toISOString(),
+            notes: item.notes || '',
+          };
+        });
+        if (!cancelled) {
+          setPayments(paymentList.sort((left, right) => new Date(right.paidAt).getTime() - new Date(left.paidAt).getTime()));
+        }
+      }, (error) => {
+        console.error('Error fetching payment records:', error);
+        if (!cancelled) {
+          setPayments([]);
+        }
+      });
+      setUnsubscribePayments(unsubscribePaymentsListener);
+
+      const auditLogsRef = collection(db, 'audit_logs');
+      const auditLogsQuery = query(auditLogsRef, orderBy('timestamp', 'desc'));
+      const unsubscribeAuditLogsListener = onSnapshot(auditLogsQuery, (snapshot) => {
+        const logs = snapshot.docs.map((docItem) => {
+          const item = docItem.data() as Record<string, any>;
+          return {
+            id: docItem.id,
+            title: item.title || '',
+            detail: item.detail || '',
+            time: item.time || item.timestamp?.toDate?.()?.toLocaleString() || new Date().toLocaleString(),
+            timestamp: item.timestamp
+          };
+        });
+        if (!cancelled) {
+          setAuditLogs(logs);
+        }
+      }, (error) => {
+        console.error('Error fetching audit logs:', error);
+        if (!cancelled) {
+          setAuditLogs([
+            { id: '1', title: 'Clinic records synced', detail: 'Latest clinic data loaded from database.', time: 'Current sync', timestamp: new Date() },
+            { id: '2', title: 'Queue metrics refreshed', detail: 'Operational data recalculated from live clinic records.', time: 'Current sync', timestamp: new Date() },
+            { id: '3', title: 'Campaign status reviewed', detail: 'WhatsApp automation status reflects active system configuration.', time: 'Current sync', timestamp: new Date() },
+            { id: '4', title: 'Access policy matched', detail: 'User permissions remain aligned with the current roster.', time: 'Current sync', timestamp: new Date() },
+          ]);
+        }
+      });
+      setUnsubscribeAuditLogs(unsubscribeAuditLogsListener);
+
+      const setupUsersListener = async () => {
+        const staffPaths = ['staff_users', 'users'];
+        const unsubscribeFunctions: (() => void)[] = [];
+
+        for (const pathName of staffPaths) {
+          try {
+            const staffRef = collection(db, pathName);
+            const unsubscribe = onSnapshot(staffRef, () => {
+              fetchUsers();
+            });
+            unsubscribeFunctions.push(unsubscribe);
+          } catch (error) {
+            console.warn(`Unable to set up listener for ${pathName}:`, error);
+          }
+        }
+
+        try {
+          const doctorsRef = collection(db, 'doctors');
+          const unsubscribe = onSnapshot(doctorsRef, () => {
+            fetchUsers();
+          });
+          unsubscribeFunctions.push(unsubscribe);
+        } catch (error) {
+          console.warn('Unable to set up listener for doctors:', error);
+        }
+
+        const combinedUnsubscribe = () => {
+          unsubscribeFunctions.forEach(unsub => unsub());
+        };
+        setUnsubscribeUsers(combinedUnsubscribe);
+        fetchUsers();
+      };
+
+      await setupUsersListener();
+      cleanupListeners = () => {
+        if (unsubscribeClinics) unsubscribeClinics();
+        if (unsubscribeUsers) unsubscribeUsers();
+        if (unsubscribeAppointments) unsubscribeAppointments();
+        if (unsubscribePayments) unsubscribePayments();
+        if (unsubscribeAuditLogs) unsubscribeAuditLogs();
+      };
     };
 
     initializeFromDatabase();
     window.addEventListener('site-config-changed', syncFromStorage);
     window.addEventListener('storage', syncFromStorage);
 
-    // Set up real-time listeners
-    const clinicsRef = collection(db, 'clinics');
-    const unsubscribeClinicsListener = onSnapshot(clinicsRef, (snapshot) => {
-      const clinicList = snapshot.docs.map((docItem) => {
-        const item = docItem.data() as Record<string, any>;
-        const featurePlan = (item.subscriptionPack?.plan || item.subscriptionPack || item.featurePlan || item.feature_plan || 'TRIAL') as FeaturePlan;
-        const packMeta = getPackMeta(featurePlan);
-        const packRecord = item.subscriptionPack && typeof item.subscriptionPack === 'object'
-          ? {
-              id: item.subscriptionPack.id || `${featurePlan}-${docItem.id}`,
-              plan: featurePlan,
-              label: item.subscriptionPack.label || packMeta.label,
-              validityDays: Number(item.subscriptionPack.validityDays || item.subscriptionPack.validity_days || packMeta.validityDays || 30),
-              status: item.subscriptionPack.status || 'ACTIVE',
-              startDate: item.subscriptionPack.startDate || item.subscriptionPack.start_date || item.createdAt || item.created_at || new Date().toISOString(),
-              expiryDate: item.subscriptionPack.expiryDate || item.subscriptionPack.expiry_date || new Date(Date.now() + Number(item.subscriptionPack.validityDays || item.subscriptionPack.validity_days || packMeta.validityDays || 30) * 24 * 60 * 60 * 1000).toISOString(),
-            }
-          : buildClinicPack(featurePlan, item.createdAt || item.created_at || new Date().toISOString());
-
-        return {
-          id: docItem.id,
-          name: item.name || '',
-          address: item.address || '',
-          phone: item.phone || '+91 ',
-          email: item.email || '',
-          specializations: Array.isArray(item.specializations) ? item.specializations : (typeof item.specializations === 'string' ? item.specializations.split(',').map((part: string) => part.trim()).filter(Boolean) : (typeof item.specialty === 'string' && item.specialty ? [item.specialty] : [])),
-          operatingHours: item.operatingHours || item.operating_hours || HOURS_OPTIONS[0],
-          featurePlan,
-          subscriptionPack: packRecord,
-          logo: item.logo || '',
-          createdAt: item.createdAt || item.created_at || new Date().toISOString(),
-        } as Clinic;
-      });
-      setClinics(clinicList);
-      setLoading(false);
-    }, (error) => {
-      console.error('Error fetching clinics:', error);
-      setLoading(false);
-    });
-    setUnsubscribeClinics(unsubscribeClinicsListener);
-
-    const appointmentsRef = collection(db, 'appointments');
-    const unsubscribeAppointmentsListener = onSnapshot(appointmentsRef, (snapshot) => {
-      setAppointments(snapshot.docs.map((docItem) => {
-        const item = docItem.data() as Record<string, any>;
-        return {
-          clinicId: String(item.clinicId || item.clinic_id || ''),
-          appointmentType: String(item.appointmentType || item.appointment_type || '').toUpperCase(),
-          status: String(item.status || '').toLowerCase(),
-        };
-      }));
-    }, (error) => {
-      console.error('Error fetching appointment records:', error);
-    });
-    setUnsubscribeAppointments(unsubscribeAppointmentsListener);
-
-    const paymentsRef = collection(db, 'payments');
-    const unsubscribePaymentsListener = onSnapshot(paymentsRef, (snapshot) => {
-      const paymentList = snapshot.docs.map((docItem) => {
-        const item = docItem.data() as Record<string, any>;
-        return {
-          id: docItem.id,
-          clinicId: item.clinicId || item.clinic_id || '',
-          clinicName: item.clinicName || item.clinic_name || 'Unnamed clinic',
-          pack: (item.pack || item.plan || 'TRIAL') as FeaturePlan,
-          amount: Number(item.amount || 0),
-          durationDays: Number(item.durationDays || item.duration_days || 30),
-          status: (item.status || 'PAID') as 'PAID' | 'PENDING',
-          paidAt: item.paidAt || item.paid_at || item.createdAt || new Date().toISOString(),
-          startDate: item.startDate || item.start_date || item.paidAt || item.paid_at || new Date().toISOString(),
-          expiryDate: item.expiryDate || item.expiry_date || new Date(Date.now() + Number(item.durationDays || item.duration_days || 30) * 24 * 60 * 60 * 1000).toISOString(),
-          notes: item.notes || '',
-        };
-      });
-      setPayments(paymentList.sort((left, right) => new Date(right.paidAt).getTime() - new Date(left.paidAt).getTime()));
-    }, (error) => {
-      console.error('Error fetching payment records:', error);
-      setPayments([]);
-    });
-    setUnsubscribePayments(unsubscribePaymentsListener);
-
-    // Set up real-time listener for audit logs
-    const auditLogsRef = collection(db, 'audit_logs');
-    const auditLogsQuery = query(auditLogsRef, orderBy('timestamp', 'desc'));
-    const unsubscribeAuditLogsListener = onSnapshot(auditLogsQuery, (snapshot) => {
-      const logs = snapshot.docs.map((docItem) => {
-        const item = docItem.data() as Record<string, any>;
-        return {
-          id: docItem.id,
-          title: item.title || '',
-          detail: item.detail || '',
-          time: item.time || item.timestamp?.toDate?.()?.toLocaleString() || new Date().toLocaleString(),
-          timestamp: item.timestamp
-        };
-      });
-      setAuditLogs(logs);
-    }, (error) => {
-      console.error('Error fetching audit logs:', error);
-      // Fallback to static logs if collection doesn't exist
-      setAuditLogs([
-        { id: '1', title: 'Clinic records synced', detail: 'Latest clinic data loaded from database.', time: 'Current sync', timestamp: new Date() },
-        { id: '2', title: 'Queue metrics refreshed', detail: 'Operational data recalculated from live clinic records.', time: 'Current sync', timestamp: new Date() },
-        { id: '3', title: 'Campaign status reviewed', detail: 'WhatsApp automation status reflects active system configuration.', time: 'Current sync', timestamp: new Date() },
-        { id: '4', title: 'Access policy matched', detail: 'User permissions remain aligned with the current roster.', time: 'Current sync', timestamp: new Date() },
-      ]);
-    });
-    setUnsubscribeAuditLogs(unsubscribeAuditLogsListener);
-
-    // For users, we need to listen to multiple collections
-    const setupUsersListener = async () => {
-      const staffPaths = ['staff_users', 'users'];
-      const unsubscribeFunctions: (() => void)[] = [];
-
-      for (const pathName of staffPaths) {
-        try {
-          const staffRef = collection(db, pathName);
-          const unsubscribe = onSnapshot(staffRef, () => {
-            // Trigger a full user fetch when any staff collection changes
-            fetchUsers();
-          });
-          unsubscribeFunctions.push(unsubscribe);
-        } catch (error) {
-          console.warn(`Unable to set up listener for ${pathName}:`, error);
-        }
+    const authUnsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        cleanupListeners?.();
+        setClinics([]);
+        setLoading(false);
+        return;
       }
 
-      // Also listen to doctors collection
-      try {
-        const doctorsRef = collection(db, 'doctors');
-        const unsubscribe = onSnapshot(doctorsRef, () => {
-          fetchUsers();
-        });
-        unsubscribeFunctions.push(unsubscribe);
-      } catch (error) {
-        console.warn('Unable to set up listener for doctors:', error);
-      }
-
-      // Combine all unsubscribe functions
-      const combinedUnsubscribe = () => {
-        unsubscribeFunctions.forEach(unsub => unsub());
-      };
-      setUnsubscribeUsers(combinedUnsubscribe);
-      
-      // Initial fetch
-      fetchUsers();
-    };
-
-    setupUsersListener();
+      startListeners();
+    });
 
     return () => {
+      cancelled = true;
+      cleanupListeners?.();
+      authUnsubscribe();
       window.removeEventListener('site-config-changed', syncFromStorage);
       window.removeEventListener('storage', syncFromStorage);
-      // Clean up all listeners
-      if (unsubscribeClinics) unsubscribeClinics();
-      if (unsubscribeUsers) unsubscribeUsers();
-      if (unsubscribeAppointments) unsubscribeAppointments();
-      if (unsubscribePayments) unsubscribePayments();
-      if (unsubscribeAuditLogs) unsubscribeAuditLogs();
     };
   }, []);
 
