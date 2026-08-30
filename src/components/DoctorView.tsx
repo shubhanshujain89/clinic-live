@@ -171,7 +171,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   };
 
   // Filter queues
-  const activeToken = tokens.find(t => t.status === 'SERVING');
+  const activeToken = tokens.find(t => t.status === 'SERVING' || t.status === 'IN_CONSULTATION');
   const waitingTokens = tokens.filter(t => t.status === 'WAITING');
   const completedTokens = tokens.filter(t => t.status === 'COMPLETED');
   const holdTokens = tokens.filter(t => t.status === 'HOLD');
@@ -231,76 +231,14 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
     if (!activeToken) return;
     setIsSavingNotes(true);
     try {
-      const completedTime = new Date().toISOString();
-      const durationSecs = elapsedSeconds > 0 ? elapsedSeconds : 480;
-
-      // Update current token as completed
-      await updateDoc(doc(db, 'tokens', activeToken.id), {
-        status: 'COMPLETED',
-        completedAt: completedTime,
-        consultationDurationSeconds: durationSecs,
-        doctorNotes: doctorRxNotes,
+      const response = await fetch(`/api/staff/queue/${encodeURIComponent(activeToken.id)}/complete`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doctorNotes: doctorRxNotes }),
       });
-
-      // Calculate rolling average
-      const recentDurations = [
-        ...completedTokens.slice(-4).map(t => (t.consultationDurationSeconds || 480) / 60),
-        durationSecs / 60,
-      ];
-      const newRollingAvg = Number(
-        (recentDurations.reduce((a, b) => a + b, 0) / recentDurations.length).toFixed(1)
-      );
-
-      // Find next waiting token
-      const nextToken = waitingTokens.sort((a, b) => {
-        // VIP first, then sequence
-        const pA = a.priority ?? 10;
-        const pB = b.priority ?? 10;
-        if (pA !== pB) return pA - pB;
-        return a.sequenceNumber - b.sequenceNumber;
-      })[0];
-
-      if (nextToken) {
-        await updateDoc(doc(db, 'tokens', nextToken.id), {
-          status: 'SERVING',
-          calledAt: new Date().toISOString(),
-        });
-
-        await updateDoc(doc(db, 'clinics', clinic.id), {
-          currentRunningToken: nextToken.tokenNumber,
-          currentRunningTokenId: nextToken.id,
-          avgConsultationMinutes: newRollingAvg,
-        });
-
-        // Trigger TV audio & WhatsApp
-        soundManager.announceToken(nextToken.tokenNumber, nextToken.patientName, clinic.cabinNumber);
-        await WhatsAppService.sendWhatsAppNotification(
-          nextToken,
-          'TOKEN_CALLED_NOW',
-          clinic.name,
-          clinic.doctorName,
-          clinic.cabinNumber
-        );
-
-        // Notify the second patient that their turn is approaching
-        const followingToken = waitingTokens.find(t => t.id !== nextToken.id);
-        if (followingToken) {
-          await WhatsAppService.sendWhatsAppNotification(
-            followingToken,
-            'QUEUE_APPROACHING',
-            clinic.name,
-            clinic.doctorName,
-            clinic.cabinNumber,
-            '1'
-          );
-        }
-      } else {
-        await updateDoc(doc(db, 'clinics', clinic.id), {
-          currentRunningToken: 'None',
-          currentRunningTokenId: '',
-          avgConsultationMinutes: newRollingAvg,
-        });
-      }
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Unable to complete consultation.');
 
       setDoctorRxNotes('');
     } catch (err) {
@@ -337,6 +275,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
     if (pA !== pB) return pA - pB;
     return (a.sequenceNumber || 0) - (b.sequenceNumber || 0);
   })[0];
+  const calledToken = tokens.find(t => t.status === 'CALLED');
 
   const handleCallNextToken = async () => {
     if (activeToken || !nextToken) return;
@@ -351,15 +290,16 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   };
 
   const handleStartConsultation = async () => {
-    if (activeToken || !nextToken) return;
-    await updateDoc(doc(db, 'tokens', nextToken.id), {
-      status: 'SERVING',
-      calledAt: new Date().toISOString(),
+    if (activeToken || !calledToken) return;
+    const response = await fetch(`/api/staff/queue/${encodeURIComponent(calledToken.id)}/start`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
     });
-    await updateDoc(doc(db, 'clinics', clinic.id), {
-      currentRunningToken: nextToken.tokenNumber,
-      currentRunningTokenId: nextToken.id,
-    });
+    if (!response.ok) {
+      const payload = await response.json();
+      throw new Error(payload.error || 'Unable to start consultation.');
+    }
   };
 
   const handleHoldConsultation = async () => {

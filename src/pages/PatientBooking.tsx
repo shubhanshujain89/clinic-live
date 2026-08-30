@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, Stethoscope, ChevronRight, Check, Heart } from 'lucide-react';
-import { db, collection, getDocs, query, where } from '../lib/firebase';
 
 interface Clinic {
   id: string;
@@ -52,12 +51,10 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
 
   const fetchClinics = async () => {
     try {
-      const snapshot = await getDocs(collection(db, 'clinics'));
-      const clinicList = snapshot.docs.map(doc => {
-        const data = doc.data() as Clinic;
-        return { id: doc.id, ...data };
-      });
-      setClinics(clinicList);
+      const response = await fetch('/api/clinics');
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Unable to load clinics.');
+      setClinics((payload || []) as Clinic[]);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching clinics:', error);
@@ -67,27 +64,14 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
 
   const fetchDoctors = async (clinicId: string, specialization?: string) => {
     try {
-      let q;
+      const url = new URL(`/api/clinics/${clinicId}/doctors`, window.location.origin);
       if (specialization) {
-        q = query(
-          collection(db, 'doctors'),
-          where('clinicId', '==', clinicId),
-          where('specialization', '==', specialization),
-          where('status', '==', 'active')
-        );
-      } else {
-        q = query(
-          collection(db, 'doctors'),
-          where('clinicId', '==', clinicId),
-          where('status', '==', 'active')
-        );
+        url.searchParams.set('specialization', specialization);
       }
-      const snapshot = await getDocs(q);
-      const doctorList = snapshot.docs.map(doc => {
-        const data = doc.data() as Doctor;
-        return { id: doc.id, ...data };
-      });
-      setDoctors(doctorList);
+      const response = await fetch(url.toString());
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Unable to load doctors.');
+      setDoctors((payload || []) as Doctor[]);
     } catch (error) {
       console.error('Error fetching doctors:', error);
     }

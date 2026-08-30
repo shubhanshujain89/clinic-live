@@ -229,15 +229,13 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
 
       // Pick next token (VIP priority honored)
       const nextToken = waitingTokens[0];
-      await updateDoc(doc(db, 'tokens', nextToken.id), {
-        status: 'SERVING',
-        calledAt: new Date().toISOString(),
+      const response = await fetch(`/api/staff/queue/${encodeURIComponent(nextToken.id)}/call`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
       });
-
-      await updateDoc(doc(db, 'clinics', clinic.id), {
-        currentRunningToken: nextToken.tokenNumber,
-        currentRunningTokenId: nextToken.id,
-      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Unable to call next token.');
 
       // Sound announcement & Meta WhatsApp message
       soundManager.announceToken(nextToken.tokenNumber, nextToken.patientName, clinic.cabinNumber);
