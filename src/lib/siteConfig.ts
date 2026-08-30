@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { doc, getDoc, setDoc } from './firebase';
 
 export interface SiteSettings {
   siteName: string;
@@ -63,8 +62,6 @@ export const defaultContentSections: ContentSections = {
 
 const SETTINGS_KEY = 'clinicflow-site-settings';
 const CONTENT_KEY = 'clinicflow-site-content';
-const SETTINGS_DOC_PATH = 'site/settings';
-const CONTENT_DOC_PATH = 'site/content';
 
 // Load from localStorage (immediate)
 export function loadSiteSettings(): SiteSettings {
@@ -91,12 +88,12 @@ export function loadContentSections(): ContentSections {
 
 export function saveSiteSettings(settings: SiteSettings) {
   saveToLocalStorage(SETTINGS_KEY, settings);
-  saveToDatabase(SETTINGS_DOC_PATH, settings);
+  saveToDatabase('site/settings', settings);
 }
 
 export function saveContentSections(sections: ContentSections) {
   saveToLocalStorage(CONTENT_KEY, sections);
-  saveToDatabase(CONTENT_DOC_PATH, sections);
+  saveToDatabase('site/content', sections);
 }
 
 // Save to localStorage (immediate UI update)
@@ -110,7 +107,16 @@ function saveToLocalStorage(key: string, data: any) {
 // Save to database (persistent across devices)
 async function saveToDatabase(path: string, data: any) {
   try {
-    await setDoc(doc(null, path), data);
+    const endpoint = path === 'site/settings' ? '/api/site/settings' : '/api/site/content';
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to save to database: ${response.status}`);
+    }
   } catch (error) {
     console.error('Failed to save to database:', error);
   }
@@ -119,9 +125,12 @@ async function saveToDatabase(path: string, data: any) {
 // Load from database (for cross-device sync)
 export async function loadSiteSettingsFromDatabase(): Promise<SiteSettings> {
   try {
-    const snapshot = await getDoc(doc(null, SETTINGS_DOC_PATH));
-    if (snapshot.exists()) {
-      const data = snapshot.data();
+    const response = await fetch('/api/site/settings', {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (response.ok) {
+      const data = await response.json();
       return { ...defaultSiteSettings, ...data };
     }
   } catch (error) {
@@ -132,9 +141,12 @@ export async function loadSiteSettingsFromDatabase(): Promise<SiteSettings> {
 
 export async function loadContentSectionsFromDatabase(): Promise<ContentSections> {
   try {
-    const snapshot = await getDoc(doc(null, CONTENT_DOC_PATH));
-    if (snapshot.exists()) {
-      const data = snapshot.data();
+    const response = await fetch('/api/site/content', {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (response.ok) {
+      const data = await response.json();
       return { ...defaultContentSections, ...data };
     }
   } catch (error) {
