@@ -4,6 +4,8 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import net from 'net';
 import { getDatabase, readDoc, listQuery, writeDoc, updateDoc, deleteDoc, findUserByEmail, verifyPassword, createPublicBooking, getPublicTracking, resetUserPassword, DEFAULT_USER_PASSWORD } from './server/db';
+import { repositories } from './server/db/repositories/index.js';
+import { services } from './server/db/services/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -113,6 +115,230 @@ app.get('/api/status', (_req, res) => {
   });
 });
 
+const parseSpecializationList = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.filter(Boolean).map(String);
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean).map(String);
+    } catch {
+      // Fall through to comma-splitting
+    }
+    return trimmed
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
+app.get('/api/clinics', async (_req, res) => {
+  try {
+    const clinics = await repositories.clinics.findActive();
+    const publicClinics = clinics.map((clinic) => ({
+      id: clinic.id,
+      name: clinic.name,
+      address: clinic.address || '',
+      phone: clinic.phone || '',
+      email: clinic.email || '',
+      specializations: parseSpecializationList(clinic.specializations),
+      operatingHours: clinic.operatingHours || '',
+    }));
+    res.status(200).json(publicClinics);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to load clinics.' });
+  }
+});
+
+app.get('/api/clinics/:clinicId/doctors', async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+    const specializationFilter = String(req.query.specialization || '').trim();
+    const doctors = await repositories.doctors.findActiveByClinicId(clinicId);
+    const publicDoctors = doctors
+      .filter((doctor) => !specializationFilter || !doctor.specialization || doctor.specialization.toLowerCase() === specializationFilter.toLowerCase())
+      .map((doctor) => ({
+        id: doctor.id,
+        clinicId: doctor.clinicId,
+        name: doctor.name,
+        specialization: doctor.specialization || '',
+        consultationFee: Number(doctor.consultationFee || 0),
+        availableDays: Array.isArray(doctor.availableDays) ? doctor.availableDays : [],
+        availableHours: doctor.availableHours || '',
+        rating: Number(doctor.rating || 0),
+      }));
+    res.status(200).json(publicDoctors);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to load doctors.' });
+  }
+});
+
+app.get('/api/staff/queue/:clinicId', async (req, res) => {
+  try {
+    const context = authContext(req);
+    const requestedClinicId = String(req.params.clinicId || '');
+    if (!context || (context.role !== 'SUPER_ADMIN' && context.clinicId !== requestedClinicId)) {
+      res.status(403).json({ error: 'Clinic access denied.' });
+      return;
+    }
+
+    const clinic = await repositories.clinics.findById(requestedClinicId);
+    if (!clinic) {
+      res.status(404).json({ error: 'Clinic not found.' });
+      return;
+    }
+
+    const session = await repositories.sessions.findActiveByClinicId(requestedClinicId);
+    const doctors = await repositories.doctors.findActiveByClinicId(requestedClinicId);
+    const scopedDoctors = context.role === 'DOCTOR'
+      ? doctors.filter((doctor) => doctor.id === context.doctorId)
+      : doctors;
+    const tokens = session
+      ? (await Promise.all(scopedDoctors.map((doctor) => repositories.tokens.findByDoctorAndSession(doctor.id, session.id)))).flat()
+      : [];
+
+    res.status(200).json({
+      clinic: {
+        id: clinic.id,
+        name: clinic.name,
+        doctorName: clinic.doctorName || '',
+        specialty: clinic.specialty || '',
+        cabinNumber: clinic.cabinNumber || '',
+        doctorStatus: clinic.doctorStatus,
+        delayMinutes: clinic.delayMinutes || 0,
+        delayReason: clinic.delayReason || '',
+        avgConsultationMinutes: clinic.avgConsultationMinutes || 0,
+        consultationFee: clinic.consultationFee || 0,
+        currentRunningToken: clinic.currentRunningToken || '',
+        currentRunningTokenId: clinic.currentRunningTokenId || '',
+        activeSessionId: clinic.activeSessionId || session?.id || '',
+        totalPatientsToday: clinic.totalPatientsToday || 0,
+        revenueToday: clinic.revenueToday || 0,
+        featurePlan: clinic.featurePlan,
+        whatsappNotificationsEnabled: clinic.whatsappNotificationsEnabled,
+        hasPaymentGateway: clinic.hasPaymentGateway,
+        clinicUpiId: clinic.clinicUpiId || '',
+      },
+      session: session ? {
+        id: session.id,
+        clinicId: session.clinicId,
+        date: session.date.toISOString(),
+        activeTokenId: session.activeTokenId || '',
+        activeTokenNumber: session.activeTokenNumber || '',
+        status: session.status,
+        totalTokensIssued: session.totalTokensIssued,
+        rollingAvgMinutes: session.rollingAvgMinutes,
+        completedCount: session.completedCount,
+        totalRevenue: session.totalRevenue,
+      } : null,
+      tokens: tokens.map((token) => ({
+        id: token.id,
+        clinicId: token.clinicId,
+        sessionId: token.sessionId,
+        tokenNumber: token.tokenNumber,
+        sequenceNumber: token.sequenceNumber,
+        patientId: token.patientId,
+        patientName: token.patientName,
+        patientPhone: token.patientPhone,
+        patientAge: token.patientAge,
+        patientGender: token.patientGender,
+        tokenType: token.tokenType,
+        status: token.status,
+        isVip: token.isVip,
+        isHold: token.isHold,
+        priority: token.priority,
+        amountPaid: token.amountPaid,
+        paymentMode: token.paymentMode,
+        paymentMethod: token.paymentMethod,
+        paymentStatus: token.paymentStatus,
+        createdAt: token.createdAt.toISOString(),
+        calledAt: token.calledAt?.toISOString(),
+        completedAt: token.completedAt?.toISOString(),
+        consultationDurationSeconds: token.consultationDurationSeconds,
+        preConsultationNotes: token.preConsultationNotes,
+        weight: token.weight,
+        temperature: token.temperature,
+        bloodPressure: token.bloodPressure,
+        triageNotes: token.triageNotes,
+        doctorNotes: token.doctorNotes,
+        whatsappSentCount: token.whatsappSentCount,
+        whatsappLastSentAt: token.whatsappLastSentAt?.toISOString(),
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to load queue.' });
+  }
+});
+
+app.post('/api/staff/queue/:tokenId/call', async (req, res) => {
+  try {
+    const context = authContext(req);
+    if (!context || !context.clinicId) {
+      res.status(401).json({ error: 'Authentication required.' });
+      return;
+    }
+    const token = await services.queue.callTokenForClinic(
+      String(req.params.tokenId || ''),
+      context.clinicId,
+      context.role === 'DOCTOR' ? context.doctorId || undefined : undefined
+    );
+    if (!token) {
+      res.status(409).json({ error: 'Token is unavailable or has already been called.' });
+      return;
+    }
+    res.status(200).json(token);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to call token.' });
+  }
+});
+
+app.post('/api/staff/queue/:tokenId/start', async (req, res) => {
+  try {
+    const context = authContext(req);
+    if (!context || !context.clinicId) {
+      res.status(401).json({ error: 'Authentication required.' });
+      return;
+    }
+    const token = await services.queue.startTokenForClinic(
+      String(req.params.tokenId || ''),
+      context.clinicId,
+      context.role === 'DOCTOR' ? context.doctorId || undefined : undefined
+    );
+    if (!token) {
+      res.status(409).json({ error: 'Token must be CALLED and available to start.' });
+      return;
+    }
+    res.status(200).json(token);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to start consultation.' });
+  }
+});
+
+app.post('/api/staff/queue/:tokenId/complete', async (req, res) => {
+  try {
+    const context = authContext(req);
+    if (!context || !context.clinicId) {
+      res.status(401).json({ error: 'Authentication required.' });
+      return;
+    }
+    const token = await services.queue.completeTokenForClinic(
+      String(req.params.tokenId || ''),
+      context.clinicId,
+      context.role === 'DOCTOR' ? context.doctorId || undefined : undefined,
+      typeof req.body?.doctorNotes === 'string' ? req.body.doctorNotes : ''
+    );
+    if (!token) {
+      res.status(409).json({ error: 'Token must be IN_CONSULTATION and available to complete.' });
+      return;
+    }
+    res.status(200).json(token);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to complete consultation.' });
+  }
+});
+
 app.post('/api/patient/book', async (req, res) => {
   try {
     const { clinicId, doctorId, patientName, phone, age, reason } = req.body || {};
@@ -146,9 +372,88 @@ app.get('/api/patient/track/:trackingId', async (req, res) => {
       res.status(404).json({ error: 'Tracking record not found.' });
       return;
     }
-    res.status(200).json(tracking);
+    res.status(200).json({
+      ...tracking,
+      estimatedConsultationTime: tracking.estimatedConsultationMinutes,
+    });
   } catch (error) {
     res.status(503).json({ error: 'Connection temporarily unavailable.' });
+  }
+});
+
+app.patch('/api/patient/track/:trackingId/notes', async (req, res) => {
+  try {
+    const trackingId = String(req.params.trackingId || '');
+    if (!/^[A-Za-z0-9_-]{12}$/.test(trackingId)) {
+      res.status(400).json({ error: 'Invalid tracking ID.' });
+      return;
+    }
+
+    const patient = await repositories.patients.findByTrackingId(trackingId);
+    if (!patient) {
+      res.status(404).json({ error: 'Tracking record not found.' });
+      return;
+    }
+
+    const token = await repositories.tokens.findByPatientId(patient.id);
+    if (!token) {
+      res.status(404).json({ error: 'Tracking record not found.' });
+      return;
+    }
+
+    const allowedKeys = new Set([
+      'symptoms',
+      'duration',
+      'severity',
+      'painScale',
+      'allergies',
+      'feverTemp',
+      'temperature',
+      'bpReading',
+      'bloodPressure',
+      'weight',
+      'attachments',
+      'submittedAt',
+      'lastEditedBy',
+    ]);
+
+    const incoming = req.body || {};
+    const notes = Object.keys(incoming || {}).reduce<Record<string, any>>((acc, key) => {
+      if (allowedKeys.has(key)) {
+        acc[key] = incoming[key];
+      }
+      return acc;
+    }, {});
+
+    if (!notes.symptoms || typeof notes.symptoms !== 'string' || !String(notes.symptoms).trim()) {
+      res.status(400).json({ error: 'Symptoms are required.' });
+      return;
+    }
+
+    if (notes.attachments !== undefined && !Array.isArray(notes.attachments)) {
+      res.status(400).json({ error: 'Attachments must be an array.' });
+      return;
+    }
+
+    const existingNotes = token.preConsultationNotes && typeof token.preConsultationNotes === 'object'
+      ? token.preConsultationNotes
+      : {};
+
+    const nextNotes = {
+      ...existingNotes,
+      ...notes,
+      submittedAt: new Date().toISOString(),
+      lastEditedBy: 'PATIENT',
+    };
+
+    await repositories.tokens.update(token.id, { preConsultationNotes: nextNotes });
+    res.status(200).json({
+      ok: true,
+      trackingId,
+      notes: nextNotes,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to update patient notes.' });
   }
 });
 
@@ -161,7 +466,7 @@ app.post('/api/auth/login', async (req, res) => {
     
     if (process.env.DEBUG_MODE === 'true') console.log(`[LOGIN] Attempt: email=${normalizedEmail}, role=${normalizedRole}`);
 
-    const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'admin@123');
+    const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || '';
     const superAdminUsername = process.env.SUPER_ADMIN_USERNAME || 'admin';
 
     let context: AuthContext | null = null;
@@ -259,12 +564,14 @@ app.get('/api/db/health', async (_req, res) => {
     await getDatabase();
     res.status(200).json({
       status: 'ok',
-      database: 'sqlite',
-      path: path.join(process.cwd(), 'data', 'clinicflow.sqlite'),
+      database: 'mysql',
+      engine: 'mysql',
+      message: 'MySQL-backed database connection is active.',
     });
   } catch (error) {
     res.status(500).json({
       status: 'error',
+      database: 'mysql',
       message: error instanceof Error ? error.message : 'Database unavailable',
     });
   }
@@ -411,32 +718,11 @@ app.post('/api/whatsapp/webhook', (req, res) => {
   return res.sendStatus(404);
 });
 
-app.post('/api/whatsapp/send-template', (req, res) => {
-  const { to, templateName, components, tokenNumber, patientName } = req.body;
-  console.log(`[WhatsApp API] Triggering template "${templateName}" to ${to} for token #${tokenNumber}`);
-
-  const mockMetaResponse = {
-    messaging_product: 'whatsapp',
-    contacts: [
-      {
-        input: to,
-        wa_id: to.replace(/[^0-9]/g, ''),
-      },
-    ],
-    messages: [
-      {
-        id: `wamid.HBgL${Date.now()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-        message_status: 'accepted',
-      },
-    ],
-  };
-
-  return res.status(200).json({
-    success: true,
-    metaResponse: mockMetaResponse,
-    deliveredTo: patientName,
-    phone: to,
-    timestamp: new Date().toISOString(),
+app.post('/api/whatsapp/send-template', (_req, res) => {
+  return res.status(503).json({
+    success: false,
+    status: 'not_configured',
+    message: 'WhatsApp integration is not configured or active in this environment.',
   });
 });
 

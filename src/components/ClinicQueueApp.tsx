@@ -6,10 +6,6 @@ import {
   UserRole
 } from '../types/queue';
 import {
-  db,
-  doc,
-  collection,
-  onSnapshot,
   auth,
   signInWithPopup,
   googleProvider,
@@ -21,7 +17,6 @@ import {
   INITIAL_CLINIC_DATA,
   INITIAL_SESSION_DATA,
   INITIAL_TOKENS_DATA,
-  seedClinicDatabase,
   resetClinicDatabase
 } from '../lib/seedData';
 import { Navbar } from './Navbar';
@@ -90,63 +85,29 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
     return () => unsubscribe();
   }, []);
 
-  // Real-time Firestore Listeners
+  // Load the current clinic queue from MySQL. Queue mutations remain on Firebase until migrated.
   useEffect(() => {
-    const clinicRef = doc(db, 'clinics', clinicId);
-    const unsubClinic = onSnapshot(
-      clinicRef,
-      (docSnap) => {
-        if (docSnap.exists()) {
-          setClinic(docSnap.data() as Clinic);
-        } else {
-          seedClinicDatabase(false);
+    const controller = new AbortController();
+    const loadQueue = async () => {
+      try {
+        const response = await fetch(`/api/staff/queue/${encodeURIComponent(clinicId)}`, {
+          signal: controller.signal,
+          credentials: 'include',
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || 'Unable to load queue.');
+        setClinic(payload.clinic as Clinic);
+        setSession(payload.session as QueueSession | null);
+        setTokens((payload.tokens || []) as TokenItem[]);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.warn('MySQL queue load failed:', error);
         }
-      },
-      (err) => {
-        console.warn('Firestore clinic subscription fallback:', err);
       }
-    );
-
-    const sessionRef = doc(db, 'queue_sessions', `sess_${clinicId}`);
-    const unsubSession = onSnapshot(
-      sessionRef,
-      (docSnap) => {
-        if (docSnap.exists()) {
-          setSession(docSnap.data() as QueueSession);
-        }
-      },
-      (err) => {
-        console.warn('Firestore session subscription:', err);
-      }
-    );
-
-    const tokensRef = collection(db, 'tokens');
-    const unsubTokens = onSnapshot(
-      tokensRef,
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const items: TokenItem[] = [];
-          snapshot.forEach((d) => {
-            const item = d.data() as TokenItem;
-            if (item.clinicId === clinicId) {
-              items.push(item);
-            }
-          });
-          setTokens(items.length ? items : INITIAL_TOKENS_DATA.filter((token) => token.clinicId === clinicId));
-        } else {
-          seedClinicDatabase(false);
-        }
-      },
-      (err) => {
-        console.warn('Firestore tokens subscription fallback:', err);
-      }
-    );
-
-    return () => {
-      unsubClinic();
-      unsubSession();
-      unsubTokens();
     };
+
+    loadQueue();
+    return () => controller.abort();
   }, [clinicId]);
 
   const handleGoogleSignIn = async () => {

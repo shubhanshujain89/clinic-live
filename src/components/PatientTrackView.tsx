@@ -20,7 +20,6 @@ import {
   Hospital
 } from 'lucide-react';
 import { Clinic, TokenItem, QueueSession, PreConsultationNotes } from '../types/queue';
-import { db, doc, updateDoc } from '../lib/firebase';
 import { soundManager } from '../lib/audio';
 
 interface PatientTrackViewProps {
@@ -28,6 +27,7 @@ interface PatientTrackViewProps {
   session: QueueSession | null;
   tokens: TokenItem[];
   selectedTokenId?: string;
+  trackingId?: string;
   onSelectTokenId: (tokenId: string) => void;
   onNavigateToBooking: () => void;
 }
@@ -37,6 +37,7 @@ export const PatientTrackView: React.FC<PatientTrackViewProps> = ({
   session,
   tokens,
   selectedTokenId,
+  trackingId,
   onSelectTokenId,
   onNavigateToBooking,
 }) => {
@@ -150,6 +151,10 @@ export const PatientTrackView: React.FC<PatientTrackViewProps> = ({
   const handleSubmitNotes = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentToken) return;
+    if (!trackingId) {
+      console.warn('Tracking ID is not available for public note update.');
+      return;
+    }
     if (!symptoms.trim()) return;
 
     setIsSubmittingNotes(true);
@@ -166,9 +171,15 @@ export const PatientTrackView: React.FC<PatientTrackViewProps> = ({
         submittedAt: new Date().toISOString(),
       };
 
-      await updateDoc(doc(db, 'tokens', currentToken.id), {
-        preConsultationNotes: payload,
+      const response = await fetch(`/api/patient/track/${encodeURIComponent(trackingId)}/notes`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(result?.error || 'Unable to save patient notes.');
+      }
 
       setNotesSubmittedSuccess(true);
       setTimeout(() => setNotesSubmittedSuccess(false), 4000);
