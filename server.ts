@@ -733,6 +733,60 @@ app.get('/api/queue-summary', (_req, res) => {
   });
 });
 
+// Site Settings API
+app.get('/api/site/settings', async (_req, res) => {
+  try {
+    const settings = await repositories.settings.findGlobal();
+    const settingsMap: Record<string, any> = {};
+    settings.forEach((setting) => {
+      settingsMap[setting.key] = setting.value;
+    });
+    res.status(200).json(settingsMap);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to load site settings' });
+  }
+});
+
+app.post('/api/site/settings', async (req, res) => {
+  try {
+    const settings = req.body || {};
+    for (const [key, value] of Object.entries(settings)) {
+      await repositories.settings.setValue(key, String(value), null, 'site');
+    }
+    res.status(200).json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to save site settings' });
+  }
+});
+
+// Site Content Sections API
+app.get('/api/site/content', async (_req, res) => {
+  try {
+    const settings = await repositories.settings.findGlobal();
+    const contentMap: Record<string, any> = {};
+    settings.forEach((setting) => {
+      if (setting.category === 'content') {
+        contentMap[setting.key] = setting.value;
+      }
+    });
+    res.status(200).json(contentMap);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to load site content' });
+  }
+});
+
+app.post('/api/site/content', async (req, res) => {
+  try {
+    const content = req.body || {};
+    for (const [key, value] of Object.entries(content)) {
+      await repositories.settings.setValue(key, String(value), null, 'content');
+    }
+    res.status(200).json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to save site content' });
+  }
+});
+
 if (process.env.NODE_ENV === 'production') {
   const frontendDirectory = path.join(process.cwd(), 'dist');
   app.use(express.static(frontendDirectory));
