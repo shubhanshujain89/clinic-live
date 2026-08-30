@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, Plus, Edit, Trash2, Users, Clock, Search, Filter } from 'lucide-react';
-import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from '../lib/firebase';
+import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from '../lib/firebase';
 import { defaultContentSections, defaultSiteSettings, loadContentSections, loadSiteSettings, saveContentSections, saveSiteSettings } from '../lib/siteConfig';
 import { FeaturePlan } from '../types/queue';
 
@@ -24,6 +24,14 @@ const PACK_OPTIONS = [
 ] as const;
 
 const getPackMeta = (plan?: FeaturePlan) => PACK_OPTIONS.find((pack) => pack.value === plan) ?? PACK_OPTIONS[0];
+
+const getPackPrice = (plan: FeaturePlan): number => {
+  const meta = getPackMeta(plan);
+  if (!meta || meta.price === 'Custom') return 0;
+  // Extract numeric value from price string like "₹1,499/mo" or "₹0"
+  const numericPrice = meta.price.replace(/[₹,/mo]/g, '').trim();
+  return parseFloat(numericPrice) || 0;
+};
 
 const buildClinicPack = (plan: FeaturePlan, startDate = new Date().toISOString()) => {
   const meta = getPackMeta(plan);
@@ -111,6 +119,14 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     logo: ''
   });
   const [billingTab, setBillingTab] = useState<'overview' | 'add-payment'>('overview');
+  
+  // Unsubscribe functions for real-time listeners
+  const [unsubscribeClinics, setUnsubscribeClinics] = useState<(() => void) | null>(null);
+  const [unsubscribeUsers, setUnsubscribeUsers] = useState<(() => void) | null>(null);
+  const [unsubscribeAppointments, setUnsubscribeAppointments] = useState<(() => void) | null>(null);
+  const [unsubscribePayments, setUnsubscribePayments] = useState<(() => void) | null>(null);
+  const [unsubscribeAuditLogs, setUnsubscribeAuditLogs] = useState<(() => void) | null>(null);
+  const [auditLogs, setAuditLogs] = useState<Array<{ id: string; title: string; detail: string; time: string; timestamp: any }>>([]);
   const [paymentForm, setPaymentForm] = useState({
     clinicId: '',
     clinicName: '',
@@ -154,14 +170,165 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     syncFromStorage();
     window.addEventListener('site-config-changed', syncFromStorage);
     window.addEventListener('storage', syncFromStorage);
-    fetchClinics();
-    fetchAppointments();
-    fetchUsers();
-    fetchPayments();
+
+    // Set up real-time listeners
+    const clinicsRef = collection(db, 'clinics');
+    const unsubscribeClinicsListener = onSnapshot(clinicsRef, (snapshot) => {
+      const clinicList = snapshot.docs.map((docItem) => {
+        const item = docItem.data() as Record<string, any>;
+        const featurePlan = (item.subscriptionPack?.plan || item.subscriptionPack || item.featurePlan || item.feature_plan || 'TRIAL') as FeaturePlan;
+        const packMeta = getPackMeta(featurePlan);
+        const packRecord = item.subscriptionPack && typeof item.subscriptionPack === 'object'
+          ? {
+              id: item.subscriptionPack.id || `${featurePlan}-${docItem.id}`,
+              plan: featurePlan,
+              label: item.subscriptionPack.label || packMeta.label,
+              validityDays: Number(item.subscriptionPack.validityDays || item.subscriptionPack.validity_days || packMeta.validityDays || 30),
+              status: item.subscriptionPack.status || 'ACTIVE',
+              startDate: item.subscriptionPack.startDate || item.subscriptionPack.start_date || item.createdAt || item.created_at || new Date().toISOString(),
+              expiryDate: item.subscriptionPack.expiryDate || item.subscriptionPack.expiry_date || new Date(Date.now() + Number(item.subscriptionPack.validityDays || item.subscriptionPack.validity_days || packMeta.validityDays || 30) * 24 * 60 * 60 * 1000).toISOString(),
+            }
+          : buildClinicPack(featurePlan, item.createdAt || item.created_at || new Date().toISOString());
+
+        return {
+          id: docItem.id,
+          name: item.name || '',
+          address: item.address || '',
+          phone: item.phone || '+91 ',
+          email: item.email || '',
+          specializations: Array.isArray(item.specializations) ? item.specializations : (typeof item.specializations === 'string' ? item.specializations.split(',').map((part: string) => part.trim()).filter(Boolean) : (typeof item.specialty === 'string' && item.specialty ? [item.specialty] : [])),
+          operatingHours: item.operatingHours || item.operating_hours || HOURS_OPTIONS[0],
+          featurePlan,
+          subscriptionPack: packRecord,
+          logo: item.logo || '',
+          createdAt: item.createdAt || item.created_at || new Date().toISOString(),
+        } as Clinic;
+      });
+      setClinics(clinicList);
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching clinics:', error);
+      setLoading(false);
+    });
+    setUnsubscribeClinics(unsubscribeClinicsListener);
+
+    const appointmentsRef = collection(db, 'appointments');
+    const unsubscribeAppointmentsListener = onSnapshot(appointmentsRef, (snapshot) => {
+      setAppointments(snapshot.docs.map((docItem) => {
+        const item = docItem.data() as Record<string, any>;
+        return {
+          clinicId: String(item.clinicId || item.clinic_id || ''),
+          appointmentType: String(item.appointmentType || item.appointment_type || '').toUpperCase(),
+          status: String(item.status || '').toLowerCase(),
+        };
+      }));
+    }, (error) => {
+      console.error('Error fetching appointment records:', error);
+    });
+    setUnsubscribeAppointments(unsubscribeAppointmentsListener);
+
+    const paymentsRef = collection(db, 'payments');
+    const unsubscribePaymentsListener = onSnapshot(paymentsRef, (snapshot) => {
+      const paymentList = snapshot.docs.map((docItem) => {
+        const item = docItem.data() as Record<string, any>;
+        return {
+          id: docItem.id,
+          clinicId: item.clinicId || item.clinic_id || '',
+          clinicName: item.clinicName || item.clinic_name || 'Unnamed clinic',
+          pack: (item.pack || item.plan || 'TRIAL') as FeaturePlan,
+          amount: Number(item.amount || 0),
+          durationDays: Number(item.durationDays || item.duration_days || 30),
+          status: (item.status || 'PAID') as 'PAID' | 'PENDING',
+          paidAt: item.paidAt || item.paid_at || item.createdAt || new Date().toISOString(),
+          startDate: item.startDate || item.start_date || item.paidAt || item.paid_at || new Date().toISOString(),
+          expiryDate: item.expiryDate || item.expiry_date || new Date(Date.now() + Number(item.durationDays || item.duration_days || 30) * 24 * 60 * 60 * 1000).toISOString(),
+          notes: item.notes || '',
+        };
+      });
+      setPayments(paymentList.sort((left, right) => new Date(right.paidAt).getTime() - new Date(left.paidAt).getTime()));
+    }, (error) => {
+      console.error('Error fetching payment records:', error);
+      setPayments([]);
+    });
+    setUnsubscribePayments(unsubscribePaymentsListener);
+
+    // Set up real-time listener for audit logs
+    const auditLogsRef = collection(db, 'audit_logs');
+    const auditLogsQuery = query(auditLogsRef, orderBy('timestamp', 'desc'));
+    const unsubscribeAuditLogsListener = onSnapshot(auditLogsQuery, (snapshot) => {
+      const logs = snapshot.docs.map((docItem) => {
+        const item = docItem.data() as Record<string, any>;
+        return {
+          id: docItem.id,
+          title: item.title || '',
+          detail: item.detail || '',
+          time: item.time || item.timestamp?.toDate?.()?.toLocaleString() || new Date().toLocaleString(),
+          timestamp: item.timestamp
+        };
+      });
+      setAuditLogs(logs);
+    }, (error) => {
+      console.error('Error fetching audit logs:', error);
+      // Fallback to static logs if collection doesn't exist
+      setAuditLogs([
+        { id: '1', title: 'Clinic records synced', detail: 'Latest clinic data loaded from database.', time: 'Current sync', timestamp: new Date() },
+        { id: '2', title: 'Queue metrics refreshed', detail: 'Operational data recalculated from live clinic records.', time: 'Current sync', timestamp: new Date() },
+        { id: '3', title: 'Campaign status reviewed', detail: 'WhatsApp automation status reflects active system configuration.', time: 'Current sync', timestamp: new Date() },
+        { id: '4', title: 'Access policy matched', detail: 'User permissions remain aligned with the current roster.', time: 'Current sync', timestamp: new Date() },
+      ]);
+    });
+    setUnsubscribeAuditLogs(unsubscribeAuditLogsListener);
+
+    // For users, we need to listen to multiple collections
+    const setupUsersListener = async () => {
+      const staffPaths = ['staff_users', 'users'];
+      const unsubscribeFunctions: (() => void)[] = [];
+
+      for (const pathName of staffPaths) {
+        try {
+          const staffRef = collection(db, pathName);
+          const unsubscribe = onSnapshot(staffRef, () => {
+            // Trigger a full user fetch when any staff collection changes
+            fetchUsers();
+          });
+          unsubscribeFunctions.push(unsubscribe);
+        } catch (error) {
+          console.warn(`Unable to set up listener for ${pathName}:`, error);
+        }
+      }
+
+      // Also listen to doctors collection
+      try {
+        const doctorsRef = collection(db, 'doctors');
+        const unsubscribe = onSnapshot(doctorsRef, () => {
+          fetchUsers();
+        });
+        unsubscribeFunctions.push(unsubscribe);
+      } catch (error) {
+        console.warn('Unable to set up listener for doctors:', error);
+      }
+
+      // Combine all unsubscribe functions
+      const combinedUnsubscribe = () => {
+        unsubscribeFunctions.forEach(unsub => unsub());
+      };
+      setUnsubscribeUsers(combinedUnsubscribe);
+      
+      // Initial fetch
+      fetchUsers();
+    };
+
+    setupUsersListener();
 
     return () => {
       window.removeEventListener('site-config-changed', syncFromStorage);
       window.removeEventListener('storage', syncFromStorage);
+      // Clean up all listeners
+      if (unsubscribeClinics) unsubscribeClinics();
+      if (unsubscribeUsers) unsubscribeUsers();
+      if (unsubscribeAppointments) unsubscribeAppointments();
+      if (unsubscribePayments) unsubscribePayments();
+      if (unsubscribeAuditLogs) unsubscribeAuditLogs();
     };
   }, []);
 
@@ -331,6 +498,19 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         return;
       }
 
+      // Validate clinic selection
+      if (!payload.clinic_name) {
+        window.alert('Please select a clinic for the user.');
+        return;
+      }
+
+      // Validate phone: must be exactly 10 digits
+      const phoneDigits = (payload.phone || '').replace(/\D/g, '');
+      if (phoneDigits.length !== 10) {
+        window.alert('Phone number must be exactly 10 digits');
+        return;
+      }
+
       if (editingUser) {
         await updateDoc(doc(db, 'users', editingUser.id), payload);
       } else {
@@ -416,10 +596,10 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         return;
       }
 
-      // Validate phone: accept any format with at least 10 digits
+      // Validate phone: must be exactly 10 digits
       const digitsOnly = (formData.phone || '').replace(/\D/g, '');
-      if (digitsOnly.length < 10) {
-        window.alert('Phone number must contain at least 10 digits');
+      if (digitsOnly.length !== 10) {
+        window.alert('Phone number must be exactly 10 digits');
         return;
       }
 
@@ -469,7 +649,9 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     const amountValue = Number(paymentForm.amount);
     const durationValue = Number(paymentForm.durationDays || 30);
 
-    if (!clinicName || !Number.isFinite(amountValue) || amountValue <= 0) {
+    // Allow 0 amount for TRIAL pack, otherwise require positive amount
+    const isTrialPack = paymentForm.pack === 'TRIAL';
+    if (!clinicName || !Number.isFinite(amountValue) || (amountValue <= 0 && !isTrialPack)) {
       window.alert('Please choose a clinic and enter a valid amount before saving the payment.');
       return;
     }
@@ -565,11 +747,11 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   };
 
   const handleUserPhoneChange = (value: string) => {
-    setUserFormData((prev) => ({ ...prev, phone: value }));
+    setUserFormData((prev) => ({ ...prev, phone: formatPhoneInput(value) }));
   };
 
   const handleClinicPhoneChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, phone: value }));
+    setFormData((prev) => ({ ...prev, phone: formatPhoneInput(value) }));
   };
 
   const filteredClinics = clinics.filter(clinic =>
@@ -652,13 +834,6 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     { name: 'Data retention audit', status: 'Passed' },
     { name: 'Clinic onboarding policy', status: 'Needs review' },
     { name: 'Backup & restore test', status: 'Passed' },
-  ];
-
-  const auditLogs = [
-    { title: 'Clinic records synced', detail: 'Latest clinic data loaded from MySQL.', time: 'Current sync' },
-    { title: 'Queue metrics refreshed', detail: 'Operational data recalculated from live clinic records.', time: 'Current sync' },
-    { title: 'Campaign status reviewed', detail: 'WhatsApp automation status reflects active system configuration.', time: 'Current sync' },
-    { title: 'Access policy matched', detail: 'User permissions remain aligned with the current roster.', time: 'Current sync' },
   ];
 
   const exportReport = () => {
@@ -834,7 +1009,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
               <div className="space-y-3">
                 {auditLogs.map((item) => (
-                  <div key={item.title} className="rounded-xl border border-slate-800 bg-slate-800/60 p-4">
+                  <div key={item.id} className="rounded-xl border border-slate-800 bg-slate-800/60 p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-white">{item.title}</p>
@@ -1257,19 +1432,36 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                           <div className="text-xs text-slate-400">{clinicUsers.length} linked users</div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${status === 'Granted' ? 'bg-emerald-500/15 text-emerald-300' : status === 'Hold' ? 'bg-amber-500/15 text-amber-300' : 'bg-red-500/15 text-red-300'}`}>
-                            {status}
-                          </span>
-                          <button onClick={() => {
-                            const next = status === 'Granted' ? 'Hold' : status === 'Hold' ? 'Denied' : 'Granted';
-                            clinicUsers.forEach((user) => {
-                              const nextUser = users.find((candidate) => candidate.id === user.id);
-                              if (nextUser) {
-                                nextUser.accessStatus = next as 'Granted' | 'Hold' | 'Denied';
+                          <select
+                            value={status}
+                            onChange={async (e) => {
+                              const newStatus = e.target.value as 'Granted' | 'Hold' | 'Denied';
+                              // Update local state immediately for responsive UI
+                              setUsers(users.map(user => 
+                                clinicUsers.some(cu => cu.id === user.id) 
+                                  ? { ...user, accessStatus: newStatus }
+                                  : user
+                              ));
+                              
+                              // Save to Firestore
+                              try {
+                                for (const user of clinicUsers) {
+                                  const userRef = doc(db, user.source === 'doctors' ? 'doctors' : 'users', user.id);
+                                  await updateDoc(userRef, { accessStatus: newStatus });
+                                }
+                              } catch (error) {
+                                console.error('Error updating clinic access:', error);
+                                window.alert('Failed to update access. Please try again.');
+                                // Revert local state on error
+                                fetchUsers();
                               }
-                            });
-                            setUsers([...users]);
-                          }} className="rounded-lg bg-slate-700 px-3 py-2 text-sm font-medium text-white">Toggle access</button>
+                            }}
+                            className="rounded-lg bg-slate-700 border border-slate-600 px-3 py-2 text-sm font-medium text-white focus:border-emerald-400 focus:outline-none"
+                          >
+                            <option value="Granted">Granted</option>
+                            <option value="Hold">Hold</option>
+                            <option value="Denied">Denied</option>
+                          </select>
                         </div>
                       </div>
                     );
@@ -1402,7 +1594,16 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                       <label className="mb-2 block text-sm font-medium text-slate-300">Pack</label>
                       <select
                         value={paymentForm.pack}
-                        onChange={(event) => setPaymentForm((current) => ({ ...current, pack: event.target.value as FeaturePlan }))}
+                        onChange={(event) => {
+                          const newPack = event.target.value as FeaturePlan;
+                          const autoAmount = getPackPrice(newPack);
+                          setPaymentForm((current) => ({ 
+                            ...current, 
+                            pack: newPack,
+                            amount: autoAmount.toString(),
+                            durationDays: getPackMeta(newPack)?.validityDays?.toString() || '30'
+                          }));
+                        }}
                         className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-white focus:border-violet-400 focus:outline-none"
                       >
                         {PACK_OPTIONS.map((pack) => (
@@ -1420,8 +1621,9 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                         value={paymentForm.amount}
                         onChange={(event) => setPaymentForm((current) => ({ ...current, amount: event.target.value }))}
                         className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-white focus:border-violet-400 focus:outline-none"
-                        placeholder="25000"
+                        placeholder={paymentForm.pack === 'TRIAL' ? '0 (auto-filled for Trial)' : paymentForm.pack === 'ENTERPRISE' ? 'Enter custom amount' : 'Auto-filled based on pack'}
                       />
+                      <p className="mt-1 text-xs text-slate-500">Auto-fills based on selected pack. Edit to apply discounts.</p>
                     </div>
 
                     <div>
@@ -1638,12 +1840,17 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
               <div>
                 <label className="block text-sm font-semibold mb-2">Clinic</label>
-                <input type="text" value={userFormData.clinicName} onChange={(e) => setUserFormData({ ...userFormData, clinicName: e.target.value })} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none" placeholder="Clinic name" />
+                <select value={userFormData.clinicName} onChange={(e) => setUserFormData({ ...userFormData, clinicName: e.target.value })} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none">
+                  <option value="">Select a clinic</option>
+                  {clinics.map((clinic) => (
+                    <option key={clinic.id} value={clinic.name}>{clinic.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold mb-2">Phone</label>
-                <input type="tel" value={userFormData.phone} onChange={(e) => handleUserPhoneChange(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none" placeholder="+91 98765 43210" maxLength={15} />
+                <input type="tel" value={userFormData.phone} onChange={(e) => handleUserPhoneChange(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none" placeholder="+91 98765 43210" maxLength={14} />
               </div>
 
               <div>
@@ -1744,7 +1951,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                     onChange={(e) => handleClinicPhoneChange(e.target.value)}
                     className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none"
                     placeholder="+91 98765 43210"
-                    maxLength={15}
+                    maxLength={14}
                   />
                 </div>
                 <div>
