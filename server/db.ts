@@ -91,6 +91,8 @@ const extractRecordId = (pathValue: string) => {
 };
 
 const normalizeKey = (key: string) => key.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+const isPaymentsPath = (pathValue: string) => extractTableName(pathValue) === 'payments';
+const paymentFromSetting = (setting: any) => ({ id: setting.id, ...JSON.parse(setting.value || '{}') });
 
 // Map repository methods to generic CRUD operations
 const repositoryMap: Record<string, any> = {
@@ -109,6 +111,14 @@ const repositoryMap: Record<string, any> = {
 
 export const listQuery = async (pathValue: string, clauses: Array<{ field: string; op?: string; value?: any }> = []) => {
   const table = extractTableName(pathValue);
+  if (isPaymentsPath(pathValue)) {
+    const settings = await repositories.settings.findAll({ where: { category: 'billing' }, orderBy: 'updated_at', orderDirection: 'DESC' });
+    let payments = settings.map(paymentFromSetting);
+    clauses.forEach((clause) => {
+      if (clause.op === '==' || !clause.op) payments = payments.filter((payment) => payment[clause.field] === clause.value);
+    });
+    return payments;
+  }
   const repo = repositoryMap[table];
   
   if (!repo) {
@@ -132,6 +142,10 @@ export const listQuery = async (pathValue: string, clauses: Array<{ field: strin
 export const readDoc = async (pathValue: string) => {
   const table = extractTableName(pathValue);
   const id = extractRecordId(pathValue);
+  if (isPaymentsPath(pathValue) && id) {
+    const setting = await repositories.settings.findById(id);
+    return setting?.category === 'billing' ? paymentFromSetting(setting) : null;
+  }
   if (!id) return null;
 
   const repo = repositoryMap[table];
@@ -142,6 +156,17 @@ export const readDoc = async (pathValue: string) => {
 
 export const writeDoc = async (pathValue: string, value: Record<string, any>) => {
   const table = extractTableName(pathValue);
+  if (isPaymentsPath(pathValue)) {
+    const id = value?.id || extractRecordId(pathValue) || crypto.randomUUID();
+    const existing = await repositories.settings.findById(id);
+    const payment = { ...value, id };
+    if (existing) {
+      await repositories.settings.update(id, { value: JSON.stringify(payment), category: 'billing' });
+    } else {
+      await repositories.settings.create({ id, key: `payment_${id}`, value: JSON.stringify(payment), category: 'billing', clinicId: null } as any);
+    }
+    return { id, path: `payments/${id}` };
+  }
   const repo = repositoryMap[table];
 
   if (!repo) {
@@ -167,6 +192,13 @@ export const updateDoc = async (pathValue: string, value: Record<string, any>) =
   const id = extractRecordId(pathValue) || value?.id;
   if (!id) throw new Error(`Cannot update document without an id: ${pathValue}`);
 
+  if (isPaymentsPath(pathValue)) {
+    const existing = await readDoc(pathValue);
+    if (!existing) throw new Error(`Payment not found: ${id}`);
+    await repositories.settings.update(id, { value: JSON.stringify({ ...existing, ...value, id }), category: 'billing' });
+    return { id };
+  }
+
   const repo = repositoryMap[table];
   if (!repo) throw new Error(`Unknown table: ${table}`);
 
@@ -178,6 +210,11 @@ export const deleteDoc = async (pathValue: string) => {
   const table = extractTableName(pathValue);
   const id = extractRecordId(pathValue);
   if (!id) return;
+
+  if (isPaymentsPath(pathValue)) {
+    await repositories.settings.delete(id);
+    return;
+  }
 
   const repo = repositoryMap[table];
   if (!repo) return;

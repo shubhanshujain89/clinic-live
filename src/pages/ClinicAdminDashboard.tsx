@@ -528,7 +528,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         display_name: userFormData.name,
         email: userFormData.email,
         role: userFormData.role,
-        status: userFormData.status,
+        status: 'Active',
         clinic_name: userFormData.clinicName,
         phone: userFormData.phone,
         access_status: userFormData.accessStatus,
@@ -2095,14 +2095,6 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold mb-2">Status</label>
-                <select value={userFormData.status} onChange={(e) => setUserFormData({ ...userFormData, status: e.target.value as 'Active' | 'Offline' | 'Pending' })} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none">
-                  <option value="Active">Active</option>
-                  <option value="Offline">Offline</option>
-                  <option value="Pending">Pending</option>
-                </select>
-              </div>
             </div>
 
             <div className="mt-8 flex gap-3">
