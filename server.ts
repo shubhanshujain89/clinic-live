@@ -500,8 +500,16 @@ app.post('/api/auth/login', async (req, res) => {
 
     const token = crypto.randomBytes(32).toString('hex');
     sessions.set(token, context);
-    res.setHeader('Set-Cookie', `clinicflow_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${8 * 60 * 60}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`);
-    
+    const isSecureCookie = process.env.NODE_ENV === 'production' || String(req.headers['x-forwarded-proto'] || '').toLowerCase() === 'https';
+    const cookieAttributes = [
+      'Path=/',
+      'HttpOnly',
+      isSecureCookie ? 'SameSite=None' : 'SameSite=Lax',
+      `Max-Age=${8 * 60 * 60}`,
+      ...(isSecureCookie ? ['Secure'] : []),
+    ];
+    res.setHeader('Set-Cookie', `clinicflow_session=${encodeURIComponent(token)}; ${cookieAttributes.join('; ')}`);
+
     const responseData = { 
       user: { 
         uid: context.userId, 
@@ -523,7 +531,8 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/logout', (req, res) => {
   const token = cookieValue(req, 'clinicflow_session');
   sessions.delete(token);
-  res.setHeader('Set-Cookie', 'clinicflow_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+  const isSecureCookie = process.env.NODE_ENV === 'production' || String(req.headers['x-forwarded-proto'] || '').toLowerCase() === 'https';
+  res.setHeader('Set-Cookie', `clinicflow_session=; Path=/; HttpOnly; ${isSecureCookie ? 'SameSite=None; Secure' : 'SameSite=Lax'}; Max-Age=0`);
   res.status(204).end();
 });
 
