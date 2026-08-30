@@ -1,14 +1,10 @@
 import express from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import net from 'net';
 import { getDatabase, readDoc, listQuery, writeDoc, updateDoc, deleteDoc, findUserByEmail, verifyPassword, createPublicBooking, getPublicTracking, resetUserPassword, DEFAULT_USER_PASSWORD } from './server/db.js';
 import { repositories } from './server/db/repositories/index.js';
 import { services } from './server/db/services/index.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -35,7 +31,7 @@ const getAvailablePort = async (preferredPort: number): Promise<number> => {
 
 const PORT = Number(process.env.PORT || process.env.BACKEND_PORT || 4000);
 
-await getDatabase();
+const databaseReady = getDatabase();
 
 type AuthContext = {
   userId: string;
@@ -772,7 +768,7 @@ const startServer = async () => {
   });
 };
 
-startServer().catch((error) => {
+databaseReady.then(() => startServer()).catch((error) => {
   console.error('Failed to start backend server:', error);
   process.exit(1);
 });

@@ -11,7 +11,7 @@
     "dev": "node ./node_modules/vite/bin/vite.js --port=3000 --host=0.0.0.0",
     "dev:server": "node ./node_modules/tsx/dist/cli.mjs server.ts",
     "build:frontend": "node ./node_modules/vite/bin/vite.js build",
-    "build:server": "node ./node_modules/typescript/bin/tsc -p tsconfig.server.json",
+    "build:server": "node ./node_modules/typescript/bin/tsc -p tsconfig.server.json && node -e \"require('fs').copyFileSync('server/package.json','dist-server/package.json')\"",
     "build": "npm run build:frontend && npm run build:server",
     "preview": "node ./node_modules/vite/bin/vite.js preview",
     "start": "node dist-server/server.js",
