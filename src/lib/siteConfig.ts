@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { doc, getDoc, setDoc } from './firebase';
 
 export interface SiteSettings {
   siteName: string;
@@ -62,7 +63,10 @@ export const defaultContentSections: ContentSections = {
 
 const SETTINGS_KEY = 'clinicflow-site-settings';
 const CONTENT_KEY = 'clinicflow-site-content';
+const SETTINGS_DOC_PATH = 'site/settings';
+const CONTENT_DOC_PATH = 'site/content';
 
+// Load from localStorage (immediate)
 export function loadSiteSettings(): SiteSettings {
   if (typeof window === 'undefined') return defaultSiteSettings;
   const raw = window.localStorage.getItem(SETTINGS_KEY);
@@ -86,17 +90,71 @@ export function loadContentSections(): ContentSections {
 }
 
 export function saveSiteSettings(settings: SiteSettings) {
+  saveToLocalStorage(SETTINGS_KEY, settings);
+  saveToDatabase(SETTINGS_DOC_PATH, settings);
+}
+
+export function saveContentSections(sections: ContentSections) {
+  saveToLocalStorage(CONTENT_KEY, sections);
+  saveToDatabase(CONTENT_DOC_PATH, sections);
+}
+
+// Save to localStorage (immediate UI update)
+function saveToLocalStorage(key: string, data: any) {
   if (typeof window !== 'undefined') {
-    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    window.localStorage.setItem(key, JSON.stringify(data));
     window.dispatchEvent(new Event('site-config-changed'));
   }
 }
 
-export function saveContentSections(sections: ContentSections) {
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem(CONTENT_KEY, JSON.stringify(sections));
-    window.dispatchEvent(new Event('site-config-changed'));
+// Save to database (persistent across devices)
+async function saveToDatabase(path: string, data: any) {
+  try {
+    await setDoc(doc(null, path), data);
+  } catch (error) {
+    console.error('Failed to save to database:', error);
   }
+}
+
+// Load from database (for cross-device sync)
+export async function loadSiteSettingsFromDatabase(): Promise<SiteSettings> {
+  try {
+    const snapshot = await getDoc(doc(null, SETTINGS_DOC_PATH));
+    if (snapshot.exists()) {
+      const data = snapshot.data();
+      return { ...defaultSiteSettings, ...data };
+    }
+  } catch (error) {
+    console.error('Failed to load site settings from database:', error);
+  }
+  return defaultSiteSettings;
+}
+
+export async function loadContentSectionsFromDatabase(): Promise<ContentSections> {
+  try {
+    const snapshot = await getDoc(doc(null, CONTENT_DOC_PATH));
+    if (snapshot.exists()) {
+      const data = snapshot.data();
+      return { ...defaultContentSections, ...data };
+    }
+  } catch (error) {
+    console.error('Failed to load content sections from database:', error);
+  }
+  return defaultContentSections;
+}
+
+// Initialize site config from database on app startup
+export async function initializeSiteConfig(): Promise<{ settings: SiteSettings; content: ContentSections }> {
+  const [settings, content] = await Promise.all([
+    loadSiteSettingsFromDatabase(),
+    loadContentSectionsFromDatabase(),
+  ]);
+  
+  // Also save to localStorage for immediate access
+  saveToLocalStorage(SETTINGS_KEY, settings);
+  saveToLocalStorage(CONTENT_KEY, content);
+  
+  return { settings, content };
 }
 
 export function useSiteConfig() {
