@@ -49,7 +49,6 @@ const cookieValue = (req: express.Request, name: string) => {
 };
 
 const authContext = (req: express.Request) => sessions.get(cookieValue(req, 'clinicflow_session'));
-const publicCollections = new Set(['clinics', 'doctors']);
 const tableForPath = (value: string) => String(value).replace(/^\/+|\/+$/g, '').split('/')[0];
 const secureEqual = (left: string, right: string) => {
   const leftBuffer = Buffer.from(left);
@@ -71,8 +70,7 @@ const canAccessRecord = (context: AuthContext, record: Record<string, any>, tabl
 const requireDatabaseAccess = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const context = authContext(req);
   const requestedPath = String(req.query.path || req.body?.path || '');
-  const table = tableForPath(requestedPath);
-  if (!context && !publicCollections.has(table)) {
+  if (!context) {
     res.status(401).json({ error: 'Authentication required.' });
     return;
   }

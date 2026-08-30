@@ -184,45 +184,17 @@ export const signInWithEmailAndPassword = async (_auth: unknown, email: string, 
   const normalizedEmail = String(email || '').trim();
   const normalizedPassword = String(password || '');
 
-  const isDefaultSuperAdmin = normalizedEmail.toLowerCase() === 'admin' && normalizedPassword === 'admin@123';
-  if (isDefaultSuperAdmin) {
-    const user: User = {
-      uid: 'super-admin',
-      email: 'admin',
-      role: 'SUPER_ADMIN',
-      clinicId,
-      displayName: 'Site Admin',
-    };
-    auth.currentUser = user;
-    return { user };
-  }
-
-  try {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: normalizedEmail, password: normalizedPassword, role: role || undefined, clinicId }),
-    });
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || 'Authentication failed.');
-    const user: User = { ...payload.user, displayName: payload.user.displayName || payload.user.email };
-    auth.currentUser = user;
-    return { user };
-  } catch (error) {
-    if (normalizedEmail.toLowerCase() === 'admin' && normalizedPassword === 'admin@123') {
-      const user: User = {
-        uid: 'super-admin',
-        email: 'admin',
-        role: 'SUPER_ADMIN',
-        clinicId,
-        displayName: 'Site Admin',
-      };
-      auth.currentUser = user;
-      return { user };
-    }
-    throw error;
-  }
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: normalizedEmail, password: normalizedPassword, role: role || undefined, clinicId }),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || 'Authentication failed.');
+  const user: User = { ...payload.user, displayName: payload.user.displayName || payload.user.email };
+  auth.currentUser = user;
+  return { user };
 };
 
 export const createUserWithEmailAndPassword = async (_auth: unknown, email: string, password: string): Promise<{ user: User }> => {
