@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, Stethoscope, ChevronRight, Check, Heart } from 'lucide-react';
+import { PhoneInput } from '../components/PhoneInput';
 
 interface Clinic {
   id: string;
@@ -313,13 +314,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-2">Mobile Number *</label>
-                  <input
-                    type="tel"
-                    value={bookingData.phone}
-                    onChange={(e) => setBookingData({ ...bookingData, phone: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none"
-                    placeholder="Your phone"
-                  />
+                  <PhoneInput value={bookingData.phone} onChange={(phone) => setBookingData({ ...bookingData, phone })} className="bg-slate-800" placeholder="Your phone" />
                 </div>
               </div>
 

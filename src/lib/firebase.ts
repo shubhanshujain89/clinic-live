@@ -221,6 +221,13 @@ export const onAuthStateChanged = (_auth: unknown, callback: (user: User | null)
 
 export const getAuth = () => auth;
 
+export const recordAuditEvent = async (title: string, detail: string) => {
+  await api('/api/audit', {
+    method: 'POST',
+    body: JSON.stringify({ title, detail }),
+  });
+};
+
 export const db = {
   collection,
   doc,

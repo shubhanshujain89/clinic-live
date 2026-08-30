@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { PhoneInput } from './PhoneInput';
 import {
   Calendar,
   Clock,
@@ -397,14 +398,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
                 <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-1.5">
                   WhatsApp Phone Number <span className="text-rose-400">*</span>
                 </label>
-                <input
-                  required
-                  type="tel"
-                  placeholder="+91 98765 43210"
-                  value={patientPhone}
-                  onChange={(e) => setPatientPhone(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none placeholder-slate-600"
-                />
+                <PhoneInput value={patientPhone} onChange={setPatientPhone} className="rounded-xl border-slate-800 bg-slate-950 text-xs text-slate-200" />
               </div>
 
               <div>

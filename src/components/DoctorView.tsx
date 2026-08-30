@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
+import { PhoneInput } from './PhoneInput';
 import {
   Stethoscope,
   Activity,
@@ -1054,13 +1055,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                   <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-1">
                     Phone Number <span className="text-rose-400">*</span>
                   </label>
-                  <input
-                    required
-                    type="tel"
-                    value={editPhone}
-                    onChange={(e) => setEditPhone(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:ring-2 focus:ring-teal-500 focus:outline-none"
-                  />
+                  <PhoneInput value={editPhone} onChange={setEditPhone} className="rounded-xl border-slate-800 bg-slate-950 text-xs" />
                 </div>
 
                 <div>

@@ -534,6 +534,53 @@ app.post('/api/auth/logout', (req, res) => {
   res.status(204).end();
 });
 
+app.get('/api/audit', async (req, res) => {
+  const context = authContext(req);
+  if (!context || !['SUPER_ADMIN', 'CLINIC_ADMIN'].includes(context.role)) {
+    res.status(401).json({ error: 'Authentication required.' });
+    return;
+  }
+
+  try {
+    const records = await repositories.settings.findAll({ where: { category: 'audit' }, orderBy: 'updated_at', orderDirection: 'DESC', limit: 100 });
+    res.status(200).json(records.map((record) => {
+      try {
+        return { id: record.id, ...(JSON.parse(record.value || '{}')), timestamp: record.updatedAt.toISOString() };
+      } catch {
+        return { id: record.id, title: 'Audit event', detail: record.value || '', timestamp: record.updatedAt.toISOString() };
+      }
+    }));
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to load audit trail.' });
+  }
+});
+
+app.post('/api/audit', async (req, res) => {
+  const context = authContext(req);
+  if (!context || !['SUPER_ADMIN', 'CLINIC_ADMIN'].includes(context.role)) {
+    res.status(401).json({ error: 'Authentication required.' });
+    return;
+  }
+
+  try {
+    const { title = '', detail = '' } = req.body || {};
+    if (!String(title).trim() || !String(detail).trim()) {
+      res.status(400).json({ error: 'Audit title and detail are required.' });
+      return;
+    }
+    const record = await repositories.settings.create({
+      id: crypto.randomUUID(),
+      key: `audit_${Date.now()}_${crypto.randomUUID()}`,
+      value: JSON.stringify({ title: String(title), detail: String(detail), actor: context.email, role: context.role, time: new Date().toISOString() }),
+      category: 'audit',
+      clinicId: null,
+    } as any);
+    res.status(201).json({ ok: true, id: record.id });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to record audit event.' });
+  }
+});
+
 app.post('/api/users/reset-password', async (req, res) => {
   try {
     const context = authContext(req);

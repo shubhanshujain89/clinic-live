@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Edit, Trash2, Star, Search, Upload } from 'lucide-react';
-import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from '../lib/firebase';
+import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, recordAuditEvent } from '../lib/firebase';
+import { PhoneInput } from '../components/PhoneInput';
 
 interface Doctor {
   id: string;
@@ -81,11 +82,13 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
           ...doctorData,
           updatedAt: new Date().toISOString()
         });
+        void recordAuditEvent('Doctor modified', `${doctorData.name} was modified for ${clinicName}.`);
       } else {
         await addDoc(collection(db, 'doctors'), {
           ...doctorData,
           createdAt: new Date().toISOString()
         });
+        void recordAuditEvent('Doctor added', `${doctorData.name} was added to ${clinicName}.`);
       }
 
       setShowAddModal(false);
@@ -113,6 +116,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
     if (window.confirm('Are you sure you want to delete this doctor?')) {
       try {
         await deleteDoc(doc(db, 'doctors', id));
+        void recordAuditEvent('Doctor deleted', `${doctors.find((doctor) => doctor.id === id)?.name || 'Doctor'} was deleted from ${clinicName}.`);
         fetchDoctors();
       } catch (error) {
         console.error('Error deleting doctor:', error);
@@ -338,12 +342,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold mb-1">Phone</label>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
-                  />
+                  <PhoneInput value={formData.phone} onChange={(phone) => setFormData({ ...formData, phone })} className="text-sm" />
                 </div>
 
                 <div>
