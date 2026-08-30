@@ -111,6 +111,10 @@ app.get('/api/status', (_req, res) => {
   });
 });
 
+const normalizeSettingKey = (key: string) => String(key || '')
+  .replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase())
+  .replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+
 const parseSpecializationList = (value: unknown): string[] => {
   if (Array.isArray(value)) return value.filter(Boolean).map(String);
   if (typeof value === 'string') {
@@ -737,10 +741,23 @@ app.get('/api/queue-summary', (_req, res) => {
 app.get('/api/site/settings', async (_req, res) => {
   try {
     const settings = await repositories.settings.findGlobal();
-    const settingsMap: Record<string, any> = {};
+    const latestByKey = new Map<string, { value: string | null; updatedAt: Date }>();
+
     settings.forEach((setting) => {
-      if (setting.key) settingsMap[setting.key] = setting.value;
+      const key = normalizeSettingKey(setting.key || '');
+      if (!key) return;
+      const updatedAt = setting.updatedAt || new Date(0);
+      const current = latestByKey.get(key);
+      if (!current || updatedAt.getTime() > current.updatedAt.getTime()) {
+        latestByKey.set(key, { value: setting.value ?? null, updatedAt });
+      }
     });
+
+    const settingsMap: Record<string, any> = {};
+    latestByKey.forEach((entry, key) => {
+      settingsMap[key] = entry.value;
+    });
+
     res.status(200).json(settingsMap);
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to load site settings' });
@@ -751,7 +768,8 @@ app.post('/api/site/settings', async (req, res) => {
   try {
     const settings = req.body || {};
     for (const [key, value] of Object.entries(settings)) {
-      await repositories.settings.setValue(key, String(value), null, 'site');
+      const canonicalKey = normalizeSettingKey(key);
+      await repositories.settings.setValue(canonicalKey, String(value), null, 'site');
     }
     res.status(200).json({ ok: true });
   } catch (error) {
@@ -763,12 +781,24 @@ app.post('/api/site/settings', async (req, res) => {
 app.get('/api/site/content', async (_req, res) => {
   try {
     const settings = await repositories.settings.findGlobal();
-    const contentMap: Record<string, any> = {};
+    const latestByKey = new Map<string, { value: string | null; updatedAt: Date }>();
+
     settings.forEach((setting) => {
-      if (setting.category === 'content' && setting.key) {
-        contentMap[setting.key] = setting.value;
+      if (setting.category !== 'content') return;
+      const key = normalizeSettingKey(setting.key || '');
+      if (!key) return;
+      const updatedAt = setting.updatedAt || new Date(0);
+      const current = latestByKey.get(key);
+      if (!current || updatedAt.getTime() > current.updatedAt.getTime()) {
+        latestByKey.set(key, { value: setting.value ?? null, updatedAt });
       }
     });
+
+    const contentMap: Record<string, any> = {};
+    latestByKey.forEach((entry, key) => {
+      contentMap[key] = entry.value;
+    });
+
     res.status(200).json(contentMap);
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to load site content' });
@@ -779,7 +809,8 @@ app.post('/api/site/content', async (req, res) => {
   try {
     const content = req.body || {};
     for (const [key, value] of Object.entries(content)) {
-      await repositories.settings.setValue(key, String(value), null, 'content');
+      const canonicalKey = normalizeSettingKey(key);
+      await repositories.settings.setValue(canonicalKey, String(value), null, 'content');
     }
     res.status(200).json({ ok: true });
   } catch (error) {
