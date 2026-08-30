@@ -9,8 +9,10 @@ interface PhoneInputProps {
 }
 
 const getSubscriberDigits = (value: string) => {
-  const digits = String(value || '').replace(/\D/g, '');
-  return digits.startsWith('91') && digits.length > 10 ? digits.slice(2, 12) : digits.slice(0, 10);
+  const rawValue = String(value || '').trim();
+  const digits = rawValue.replace(/\D/g, '');
+  if (rawValue.startsWith('+91')) return digits.slice(2, 12);
+  return digits.slice(0, 10);
 };
 
 export const PhoneInput: React.FC<PhoneInputProps> = ({
