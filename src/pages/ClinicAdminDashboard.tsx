@@ -34,7 +34,7 @@ const getPackPrice = (plan: FeaturePlan): number => {
   return parseFloat(numericPrice) || 0;
 };
 
-const buildClinicPack = (plan: FeaturePlan, startDate = new Date().toISOString()) => {
+const buildClinicPack = (plan: FeaturePlan, startDate = new Date().toISOString(), status: 'ACTIVE' | 'EXPIRED' | 'PAUSED' = 'ACTIVE') => {
   const meta = getPackMeta(plan);
   const start = new Date(startDate);
   const expiry = new Date(start.getTime() + meta.validityDays * 24 * 60 * 60 * 1000);
@@ -44,7 +44,7 @@ const buildClinicPack = (plan: FeaturePlan, startDate = new Date().toISOString()
     plan,
     label: meta.label,
     validityDays: meta.validityDays,
-    status: 'ACTIVE' as const,
+    status,
     startDate: start.toISOString(),
     expiryDate: expiry.toISOString(),
   };
@@ -122,6 +122,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   });
   const [billingTab, setBillingTab] = useState<'overview' | 'add-payment'>('overview');
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+  const [expandedBillingPack, setExpandedBillingPack] = useState<FeaturePlan | null>(null);
   
   // Unsubscribe functions for real-time listeners
   const [unsubscribeClinics, setUnsubscribeClinics] = useState<(() => void) | null>(null);
@@ -523,17 +524,18 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     try {
       const isDoctor = userFormData.role.trim().toLowerCase() === 'doctor';
       const selectedClinic = clinics.find((clinic) => clinic.name.toLowerCase() === userFormData.clinicName.trim().toLowerCase());
+      const databaseAccessStatus = userFormData.accessStatus === 'Hold' ? 'Pending' : userFormData.accessStatus === 'Denied' ? 'Revoked' : 'Granted';
       const payload = {
         name: userFormData.name,
-        display_name: userFormData.name,
+        displayName: userFormData.name,
         email: userFormData.email,
         role: userFormData.role,
         status: 'Active',
-        clinic_name: userFormData.clinicName,
+        clinicName: userFormData.clinicName,
         phone: userFormData.phone,
-        access_status: userFormData.accessStatus,
-        photo_url: userFormData.photoURL || '',
-        password_reset: userFormData.passwordReset || 'Never reset',
+        accessStatus: databaseAccessStatus,
+        photoUrl: userFormData.photoURL || '',
+        passwordReset: userFormData.passwordReset || 'Never reset',
       };
 
       if (!payload.name || !payload.email) {
@@ -542,7 +544,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       }
 
       // Validate clinic selection
-      if (!payload.clinic_name || (isDoctor && !selectedClinic)) {
+      if (!payload.clinicName || (isDoctor && !selectedClinic)) {
         window.alert('Please select a clinic for the user.');
         return;
       }
@@ -677,7 +679,8 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       }
 
       const clinicPlan = formData.featurePlan as FeaturePlan;
-      const subscriptionPack = buildClinicPack(clinicPlan, new Date().toISOString());
+      const hasBillingRecord = editingClinic ? payments.some((payment) => payment.clinicId === editingClinic.id || payment.clinicName.toLowerCase() === editingClinic.name.toLowerCase()) : false;
+      const subscriptionPack = buildClinicPack(clinicPlan, new Date().toISOString(), hasBillingRecord ? 'ACTIVE' : 'PAUSED');
       const clinicPayload = {
         name: formData.name.trim(),
         address: formData.address.trim(),
@@ -750,7 +753,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       };
       const matchedClinic = clinics.find((clinic) => clinic.id === clinicId || clinic.name.toLowerCase() === clinicName.toLowerCase());
       if (matchedClinic) {
-        const updatedPack = buildClinicPack(paymentForm.pack, startDate);
+        const updatedPack = buildClinicPack(paymentForm.pack, startDate, 'ACTIVE');
         await updateDoc(doc(db, 'clinics', matchedClinic.id), {
           featurePlan: paymentForm.pack,
           subscriptionPack: updatedPack,
@@ -912,14 +915,13 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
   const paidPayments = payments.filter((payment) => payment.status === 'PAID');
   const pendingPayments = payments.filter((payment) => payment.status === 'PENDING');
-  const billingUsers = users.filter((user) => user.clinicName);
-  const openUserBilling = (user: (typeof users)[number], payment?: (typeof payments)[number]) => {
-    const clinic = clinics.find((item) => item.id === payment?.clinicId || item.name.toLowerCase() === (payment?.clinicName || user.clinicName || '').toLowerCase());
-    const pack = payment?.pack || clinic?.featurePlan || 'TRIAL';
+  const clinicHasBilling = (clinic: Clinic) => payments.some((payment) => payment.clinicId === clinic.id || payment.clinicName.toLowerCase() === clinic.name.toLowerCase());
+  const openClinicBilling = (clinic: Clinic, payment?: (typeof payments)[number]) => {
+    const pack = payment?.pack || clinic.featurePlan || 'TRIAL';
     setEditingPaymentId(payment?.id || null);
     setPaymentForm({
-      clinicId: clinic?.id || payment?.clinicId || '',
-      clinicName: clinic?.name || payment?.clinicName || user.clinicName || '',
+      clinicId: clinic.id,
+      clinicName: clinic.name,
       pack,
       amount: payment ? String(payment.amount) : String(getPackPrice(pack)),
       durationDays: payment ? String(payment.durationDays) : String(getPackMeta(pack).validityDays),
@@ -1011,7 +1013,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'dashboard':
-        const activeClinicsCount = clinics.filter(c => c.subscriptionPack?.status === 'ACTIVE').length;
+        const activeClinicsCount = clinics.filter(clinicHasBilling).length;
         
         const pendingClinicsCount = Math.max(0, clinics.length - activeClinicsCount);
         
@@ -1434,9 +1436,14 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                         <h3 className="text-lg font-bold text-white">{clinic.name}</h3>
                         <p className="text-sm text-slate-400">{clinic.address}</p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col items-end gap-2">
+                        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${clinicHasBilling(clinic) ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}`}>
+                          {clinicHasBilling(clinic) ? 'Active' : 'On hold'}
+                        </span>
+                        <div className="flex gap-2">
                         <button onClick={() => handleEditClinic(clinic)} className="rounded-lg bg-blue-500/15 p-2 text-blue-300"><Edit className="h-4 w-4" /></button>
                         <button onClick={() => handleDeleteClinic(clinic.id)} className="rounded-lg bg-red-500/15 p-2 text-red-300"><Trash2 className="h-4 w-4" /></button>
+                        </div>
                       </div>
                     </div>
 
@@ -1678,47 +1685,50 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                   <div className="mb-6">
                     <div className="mb-4 flex items-center justify-between">
                       <div>
-                        <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400">User billing</div>
-                        <h3 className="mt-1 text-xl font-bold text-white">Billing by user</h3>
+                        <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Clinic billing</div>
+                        <h3 className="mt-1 text-xl font-bold text-white">Billing by clinic</h3>
                       </div>
-                      <span className="rounded-full bg-slate-700 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">{billingUsers.length} linked users</span>
+                      <span className="rounded-full bg-slate-700 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">{clinics.length} clinics</span>
                     </div>
-                    {billingUsers.length === 0 ? (
-                      <div className="rounded-xl border border-slate-800 bg-slate-800/60 p-5 text-sm text-slate-400">No linked users available for billing.</div>
-                    ) : (
-                      <div className="grid gap-4 md:grid-cols-2">
-                        {billingUsers.map((user) => {
-                          const userPayments = payments.filter((payment) => payment.clinicId === clinics.find((clinic) => clinic.name.toLowerCase() === user.clinicName?.toLowerCase())?.id || payment.clinicName.toLowerCase() === user.clinicName?.toLowerCase());
-                          const latestPayment = userPayments[0];
-                          return (
-                            <div key={`${user.source}-${user.id}`} className="rounded-xl border border-slate-800 bg-slate-800/70 p-4">
-                              <div className="flex items-start justify-between gap-3">
-                                <div>
-                                  <div className="font-semibold text-white">{user.name}</div>
-                                  <div className="mt-1 text-xs text-slate-400">{user.email}</div>
-                                  <div className="mt-2 text-xs text-slate-300">{user.clinicName}</div>
-                                </div>
-                                <span className="rounded-full bg-slate-700 px-2 py-1 text-[10px] text-slate-200">{latestPayment ? latestPayment.status : 'No billing'}</span>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {clinics.map((clinic) => {
+                        const clinicPayments = payments.filter((payment) => payment.clinicId === clinic.id || payment.clinicName.toLowerCase() === clinic.name.toLowerCase());
+                        const latestPayment = clinicPayments[0];
+                        return (
+                          <div key={clinic.id} className="rounded-xl border border-slate-800 bg-slate-800/70 p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="font-semibold text-white">{clinic.name}</div>
+                                <div className="mt-1 text-xs text-slate-400">{clinic.email}</div>
                               </div>
-                              <div className="mt-4 flex items-center justify-between gap-3">
-                                <div className="text-sm text-slate-300">{latestPayment ? `${latestPayment.pack} · ₹${Number(latestPayment.amount).toLocaleString('en-IN')}` : 'No payment recorded'}</div>
-                                <div className="flex gap-2">
-                                  {latestPayment && <button onClick={() => openUserBilling(user, latestPayment)} className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-violet-400">Edit billing</button>}
-                                  <button onClick={() => openUserBilling(user)} className="rounded-lg bg-violet-500 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-400">Add billing</button>
-                                </div>
+                              <span className="rounded-full bg-slate-700 px-2 py-1 text-[10px] text-slate-200">{latestPayment ? latestPayment.status : 'No billing'}</span>
+                            </div>
+                            <div className="mt-4 flex items-center justify-between gap-3">
+                              <div className="text-sm text-slate-300">{latestPayment ? `${latestPayment.pack} · ₹${Number(latestPayment.amount).toLocaleString('en-IN')}` : 'No payment recorded'}</div>
+                              <div className="flex gap-2">
+                                {latestPayment && <button onClick={() => openClinicBilling(clinic, latestPayment)} className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-violet-400">Edit billing</button>}
+                                <button onClick={() => openClinicBilling(clinic)} className="rounded-lg bg-violet-500 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-400">Add billing</button>
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div className="grid gap-4 lg:grid-cols-2">
                     {PACK_OPTIONS.map((pack) => {
                       const activeCount = clinics.filter((clinic) => (clinic.featurePlan || 'TRIAL') === pack.value).length;
+                      const packClinics = clinics.filter((clinic) => (clinic.featurePlan || 'TRIAL') === pack.value);
+                      const isExpanded = expandedBillingPack === pack.value;
                       return (
-                        <div key={pack.value} className="rounded-2xl border border-slate-800 bg-slate-800/70 p-5">
+                        <button
+                          key={pack.value}
+                          type="button"
+                          aria-expanded={isExpanded}
+                          onClick={() => setExpandedBillingPack(isExpanded ? null : pack.value)}
+                          className={`rounded-2xl border p-5 text-left transition ${isExpanded ? 'border-emerald-400/50 bg-slate-800' : 'border-slate-800 bg-slate-800/70 hover:border-emerald-400/40'}`}
+                        >
                           <div className="flex items-start justify-between gap-4">
                             <div>
                               <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400">{pack.label}</div>
@@ -1727,45 +1737,18 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                             <span className="rounded-full bg-slate-700 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-200">{pack.validityDays} days</span>
                           </div>
                           <div className="mt-4 text-sm text-slate-400">{activeCount} clinics assigned</div>
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            {clinics.filter((clinic) => (clinic.featurePlan || 'TRIAL') === pack.value).slice(0, 3).map((clinic) => (
-                              <span key={clinic.id} className="rounded-full bg-slate-700 px-2 py-1 text-[10px] text-slate-200">{clinic.name}</span>
-                            ))}
-                          </div>
-                        </div>
+                          {isExpanded && (
+                            <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-700 pt-4">
+                              {packClinics.length > 0 ? packClinics.map((clinic) => (
+                                <span key={clinic.id} className="rounded-full bg-slate-700 px-2 py-1 text-[10px] text-slate-200">{clinic.name}</span>
+                              )) : <span className="text-xs text-slate-500">No clinics assigned</span>}
+                            </div>
+                          )}
+                        </button>
                       );
                     })}
                   </div>
 
-                  <div className="mt-6 grid gap-6 lg:grid-cols-2">
-                    <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-6">
-                      <h3 className="mb-4 text-xl font-bold">Subscription health</h3>
-                      <div className="space-y-4">
-                        {[{ label: 'Paid records', value: payments.length ? `${Math.round((paidPayments.length / payments.length) * 100)}%` : '0%', tone: 'emerald' }, { label: 'Pending records', value: payments.length ? `${Math.round((pendingPayments.length / payments.length) * 100)}%` : '0%', tone: 'cyan' }, { label: 'Overdue balances', value: 'No data', tone: 'amber' }].map((item) => (
-                          <div key={item.label}>
-                            <div className="mb-1 flex items-center justify-between text-sm">
-                              <span className="text-slate-300">{item.label}</span>
-                              <span className="font-bold text-white">{item.value}</span>
-                            </div>
-                            <div className="h-2.5 overflow-hidden rounded-full bg-slate-800">
-                              <div className={`h-full rounded-full ${item.tone === 'emerald' ? 'bg-emerald-500' : item.tone === 'cyan' ? 'bg-cyan-500' : 'bg-amber-500'}`} style={{ width: item.value === 'No data' ? '0%' : item.value }} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-6">
-                      <h3 className="mb-4 text-xl font-bold">Billing actions</h3>
-                      <div className="space-y-3">
-                        {['Upgrade clinic pack', 'Review overdue invoices', 'Sync payment status', 'Export usage report'].map((action) => (
-                          <button key={action} className="w-full rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-3 text-left text-sm font-medium text-slate-200 hover:border-emerald-400/50">
-                            {action}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
                 </>
               ) : (
                 <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-6">
