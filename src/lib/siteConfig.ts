@@ -63,13 +63,46 @@ export const defaultContentSections: ContentSections = {
 const SETTINGS_KEY = 'clinicflow-site-settings';
 const CONTENT_KEY = 'clinicflow-site-content';
 
+function parseStoredValue(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+
+  const trimmed = value.trim();
+  if (trimmed === 'true') return true;
+  if (trimmed === 'false') return false;
+
+  if (trimmed === '' || trimmed === 'null') return null;
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    return parsed;
+  } catch {
+    return value;
+  }
+}
+
+function normaliseSiteSettings(data: Partial<SiteSettings> = {}): SiteSettings {
+  const parsed = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, parseStoredValue(value)]));
+  return {
+    ...defaultSiteSettings,
+    ...parsed,
+    whatsappEnabled: parsed.whatsappEnabled === undefined ? defaultSiteSettings.whatsappEnabled : Boolean(parsed.whatsappEnabled),
+  };
+}
+
+function normaliseContentSections(data: Partial<ContentSections> = {}): ContentSections {
+  return {
+    ...defaultContentSections,
+    ...Object.fromEntries(Object.entries(data).map(([key, value]) => [key, parseStoredValue(value)])),
+  };
+}
+
 // Load from localStorage (immediate)
 export function loadSiteSettings(): SiteSettings {
   if (typeof window === 'undefined') return defaultSiteSettings;
   const raw = window.localStorage.getItem(SETTINGS_KEY);
   if (!raw) return defaultSiteSettings;
   try {
-    return { ...defaultSiteSettings, ...JSON.parse(raw) };
+    return normaliseSiteSettings(JSON.parse(raw));
   } catch {
     return defaultSiteSettings;
   }
@@ -80,20 +113,20 @@ export function loadContentSections(): ContentSections {
   const raw = window.localStorage.getItem(CONTENT_KEY);
   if (!raw) return defaultContentSections;
   try {
-    return { ...defaultContentSections, ...JSON.parse(raw) };
+    return normaliseContentSections(JSON.parse(raw));
   } catch {
     return defaultContentSections;
   }
 }
 
-export function saveSiteSettings(settings: SiteSettings) {
+export async function saveSiteSettings(settings: SiteSettings) {
   saveToLocalStorage(SETTINGS_KEY, settings);
-  saveToDatabase('site/settings', settings);
+  await saveToDatabase('site/settings', settings);
 }
 
-export function saveContentSections(sections: ContentSections) {
+export async function saveContentSections(sections: ContentSections) {
   saveToLocalStorage(CONTENT_KEY, sections);
-  saveToDatabase('site/content', sections);
+  await saveToDatabase('site/content', sections);
 }
 
 // Save to localStorage (immediate UI update)
@@ -131,7 +164,7 @@ export async function loadSiteSettingsFromDatabase(): Promise<SiteSettings> {
     });
     if (response.ok) {
       const data = await response.json();
-      return { ...defaultSiteSettings, ...data };
+      return normaliseSiteSettings(data);
     }
   } catch (error) {
     console.error('Failed to load site settings from database:', error);
@@ -147,7 +180,7 @@ export async function loadContentSectionsFromDatabase(): Promise<ContentSections
     });
     if (response.ok) {
       const data = await response.json();
-      return { ...defaultContentSections, ...data };
+      return normaliseContentSections(data);
     }
   } catch (error) {
     console.error('Failed to load content sections from database:', error);
@@ -161,11 +194,11 @@ export async function initializeSiteConfig(): Promise<{ settings: SiteSettings; 
     loadSiteSettingsFromDatabase(),
     loadContentSectionsFromDatabase(),
   ]);
-  
+
   // Also save to localStorage for immediate access
   saveToLocalStorage(SETTINGS_KEY, settings);
   saveToLocalStorage(CONTENT_KEY, content);
-  
+
   return { settings, content };
 }
 
@@ -174,15 +207,33 @@ export function useSiteConfig() {
   const [content, setContent] = useState<ContentSections>(loadContentSections);
 
   useEffect(() => {
+    let isMounted = true;
+
     const syncConfig = () => {
-      setSettings(loadSiteSettings());
-      setContent(loadContentSections());
+      const nextSettings = loadSiteSettings();
+      const nextContent = loadContentSections();
+      setSettings(nextSettings);
+      setContent(nextContent);
+    };
+
+    const syncFromDatabase = async () => {
+      try {
+        const { settings: nextSettings, content: nextContent } = await initializeSiteConfig();
+        if (isMounted) {
+          setSettings(nextSettings);
+          setContent(nextContent);
+        }
+      } catch (error) {
+        console.error('Failed to sync site config from database:', error);
+      }
     };
 
     syncConfig();
+    void syncFromDatabase();
     window.addEventListener('site-config-changed', syncConfig);
 
     return () => {
+      isMounted = false;
       window.removeEventListener('site-config-changed', syncConfig);
     };
   }, []);
