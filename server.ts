@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import net from 'net';
-import { getDatabase, readDoc, listQuery, writeDoc, updateDoc, deleteDoc, findUserByEmail, verifyPassword, createPublicBooking, getPublicTracking, resetUserPassword, DEFAULT_USER_PASSWORD } from './server/db';
+import { getDatabase, readDoc, listQuery, writeDoc, updateDoc, deleteDoc, findUserByEmail, verifyPassword, createPublicBooking, getPublicTracking, resetUserPassword, DEFAULT_USER_PASSWORD } from './server/db.js';
 import { repositories } from './server/db/repositories/index.js';
 import { services } from './server/db/services/index.js';
 
@@ -737,6 +737,18 @@ app.get('/api/queue-summary', (_req, res) => {
   });
 });
 
+if (process.env.NODE_ENV === 'production') {
+  const frontendDirectory = path.join(process.cwd(), 'dist');
+  app.use(express.static(frontendDirectory));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+      next();
+      return;
+    }
+    res.sendFile(path.join(frontendDirectory, 'index.html'));
+  });
+}
+
 app.use((req, res) => {
   res.status(404).json({
     status: 'not_found',
@@ -752,13 +764,6 @@ app.use((err: any, _req: any, res: any, _next: any) => {
     message: 'Something went wrong on the server',
   });
 });
-
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'dist')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-  });
-}
 
 const startServer = async () => {
   const availablePort = await getAvailablePort(PORT);
