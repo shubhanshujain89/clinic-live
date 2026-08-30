@@ -80,8 +80,25 @@ function parseStoredValue(value: unknown): unknown {
   }
 }
 
+function normalizeDbKey(key: string): string {
+  const cleaned = key.trim();
+  if (!cleaned) return cleaned;
+
+  const camel = cleaned
+    .replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase())
+    .replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+
+  return camel;
+}
+
+function normalizeRecord(data: Record<string, any>): Record<string, any> {
+  return Object.fromEntries(
+    Object.entries(data).map(([key, value]) => [normalizeDbKey(key), parseStoredValue(value)])
+  );
+}
+
 function normaliseSiteSettings(data: Partial<SiteSettings> = {}): SiteSettings {
-  const parsed = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, parseStoredValue(value)]));
+  const parsed = normalizeRecord(data as Record<string, any>);
   return {
     ...defaultSiteSettings,
     ...parsed,
@@ -92,7 +109,7 @@ function normaliseSiteSettings(data: Partial<SiteSettings> = {}): SiteSettings {
 function normaliseContentSections(data: Partial<ContentSections> = {}): ContentSections {
   return {
     ...defaultContentSections,
-    ...Object.fromEntries(Object.entries(data).map(([key, value]) => [key, parseStoredValue(value)])),
+    ...normalizeRecord(data as Record<string, any>),
   };
 }
 

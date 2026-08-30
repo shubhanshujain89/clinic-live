@@ -739,7 +739,7 @@ app.get('/api/site/settings', async (_req, res) => {
     const settings = await repositories.settings.findGlobal();
     const settingsMap: Record<string, any> = {};
     settings.forEach((setting) => {
-      settingsMap[setting.key] = setting.value;
+      if (setting.key) settingsMap[setting.key] = setting.value;
     });
     res.status(200).json(settingsMap);
   } catch (error) {
@@ -765,7 +765,7 @@ app.get('/api/site/content', async (_req, res) => {
     const settings = await repositories.settings.findGlobal();
     const contentMap: Record<string, any> = {};
     settings.forEach((setting) => {
-      if (setting.category === 'content') {
+      if (setting.category === 'content' && setting.key) {
         contentMap[setting.key] = setting.value;
       }
     });

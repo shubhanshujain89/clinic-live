@@ -50,9 +50,13 @@ export abstract class BaseRepository<T extends BaseEntity> {
     const params: any[] = [];
 
     if (options.where && Object.keys(options.where).length > 0) {
-      const conditions = Object.keys(options.where).map(key => `\`${key}\` = ?`);
+      const conditions = Object.keys(options.where).map((key) => {
+        const value = options.where![key];
+        if (value === null) return `\`${key}\` IS NULL`;
+        params.push(value);
+        return `\`${key}\` = ?`;
+      });
       sql += ` WHERE ${conditions.join(' AND ')}`;
-      params.push(...Object.values(options.where));
     }
 
     if (options.orderBy) {
