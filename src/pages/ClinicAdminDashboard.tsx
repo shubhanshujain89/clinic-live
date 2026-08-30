@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, Plus, Edit, Trash2, Users, Clock, Search, Filter } from 'lucide-react';
 import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from '../lib/firebase';
-import { defaultContentSections, defaultSiteSettings, loadContentSections, loadSiteSettings, saveContentSections, saveSiteSettings } from '../lib/siteConfig';
+import { defaultContentSections, defaultSiteSettings, loadContentSections, loadSiteSettings, saveContentSections, saveSiteSettings, initializeSiteConfig, loadSiteSettingsFromDatabase, loadContentSectionsFromDatabase } from '../lib/siteConfig';
 import { FeaturePlan } from '../types/queue';
 
 const HOURS_OPTIONS = [
@@ -167,7 +167,22 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       setSavedContentSections(loadedContent);
     };
 
-    syncFromStorage();
+    // Initialize from database on startup (for cross-device sync)
+    const initializeFromDatabase = async () => {
+      try {
+        const { settings, content } = await initializeSiteConfig();
+        setSiteSettings(settings);
+        setContentSections(content);
+        setSavedSiteSettings(settings);
+        setSavedContentSections(content);
+      } catch (error) {
+        console.error('Failed to initialize site config from database:', error);
+        // Fallback to localStorage
+        syncFromStorage();
+      }
+    };
+
+    initializeFromDatabase();
     window.addEventListener('site-config-changed', syncFromStorage);
     window.addEventListener('storage', syncFromStorage);
 
@@ -747,11 +762,15 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   };
 
   const handleUserPhoneChange = (value: string) => {
-    setUserFormData((prev) => ({ ...prev, phone: formatPhoneInput(value) }));
+    // Store only the 10 digits
+    const digits = (value || '').replace(/\D/g, '').slice(0, 10);
+    setUserFormData((prev) => ({ ...prev, phone: digits }));
   };
 
   const handleClinicPhoneChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, phone: formatPhoneInput(value) }));
+    // Store only the 10 digits
+    const digits = (value || '').replace(/\D/g, '').slice(0, 10);
+    setFormData((prev) => ({ ...prev, phone: digits }));
   };
 
   const filteredClinics = clinics.filter(clinic =>
@@ -761,9 +780,9 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
   const hasUnsavedSettingsChanges = JSON.stringify(siteSettings) !== JSON.stringify(savedSiteSettings) || JSON.stringify(contentSections) !== JSON.stringify(savedContentSections);
 
-  const handleSaveSettings = () => {
-    saveSiteSettings(siteSettings);
-    saveContentSections(contentSections);
+  const handleSaveSettings = async () => {
+    await saveSiteSettings(siteSettings);
+    await saveContentSections(contentSections);
     setSaveMessage('Settings saved successfully.');
     window.dispatchEvent(new Event('site-config-changed'));
     
