@@ -87,7 +87,7 @@ const extractTableName = (pathValue: string) => {
 const extractRecordId = (pathValue: string) => {
   const cleaned = pathValue.replace(/^\/+|\/+$/g, '').trim();
   const segments = cleaned.split('/').filter(Boolean);
-  return segments[1] || segments[0] || null;
+  return segments.length > 1 ? segments[1] : null;
 };
 
 const normalizeKey = (key: string) => key.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
@@ -143,12 +143,13 @@ export const readDoc = async (pathValue: string) => {
 export const writeDoc = async (pathValue: string, value: Record<string, any>) => {
   const table = extractTableName(pathValue);
   const repo = repositoryMap[table];
-  
+
   if (!repo) {
     throw new Error(`Unknown table: ${table}`);
   }
 
-  const id = value?.id || extractRecordId(pathValue) || crypto.randomUUID();
+  const requestedId = extractRecordId(pathValue);
+  const id = value?.id || requestedId || crypto.randomUUID();
   const payload = { ...value, id };
 
   const existing = await repo.findById(id);
@@ -156,7 +157,7 @@ export const writeDoc = async (pathValue: string, value: Record<string, any>) =>
     await repo.update(id, payload);
     return { id: existing.id, path: `${table}/${existing.id}` };
   }
-  
+
   const result = await repo.create(payload);
   return { id: result.id, path: `${table}/${result.id}` };
 };
