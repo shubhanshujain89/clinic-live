@@ -1,10 +1,6 @@
 import mysql from 'mysql2/promise';
-import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Load environment variables from .env file if it exists
 const envPath = path.join(process.cwd(), '.env');
