@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { auth, onAuthStateChanged, User, signInWithEmailAndPassword } from './lib/firebase';
-import { seedClinicDatabase } from './lib/seedData';
 import { GlobalHeader } from './components/GlobalHeader';
 import { useSiteConfig } from './lib/siteConfig';
 import { LandingPage } from './pages/LandingPage';
@@ -79,11 +78,6 @@ export default function App() {
       confirmPassword: '',
     });
   }, [userSession, authUser]);
-
-  // Seed database on app load
-  useEffect(() => {
-    seedClinicDatabase(false).catch(err => console.error('Seeding failed:', err));
-  }, []);
 
   const handleNavigate = (page: string, role?: string) => {
     if (page === 'login') {

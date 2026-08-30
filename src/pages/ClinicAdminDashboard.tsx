@@ -85,12 +85,13 @@ interface ClinicAdminProps {
 
 export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLogout, onManageDoctors, mode = 'clinic-admin' }) => {
   const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [appointments, setAppointments] = useState<Array<{ clinicId: string; appointmentType?: string; status?: string }>>([]);
   const [payments, setPayments] = useState<Array<{ id: string; clinicId: string; clinicName: string; pack: FeaturePlan; amount: number; durationDays: number; status: 'PAID' | 'PENDING'; paidAt: string; startDate: string; expiryDate: string; notes?: string }>>([]);
-  const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; role: string; status: 'Active' | 'Offline' | 'Pending'; clinicName?: string; phone?: string; accessStatus?: 'Granted' | 'Hold' | 'Denied'; photoURL?: string; passwordReset?: string }>>([]);
+  const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; role: string; status: 'Active' | 'Offline' | 'Pending'; clinicName?: string; phone?: string; accessStatus?: 'Granted' | 'Hold' | 'Denied'; photoURL?: string; passwordReset?: string; source?: 'staff_users' | 'doctors' }>>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingClinic, setEditingClinic] = useState<Clinic | null>(null);
-  const [editingUser, setEditingUser] = useState<{ id: string; name: string; email: string; role: string; status: 'Active' | 'Offline' | 'Pending'; clinicName?: string; phone?: string; accessStatus?: 'Granted' | 'Hold' | 'Denied'; photoURL?: string; passwordReset?: string } | null>(null);
+  const [editingUser, setEditingUser] = useState<{ id: string; name: string; email: string; role: string; status: 'Active' | 'Offline' | 'Pending'; clinicName?: string; phone?: string; accessStatus?: 'Granted' | 'Hold' | 'Denied'; photoURL?: string; passwordReset?: string; source?: 'staff_users' | 'doctors' } | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [siteSettings, setSiteSettings] = useState(loadSiteSettings());
@@ -154,6 +155,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     window.addEventListener('site-config-changed', syncFromStorage);
     window.addEventListener('storage', syncFromStorage);
     fetchClinics();
+    fetchAppointments();
     fetchUsers();
     fetchPayments();
 
@@ -230,6 +232,23 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     }
   };
 
+  const fetchAppointments = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, 'appointments'));
+      setAppointments(snapshot.docs.map((docItem) => {
+        const item = docItem.data() as Record<string, any>;
+        return {
+          clinicId: String(item.clinicId || item.clinic_id || ''),
+          appointmentType: String(item.appointmentType || item.appointment_type || '').toUpperCase(),
+          status: String(item.status || '').toLowerCase(),
+        };
+      }));
+    } catch (error) {
+      console.error('Error fetching appointment records:', error);
+      setAppointments([]);
+    }
+  };
+
   const fetchUsers = async () => {
     try {
       const staffResults: Array<any> = [];
@@ -248,7 +267,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
       const doctorSnapshot = await getDocs(collection(db, 'doctors')).catch(() => ({ docs: [] }));
 
-      const normalizeUserRecord = (item: Record<string, any>, fallbackRole = 'Staff') => {
+      const normalizeUserRecord = (item: Record<string, any>, fallbackRole = 'Staff', source: 'staff_users' | 'doctors' = 'staff_users') => {
         const safeName = String(item.name || item.displayName || item.display_name || item.fullName || 'User').trim();
         const safeEmail = String(item.email || '').trim();
         const safeRole = String(item.role || fallbackRole).trim();
@@ -258,6 +277,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         const passwordResetValue = item.passwordReset || item.password_reset || 'Never reset';
         return {
           id: String(item.id || item.uid || `${safeEmail || safeName}-${Math.random().toString(36).slice(2, 8)}`),
+          source,
           name: safeName || 'User',
           email: safeEmail,
           role: safeRole,
@@ -270,10 +290,10 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         };
       };
 
-      const staffUsers = staffResults.map((item) => normalizeUserRecord(item as Record<string, any>)).filter((user) => user.email || user.name);
+      const staffUsers = staffResults.map((item) => normalizeUserRecord(item as Record<string, any>, 'Staff', 'staff_users')).filter((user) => user.email || user.name);
       const doctorUsers = (doctorSnapshot.docs || []).map((docItem) => {
         const item = docItem.data() as Record<string, any>;
-        return normalizeUserRecord({ ...item, role: 'Doctor' }, 'Doctor');
+        return normalizeUserRecord({ ...item, role: 'Doctor' }, 'Doctor', 'doctors');
       });
 
       const mergedUsers = [...staffUsers, ...doctorUsers.filter((doctor) => !staffUsers.some((user) => user.email && doctor.email && user.email.toLowerCase() === doctor.email.toLowerCase()))];
@@ -333,7 +353,8 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   const handleDeleteUser = async (id: string) => {
     if (!window.confirm('Delete this user from the admin roster?')) return;
     try {
-      await deleteDoc(doc(db, 'users', id));
+      const user = users.find((item) => item.id === id);
+      await deleteDoc(doc(db, user?.source === 'doctors' ? 'doctors' : 'users', id));
       fetchUsers();
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -367,7 +388,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     }
   };
 
-  const handleEditUser = (user: { id: string; name: string; email: string; role: string; status: 'Active' | 'Offline' | 'Pending'; clinicName?: string; phone?: string; accessStatus?: 'Granted' | 'Hold' | 'Denied'; photoURL?: string; passwordReset?: string }) => {
+  const handleEditUser = (user: { id: string; name: string; email: string; role: string; status: 'Active' | 'Offline' | 'Pending'; clinicName?: string; phone?: string; accessStatus?: 'Granted' | 'Hold' | 'Denied'; photoURL?: string; passwordReset?: string; source?: 'staff_users' | 'doctors' }) => {
     setEditingUser(user);
     setUserFormData({
       name: user.name,
@@ -593,41 +614,37 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
 
 
+  const paidPayments = payments.filter((payment) => payment.status === 'PAID');
+  const pendingPayments = payments.filter((payment) => payment.status === 'PENDING');
   const billingSummary = [
-    { label: 'Monthly recurring revenue', value: '₹4.8L', tone: 'emerald' },
-    { label: 'Pending invoices', value: '12', tone: 'amber' },
-    { label: 'Active subscriptions', value: '94%', tone: 'cyan' },
-    { label: 'Due this cycle', value: '₹1.2L', tone: 'violet' },
-  ];
-
-  const companyControlCards = [
-    { label: 'Clinics live', value: String(clinics.length), tone: 'emerald' },
-    { label: 'Active users', value: String(users.length), tone: 'cyan' },
-    { label: 'Access health', value: '96%', tone: 'violet' },
-    { label: 'Critical alerts', value: '02', tone: 'amber' },
+    { label: 'Recorded revenue', value: `₹${paidPayments.reduce((sum, payment) => sum + payment.amount, 0).toLocaleString('en-IN')}`, tone: 'emerald' },
+    { label: 'Pending invoices', value: String(pendingPayments.length), tone: 'amber' },
+    { label: 'Recorded payments', value: String(payments.length), tone: 'cyan' },
+    { label: 'Recorded due amount', value: `₹${pendingPayments.reduce((sum, payment) => sum + payment.amount, 0).toLocaleString('en-IN')}`, tone: 'violet' },
   ];
 
   const clinicAppointmentSummary = clinics.length > 0
-    ? clinics.map((clinic, index) => ({
-        clinic: clinic.name || `Clinic ${index + 1}`,
-        walkIns: 18 + (index * 7) + (clinic.specializations?.length || 0) * 3,
-        online: 24 + (index * 9) + (clinic.specializations?.length || 0) * 4,
-        followUps: 7 + (index * 3),
-        noShows: 2 + (index % 3),
-      }))
+    ? clinics.map((clinic) => {
+        const clinicAppointments = appointments.filter((appointment) => appointment.clinicId === clinic.id);
+        const walkIns = clinicAppointments.filter((appointment) => appointment.appointmentType === 'WALK_IN').length;
+        const online = clinicAppointments.filter((appointment) => appointment.appointmentType === 'ONLINE').length;
+        const followUps = clinicAppointments.filter((appointment) => appointment.appointmentType === 'FOLLOW_UP').length;
+        const noShows = clinicAppointments.filter((appointment) => appointment.status === 'NO_SHOW').length;
+        return {
+        clinic: clinic.name || 'Unnamed clinic',
+        walkIns,
+        online,
+        followUps,
+        noShows,
+        };
+      })
     : [];
 
   const recentActivity = [
-    { title: 'New clinic onboarding', detail: 'Latest clinic records synced from Firestore.', time: 'Recently updated' },
+    { title: 'New clinic onboarding', detail: 'Latest clinic records loaded from MySQL.', time: 'Recently updated' },
     { title: 'WhatsApp reminder campaign', detail: `Status reflects current live clinic configuration.`, time: 'Live sync' },
     { title: 'Queue reporting', detail: 'Patient flow data updates from the connected clinic database.', time: 'Updated now' },
     { title: 'Security review completed', detail: 'Role-based access is aligned to the active user roster.', time: 'Current state' },
-  ];
-
-  const communicationHealth = [
-    { channel: 'WhatsApp', status: 'Active', value: '98.2%' },
-    { channel: 'SMS alerts', status: 'Stable', value: '96.4%' },
-    { channel: 'Email automation', status: 'Healthy', value: '99.1%' },
   ];
 
   const complianceChecks = [
@@ -637,20 +654,11 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     { name: 'Backup & restore test', status: 'Passed' },
   ];
 
-  const chartBars = [48, 62, 54, 70, 78, 68, 88];
-
   const auditLogs = [
-    { title: 'Clinic records synced', detail: 'Latest clinic data mirrored from Firestore.', time: 'Current sync' },
+    { title: 'Clinic records synced', detail: 'Latest clinic data loaded from MySQL.', time: 'Current sync' },
     { title: 'Queue metrics refreshed', detail: 'Operational data recalculated from live clinic records.', time: 'Current sync' },
     { title: 'Campaign status reviewed', detail: 'WhatsApp automation status reflects active system configuration.', time: 'Current sync' },
     { title: 'Access policy matched', detail: 'User permissions remain aligned with the current roster.', time: 'Current sync' },
-  ];
-
-  const integrations = [
-    { name: 'WhatsApp Business', status: 'Connected', uptime: '99.1%' },
-    { name: 'Firebase', status: 'Connected', uptime: '99.8%' },
-    { name: 'Stripe / Payments', status: 'Configured', uptime: '98.7%' },
-    { name: 'Email automation', status: 'Healthy', uptime: '99.0%' },
   ];
 
   const exportReport = () => {
@@ -698,11 +706,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'dashboard':
-        const activeClinicsCount = clinics.filter(c => {
-          const createdDate = new Date(c.createdAt);
-          const daysSinceCreation = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
-          return daysSinceCreation <= 30;
-        }).length || Math.max(1, clinics.length);
+        const activeClinicsCount = clinics.filter(c => c.subscriptionPack?.status === 'ACTIVE').length;
         
         const pendingClinicsCount = Math.max(0, clinics.length - activeClinicsCount);
         
@@ -712,14 +716,16 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         const grantedAccessCount = users.filter(u => u.accessStatus === 'Granted').length;
         const accessGrantedPercent = users.length > 0 ? Math.round((grantedAccessCount / users.length) * 100) : 0;
         
-        const totalRevenue = clinics.reduce((sum, clinic) => {
-          const clinicData = clinics.find(c => c.id === clinic.id);
-          return sum + (clinicData ? 15000 : 0);
-        }, 0);
+        const totalRevenue = paidPayments.reduce((sum, payment) => sum + payment.amount, 0);
         
-        const pendingPayments = Math.max(2, Math.floor(clinics.length * 0.15));
-        const expiringSubscriptions = Math.max(1, Math.floor(clinics.length * 0.1));
-        const activeSubscriptionsPercent = Math.round((activeClinicsCount / Math.max(1, clinics.length)) * 100);
+        const dashboardPendingPayments = pendingPayments.length;
+        const expiringSubscriptions = clinics.filter((clinic) => {
+          const expiryDate = clinic.subscriptionPack?.expiryDate;
+          if (!expiryDate) return false;
+          const expiry = new Date(expiryDate).getTime();
+          return expiry >= Date.now() && expiry <= Date.now() + 7 * 24 * 60 * 60 * 1000;
+        }).length;
+        const activeSubscriptionsPercent = clinics.length ? Math.round((activeClinicsCount / clinics.length) * 100) : 0;
         
         return (
           <div className="space-y-8">
@@ -762,8 +768,8 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
               <div className="grid gap-4 md:grid-cols-4">
                 <button onClick={() => setActiveTab('security')} className="rounded-2xl border border-slate-700 bg-slate-900/70 p-5 text-left hover:border-violet-400/50 hover:bg-slate-800/70 transition">
                   <div className="text-[10px] uppercase tracking-[0.18em] text-amber-400">Payment pending</div>
-                  <div className="mt-3 text-4xl font-black text-white">₹{(pendingPayments * 2500).toLocaleString()}</div>
-                  <p className="mt-2 text-xs text-slate-500">{pendingPayments} invoices awaiting</p>
+                  <div className="mt-3 text-4xl font-black text-white">₹{pendingPayments.reduce((sum, payment) => sum + payment.amount, 0).toLocaleString('en-IN')}</div>
+                  <p className="mt-2 text-xs text-slate-500">{dashboardPendingPayments} invoices awaiting</p>
                 </button>
                 <button onClick={() => setActiveTab('security')} className="rounded-2xl border border-slate-700 bg-slate-900/70 p-5 text-left hover:border-violet-400/50 hover:bg-slate-800/70 transition">
                   <div className="text-[10px] uppercase tracking-[0.18em] text-emerald-400">Active subscriptions</div>
@@ -1330,14 +1336,14 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                     <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-6">
                       <h3 className="mb-4 text-xl font-bold">Subscription health</h3>
                       <div className="space-y-4">
-                        {[{ label: 'Trial pack', value: '94%', tone: 'emerald' }, { label: 'Standard pack', value: '68%', tone: 'cyan' }, { label: 'Overdue balances', value: '11%', tone: 'amber' }].map((item) => (
+                        {[{ label: 'Paid records', value: payments.length ? `${Math.round((paidPayments.length / payments.length) * 100)}%` : '0%', tone: 'emerald' }, { label: 'Pending records', value: payments.length ? `${Math.round((pendingPayments.length / payments.length) * 100)}%` : '0%', tone: 'cyan' }, { label: 'Overdue balances', value: 'No data', tone: 'amber' }].map((item) => (
                           <div key={item.label}>
                             <div className="mb-1 flex items-center justify-between text-sm">
                               <span className="text-slate-300">{item.label}</span>
                               <span className="font-bold text-white">{item.value}</span>
                             </div>
                             <div className="h-2.5 overflow-hidden rounded-full bg-slate-800">
-                              <div className={`h-full rounded-full ${item.tone === 'emerald' ? 'bg-emerald-500' : item.tone === 'cyan' ? 'bg-cyan-500' : 'bg-amber-500'}`} style={{ width: item.value }} />
+                              <div className={`h-full rounded-full ${item.tone === 'emerald' ? 'bg-emerald-500' : item.tone === 'cyan' ? 'bg-cyan-500' : 'bg-amber-500'}`} style={{ width: item.value === 'No data' ? '0%' : item.value }} />
                             </div>
                           </div>
                         ))}

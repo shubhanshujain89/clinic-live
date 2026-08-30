@@ -150,6 +150,12 @@ export const writeDoc = async (pathValue: string, value: Record<string, any>) =>
 
   const id = value?.id || extractRecordId(pathValue) || crypto.randomUUID();
   const payload = { ...value, id };
+
+  const existing = await repo.findById(id);
+  if (existing) {
+    await repo.update(id, payload);
+    return { id: existing.id, path: `${table}/${existing.id}` };
+  }
   
   const result = await repo.create(payload);
   return { id: result.id, path: `${table}/${result.id}` };
