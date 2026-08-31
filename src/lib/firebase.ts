@@ -23,6 +23,35 @@ export const googleProvider = new GoogleAuthProvider();
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 const cleanPath = (path: string) => String(path || '').replace(/^\/+|\/+$/g, '');
 
+// Client-side password hashing using Web Crypto API (matches server implementation)
+export const hashPassword = async (password: string, salt?: string): Promise<string> => {
+  const encoder = new TextEncoder();
+  const saltBytes = salt ? new TextEncoder().encode(salt) : crypto.getRandomValues(new Uint8Array(16));
+  const saltHex = Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(password),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
+  
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: saltBytes,
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    512 // 64 bytes = 512 bits
+  );
+  
+  const hashHex = Array.from(new Uint8Array(derivedBits)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return `${saltHex}:${hashHex}`;
+};
+
 const api = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(path, {
     credentials: 'include',

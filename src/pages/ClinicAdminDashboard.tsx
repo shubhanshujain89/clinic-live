@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, Plus, Edit, Trash2, Users, Clock, Search, Filter } from 'lucide-react';
-import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, auth, onAuthStateChanged, recordAuditEvent } from '../lib/firebase';
+import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, auth, onAuthStateChanged, recordAuditEvent, hashPassword } from '../lib/firebase';
 import { defaultContentSections, defaultSiteSettings, loadContentSections, loadSiteSettings, saveContentSections, saveSiteSettings, initializeSiteConfig, loadSiteSettingsFromDatabase, loadContentSectionsFromDatabase } from '../lib/siteConfig';
 import { FeaturePlan } from '../types/queue';
 import { PhoneInput } from '../components/PhoneInput';
@@ -516,16 +516,25 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       const selectedClinic = clinics.find((clinic) => clinic.name.toLowerCase() === userFormData.clinicName.trim().toLowerCase());
       const selectedAccessStatus = editingUser?.accessStatus || userFormData.accessStatus;
       const databaseAccessStatus = selectedAccessStatus === 'Hold' ? 'Pending' : selectedAccessStatus === 'Denied' ? 'Revoked' : 'Granted';
+      const roleMap: Record<string, string> = {
+        'Super Admin': 'SUPER_ADMIN',
+        'Clinic Admin': 'CLINIC_ADMIN',
+        'Doctor': 'DOCTOR',
+        'Support Staff': 'STAFF',
+      };
+      const dbRole = roleMap[userFormData.role] || 'STAFF';
+      const passwordHash = await hashPassword(DEFAULT_USER_PASSWORD);
       const payload = {
         name: userFormData.name,
         displayName: userFormData.name,
         email: userFormData.email,
-        role: userFormData.role,
+        role: dbRole,
         status: 'Active',
         clinicId: selectedClinic?.id,
         clinicName: userFormData.clinicName,
         phone: userFormData.phone,
         accessStatus: databaseAccessStatus,
+        passwordHash: passwordHash,
         passwordReset: userFormData.passwordReset || 'Never reset',
       };
 
@@ -569,6 +578,21 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         } else {
           await addDoc(collection(db, 'doctors'), {
             ...doctorPayload,
+            createdAt: new Date().toISOString()
+          });
+          // Also create staff_users entry for doctor login
+          await addDoc(collection(db, 'users'), {
+            name: payload.name,
+            displayName: payload.name,
+            email: payload.email,
+            role: 'DOCTOR',
+            status: 'Active',
+            clinicId: selectedClinic?.id,
+            clinicName: userFormData.clinicName,
+            phone: payload.phone,
+            accessStatus: databaseAccessStatus,
+            passwordHash: passwordHash,
+            passwordReset: 'Default (Clinic@123)',
             createdAt: new Date().toISOString()
           });
         }
