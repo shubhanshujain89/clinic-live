@@ -49,6 +49,17 @@ const cookieValue = (req: express.Request, name: string) => {
 };
 
 const authContext = (req: express.Request) => sessions.get(cookieValue(req, 'clinicflow_session'));
+
+const getClinicAccessStatus = async (clinicId: string | null, clinicName?: string) => {
+  let resolvedClinicId = clinicId;
+  if (!resolvedClinicId && clinicName) {
+    const clinic = await repositories.clinics.findOne({ name: clinicName });
+    resolvedClinicId = clinic?.id || null;
+  }
+  if (!resolvedClinicId) return 'Granted';
+  const record = await repositories.settings.findOne({ key: `clinic_access_${resolvedClinicId}`, clinic_id: null });
+  return record?.value || 'Granted';
+};
 const tableForPath = (value: string) => String(value).replace(/^\/+|\/+$/g, '').split('/')[0];
 const secureEqual = (left: string, right: string) => {
   const leftBuffer = Buffer.from(left);
@@ -468,6 +479,8 @@ app.post('/api/auth/login', async (req, res) => {
     const superAdminUsername = process.env.SUPER_ADMIN_USERNAME || 'admin';
 
     let context: AuthContext | null = null;
+    let accountAccessStatus = 'Granted';
+    let accountClinicName = '';
     
     // Check super admin credentials
     if (normalizedEmail === superAdminUsername && superAdminPassword && secureEqual(normalizedPassword, superAdminPassword)) {
@@ -478,6 +491,8 @@ app.post('/api/auth/login', async (req, res) => {
       const account = await findUserByEmail(normalizedEmail);
       
       if (account && verifyPassword(normalizedPassword, account.passwordHash)) {
+        accountAccessStatus = account.accessStatus || 'Granted';
+        accountClinicName = account.clinicName || '';
         const role = String(account.role || 'CLINIC_ADMIN').toUpperCase() as AuthContext['role'];
         if (['CLINIC_ADMIN', 'DOCTOR', 'STAFF', 'SUPER_ADMIN'].includes(role)) {
           context = { userId: account.id, role, clinicId: account.clinicId || null, doctorId: account.doctorId || null, email: account.email };
@@ -488,6 +503,14 @@ app.post('/api/auth/login', async (req, res) => {
     if (!context) {
       res.status(401).json({ error: 'Invalid credentials or user not found.' });
       return;
+    }
+
+    if (context.role !== 'SUPER_ADMIN') {
+      const clinicAccessStatus = await getClinicAccessStatus(context.clinicId, accountClinicName);
+      if (['Hold', 'Denied'].includes(clinicAccessStatus) || ['Pending', 'Revoked'].includes(accountAccessStatus)) {
+        res.status(403).json({ error: clinicAccessStatus === 'Denied' || accountAccessStatus === 'Revoked' ? 'Access denied.' : 'Clinic access is on hold.' });
+        return;
+      }
     }
 
     if (normalizedRole && normalizedRole !== context.role && !(normalizedRole === 'CLINIC-ADMIN' && context.role === 'CLINIC_ADMIN')) {
@@ -622,6 +645,14 @@ app.post('/api/clinic-access', async (req, res) => {
     const existing = await repositories.settings.findOne({ key, clinic_id: null });
     if (existing) await repositories.settings.update(existing.id, { value: status, category: 'clinic_access' });
     else await repositories.settings.create({ id: crypto.randomUUID(), key, value: status, category: 'clinic_access', clinicId: null } as any);
+    const databaseStatus = status === 'Hold' ? 'Pending' : status === 'Denied' ? 'Revoked' : 'Granted';
+    const clinic = await repositories.clinics.findById(clinicId);
+    const linkedUsers = [
+      ...(await repositories.staffUsers.findAll({ where: { clinic_id: clinicId } })),
+      ...(await repositories.staffUsers.findAll({ where: { clinic_id: null } })).filter((user) => user.clinicName?.toLowerCase() === clinic?.name?.toLowerCase()),
+    ];
+    const uniqueUsers = linkedUsers.filter((user, index, all) => all.findIndex((candidate) => candidate.id === user.id) === index);
+    await Promise.all(uniqueUsers.map((user) => repositories.staffUsers.update(user.id, { accessStatus: databaseStatus as any })));
     res.status(200).json({ ok: true, clinicId, status });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to update clinic access.' });
@@ -723,6 +754,13 @@ app.post('/api/db/doc', async (req, res) => {
     
     console.log('Calling writeDoc for:', documentPath);
     const result = await writeDoc(documentPath, value || {});
+    if (tableForPath(documentPath) === 'clinics' && !String(documentPath).includes('/')) {
+      const accessKey = `clinic_access_${result.id}`;
+      const accessRecord = await repositories.settings.findOne({ key: accessKey, clinic_id: null });
+      if (!accessRecord) {
+        await repositories.settings.create({ id: crypto.randomUUID(), key: accessKey, value: 'Hold', category: 'clinic_access', clinicId: null } as any);
+      }
+    }
     console.log('writeDoc result:', result);
     res.status(200).json({ id: result.id });
   } catch (error) {

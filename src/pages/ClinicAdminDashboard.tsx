@@ -262,34 +262,9 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       });
       setUnsubscribeAppointments(unsubscribeAppointmentsListener);
 
-      const paymentsRef = collection(db, 'payments');
-      const unsubscribePaymentsListener = onSnapshot(paymentsRef, (snapshot) => {
-        const paymentList = snapshot.docs.map((docItem) => {
-          const item = docItem.data() as Record<string, any>;
-          return {
-            id: docItem.id,
-            clinicId: item.clinicId || item.clinic_id || '',
-            clinicName: item.clinicName || item.clinic_name || 'Unnamed clinic',
-            pack: (item.pack || item.plan || 'TRIAL') as FeaturePlan,
-            amount: Number(item.amount || 0),
-            durationDays: Number(item.durationDays || item.duration_days || 30),
-            status: (item.status || 'PAID') as 'PAID' | 'PENDING',
-            paidAt: item.paidAt || item.paid_at || item.createdAt || new Date().toISOString(),
-            startDate: item.startDate || item.start_date || item.paidAt || item.paid_at || new Date().toISOString(),
-            expiryDate: item.expiryDate || item.expiry_date || new Date(Date.now() + Number(item.durationDays || item.duration_days || 30) * 24 * 60 * 60 * 1000).toISOString(),
-            notes: item.notes || '',
-          };
-        });
-        if (!cancelled) {
-          setPayments(paymentList.sort((left, right) => new Date(right.paidAt).getTime() - new Date(left.paidAt).getTime()));
-        }
-      }, (error) => {
-        console.error('Error fetching payment records:', error);
-        if (!cancelled) {
-          setPayments([]);
-        }
-      });
-      setUnsubscribePayments(unsubscribePaymentsListener);
+      void fetchPayments();
+      const paymentRefreshTimer = window.setInterval(fetchPayments, 2500);
+      setUnsubscribePayments(() => () => window.clearInterval(paymentRefreshTimer));
 
       const fetchAuditLogs = async () => {
         try {
@@ -547,6 +522,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         email: userFormData.email,
         role: userFormData.role,
         status: 'Active',
+        clinicId: selectedClinic?.id,
         clinicName: userFormData.clinicName,
         phone: userFormData.phone,
         accessStatus: databaseAccessStatus,
@@ -779,6 +755,13 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
           updatedAt: new Date().toISOString(),
           currentPackName: paymentForm.pack,
         });
+        const accessResponse = await fetch('/api/clinic-access', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clinicId: matchedClinic.id, status: 'Granted' }),
+        });
+        if (!accessResponse.ok) throw new Error('Unable to activate clinic after billing update.');
       }
 
       if (editingPaymentId) {
@@ -958,6 +941,17 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     });
     setBillingTab('add-payment');
   };
+  const handleDeletePayment = async (payment: (typeof payments)[number]) => {
+    if (!window.confirm(`Delete the ${payment.pack} payment for ${payment.clinicName}?`)) return;
+    try {
+      await deleteDoc(doc(db, 'payments', payment.id));
+      await fetchPayments();
+      void recordAuditEvent('Billing deleted', `Billing for ${payment.clinicName} was deleted.`);
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      window.alert('Unable to delete the payment. Please try again.');
+    }
+  };
   const billingSummary = [
     { label: 'Recorded revenue', value: `₹${paidPayments.reduce((sum, payment) => sum + payment.amount, 0).toLocaleString('en-IN')}`, tone: 'emerald' },
     { label: 'Pending invoices', value: String(pendingPayments.length), tone: 'amber' },
@@ -1041,7 +1035,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'dashboard':
-        const activeClinicsCount = clinics.filter(clinicHasBilling).length;
+        const activeClinicsCount = clinics.filter((clinic) => clinicHasBilling(clinic) && (clinicAccess[clinic.id] || 'Granted') === 'Granted').length;
         
         const pendingClinicsCount = Math.max(0, clinics.length - activeClinicsCount);
         
@@ -1878,14 +1872,15 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
               )}
             </div>
 
-            {payments.length > 0 && (
-              <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-6">
+            <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="text-xl font-bold text-white">Recent payments</h3>
                   <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200">{payments.length} entries</span>
                 </div>
-                <div className="space-y-3">
-                  {payments.map((payment) => (
+                {payments.length === 0 ? <div className="py-6 text-center text-sm text-slate-400">No payments recorded yet.</div> : <div className="space-y-3">
+                  {payments.map((payment) => {
+                    const paymentClinic = clinics.find((clinic) => clinic.id === payment.clinicId || clinic.name.toLowerCase() === payment.clinicName.toLowerCase());
+                    return (
                     <div key={payment.id} className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-800/70 p-4 md:flex-row md:items-center md:justify-between">
                       <div>
                         <div className="text-base font-semibold text-white">{payment.clinicName || 'Unnamed clinic'}</div>
@@ -1894,12 +1889,14 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                       <div className="flex items-center gap-3">
                         <span className="rounded-full bg-slate-700 px-2 py-1 text-[10px] uppercase tracking-[0.14em] text-slate-200">{payment.status}</span>
                         <span className="text-lg font-bold text-emerald-300">₹{Number(payment.amount).toLocaleString('en-IN')}</span>
+                        {paymentClinic && <button onClick={() => openClinicBilling(paymentClinic, payment)} className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-violet-400">Edit</button>}
+                        <button onClick={() => handleDeletePayment(payment)} className="rounded-lg bg-red-500/15 px-3 py-2 text-xs font-semibold text-red-200 hover:bg-red-500/25">Delete</button>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    );
+                  })}
+                </div>}
               </div>
-            )}
           </div>
         );
       default:
