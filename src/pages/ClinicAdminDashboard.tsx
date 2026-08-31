@@ -798,6 +798,8 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         } : payment));
         setEditingPaymentId(null);
         setBillingTab('overview');
+        await fetchPayments();
+        fetchClinics();
         void recordAuditEvent('Billing modified', `Billing for ${clinicName} was modified: ${paymentForm.pack}, ₹${amountValue.toLocaleString('en-IN')}, ${paymentForm.status}.`);
         window.alert('Payment updated successfully.');
         return;
@@ -821,6 +823,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       setEditingPaymentId(null);
       setPaymentForm({ clinicId: '', clinicName: '', pack: 'TRIAL', amount: '', fromDate: new Date().toISOString().slice(0, 10), durationDays: '30', status: 'PAID', notes: '' });
       setBillingTab('overview');
+      await fetchPayments();
       void recordAuditEvent('Billing added', `Billing for ${clinicName} was added: ${paymentForm.pack}, ₹${amountValue.toLocaleString('en-IN')}, ${paymentForm.status}.`);
       fetchClinics();
       fetchPayments();
@@ -934,6 +937,11 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
   const paidPayments = payments.filter((payment) => payment.status === 'PAID');
   const pendingPayments = payments.filter((payment) => payment.status === 'PENDING');
+  const clinicAccessCounts = {
+    Granted: clinics.filter((clinic) => (clinicAccess[clinic.id] || 'Granted') === 'Granted').length,
+    Hold: clinics.filter((clinic) => clinicAccess[clinic.id] === 'Hold').length,
+    Denied: clinics.filter((clinic) => clinicAccess[clinic.id] === 'Denied').length,
+  };
   const clinicHasBilling = (clinic: Clinic) => payments.some((payment) => payment.clinicId === clinic.id || payment.clinicName.toLowerCase() === clinic.name.toLowerCase());
   const openClinicBilling = (clinic: Clinic, payment?: (typeof payments)[number]) => {
     const pack = payment?.pack || clinic.featurePlan || 'TRIAL';
@@ -1604,7 +1612,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
               <div className="grid gap-4 md:grid-cols-3">
                 {['Granted', 'Hold', 'Denied'].map((status) => {
-                  const count = users.filter((user) => (user.accessStatus || 'Granted') === status).length;
+                  const count = clinicAccessCounts[status as keyof typeof clinicAccessCounts];
                   return (
                     <div key={status} className="rounded-xl border border-slate-800 bg-slate-800/70 p-4">
                       <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400">{status}</div>
