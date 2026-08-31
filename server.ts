@@ -581,6 +581,53 @@ app.post('/api/audit', async (req, res) => {
   }
 });
 
+app.get('/api/clinic-access', async (req, res) => {
+  const context = authContext(req);
+  if (!context || !['SUPER_ADMIN', 'CLINIC_ADMIN'].includes(context.role)) {
+    res.status(401).json({ error: 'Authentication required.' });
+    return;
+  }
+
+  try {
+    const records = await repositories.settings.findAll({ where: { category: 'clinic_access' } });
+    const access: Record<string, string> = {};
+    records.forEach((record) => {
+      if (record.value) access[record.key.replace(/^clinic_access_/, '')] = record.value;
+    });
+    res.status(200).json(access);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to load clinic access.' });
+  }
+});
+
+app.post('/api/clinic-access', async (req, res) => {
+  const context = authContext(req);
+  const clinicId = String(req.body?.clinicId || '').trim();
+  const status = String(req.body?.status || '').trim();
+  if (!context || !['SUPER_ADMIN', 'CLINIC_ADMIN'].includes(context.role)) {
+    res.status(401).json({ error: 'Authentication required.' });
+    return;
+  }
+  if (!clinicId || !['Granted', 'Hold', 'Denied'].includes(status)) {
+    res.status(400).json({ error: 'Clinic and valid access status are required.' });
+    return;
+  }
+  if (context.role === 'CLINIC_ADMIN' && context.clinicId !== clinicId) {
+    res.status(403).json({ error: 'Clinic access denied.' });
+    return;
+  }
+
+  try {
+    const key = `clinic_access_${clinicId}`;
+    const existing = await repositories.settings.findOne({ key, clinic_id: null });
+    if (existing) await repositories.settings.update(existing.id, { value: status, category: 'clinic_access' });
+    else await repositories.settings.create({ id: crypto.randomUUID(), key, value: status, category: 'clinic_access', clinicId: null } as any);
+    res.status(200).json({ ok: true, clinicId, status });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to update clinic access.' });
+  }
+});
+
 app.post('/api/users/reset-password', async (req, res) => {
   try {
     const context = authContext(req);

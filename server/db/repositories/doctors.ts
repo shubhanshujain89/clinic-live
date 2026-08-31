@@ -15,6 +15,7 @@ export interface Doctor {
   experience?: string;
   phone?: string;
   email?: string;
+  photo?: string;
   bio?: string;
   consultationFee: number;
   availableDays: string[];
@@ -39,6 +40,7 @@ export class DoctorRepository extends BaseRepository<Doctor> {
       experience: row.experience,
       phone: row.phone,
       email: row.email,
+      photo: row.photo_url,
       bio: row.bio,
       consultationFee: parseFloat(row.consultation_fee),
       availableDays: Array.isArray(row.available_days)
@@ -65,6 +67,7 @@ export class DoctorRepository extends BaseRepository<Doctor> {
     if (entity.experience !== undefined) columns.experience = entity.experience;
     if (entity.phone !== undefined) columns.phone = entity.phone;
     if (entity.email !== undefined) columns.email = entity.email;
+    if (entity.photo !== undefined) columns.photo_url = entity.photo;
     if (entity.bio !== undefined) columns.bio = entity.bio;
     if (entity.consultationFee !== undefined) columns.consultation_fee = entity.consultationFee;
     if (entity.availableDays !== undefined) columns.available_days = JSON.stringify(entity.availableDays);
