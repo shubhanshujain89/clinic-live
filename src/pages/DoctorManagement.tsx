@@ -41,6 +41,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
     experience: '',
     phone: '',
     email: '',
+    photo: '',
     bio: '',
     consultationFee: '',
     availableDays: [] as string[],
@@ -100,6 +101,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
         experience: '',
         phone: '',
         email: '',
+        photo: '',
         bio: '',
         consultationFee: '',
         availableDays: [],
@@ -110,6 +112,14 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
     } catch (error) {
       console.error('Error saving doctor:', error);
     }
+  };
+
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setFormData((current) => ({ ...current, photo: String(reader.result || '') }));
+    reader.readAsDataURL(file);
   };
 
   const handleDeleteDoctor = async (id: string) => {
@@ -133,6 +143,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
       experience: doctor.experience,
       phone: doctor.phone,
       email: doctor.email,
+      photo: doctor.photo || '',
       bio: doctor.bio || '',
       consultationFee: doctor.consultationFee.toString(),
       availableDays: doctor.availableDays,
@@ -227,7 +238,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
               <div key={doctor.id} className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden hover:border-emerald-400/50 transition group">
                 {/* Doctor Image Placeholder */}
                 <div className="h-40 bg-gradient-to-br from-emerald-900/30 to-cyan-900/30 flex items-center justify-center">
-                  <Users className="w-20 h-20 text-slate-600" />
+                  {doctor.photo ? <img src={doctor.photo} alt={doctor.name} className="h-full w-full object-cover" /> : <Users className="w-20 h-20 text-slate-600" />}
                 </div>
 
                 <div className="p-6">
@@ -356,15 +367,26 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold mb-1">Consultation Fee (₹)</label>
-                <input
-                  type="number"
-                  value={formData.consultationFee}
-                  onChange={(e) => setFormData({ ...formData, consultationFee: e.target.value })}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
-                  placeholder="500"
-                />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Consultation Fee (₹)</label>
+                  <input
+                    type="number"
+                    value={formData.consultationFee}
+                    onChange={(e) => setFormData({ ...formData, consultationFee: e.target.value })}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
+                    placeholder="500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Profile Photo</label>
+                  <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-emerald-400">
+                    <Upload className="h-4 w-4 text-emerald-400" />
+                    <span>{formData.photo ? 'Change photo' : 'Upload photo'}</span>
+                    <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                  </label>
+                  {formData.photo && <img src={formData.photo} alt="Doctor profile preview" className="mt-2 h-16 w-16 rounded-lg border border-slate-600 object-cover" />}
+                </div>
               </div>
 
               <div>
@@ -448,6 +470,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
                     experience: '',
                     phone: '',
                     email: '',
+                    photo: '',
                     bio: '',
                     consultationFee: '',
                     availableDays: [],

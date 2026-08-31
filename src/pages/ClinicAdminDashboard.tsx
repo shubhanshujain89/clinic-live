@@ -130,12 +130,14 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   const [unsubscribeAppointments, setUnsubscribeAppointments] = useState<(() => void) | null>(null);
   const [unsubscribePayments, setUnsubscribePayments] = useState<(() => void) | null>(null);
   const [unsubscribeAuditLogs, setUnsubscribeAuditLogs] = useState<(() => void) | null>(null);
+  const [clinicAccess, setClinicAccess] = useState<Record<string, 'Granted' | 'Hold' | 'Denied'>>({});
   const [auditLogs, setAuditLogs] = useState<Array<{ id: string; title: string; detail: string; time: string; timestamp: any }>>([]);
   const [paymentForm, setPaymentForm] = useState({
     clinicId: '',
     clinicName: '',
     pack: 'TRIAL' as FeaturePlan,
     amount: '',
+    fromDate: new Date().toISOString().slice(0, 10),
     durationDays: '30',
     status: 'PAID' as 'PAID' | 'PENDING',
     notes: '',
@@ -303,6 +305,18 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       const auditTimer = window.setInterval(fetchAuditLogs, 2500);
       setUnsubscribeAuditLogs(() => () => window.clearInterval(auditTimer));
 
+      const fetchClinicAccess = async () => {
+        try {
+          const response = await fetch('/api/clinic-access', { credentials: 'include' });
+          if (!response.ok) throw new Error(`Clinic access request failed (${response.status})`);
+          setClinicAccess(await response.json());
+        } catch (error) {
+          console.error('Error fetching clinic access:', error);
+        }
+      };
+      void fetchClinicAccess();
+      const clinicAccessTimer = window.setInterval(fetchClinicAccess, 2500);
+
       const setupUsersListener = async () => {
         const staffPaths = ['staff_users', 'users'];
         const unsubscribeFunctions: (() => void)[] = [];
@@ -343,6 +357,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         if (unsubscribeAppointments) unsubscribeAppointments();
         if (unsubscribePayments) unsubscribePayments();
         if (unsubscribeAuditLogs) unsubscribeAuditLogs();
+        window.clearInterval(clinicAccessTimer);
       };
     };
 
@@ -524,7 +539,8 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     try {
       const isDoctor = userFormData.role.trim().toLowerCase() === 'doctor';
       const selectedClinic = clinics.find((clinic) => clinic.name.toLowerCase() === userFormData.clinicName.trim().toLowerCase());
-      const databaseAccessStatus = userFormData.accessStatus === 'Hold' ? 'Pending' : userFormData.accessStatus === 'Denied' ? 'Revoked' : 'Granted';
+      const selectedAccessStatus = editingUser?.accessStatus || userFormData.accessStatus;
+      const databaseAccessStatus = selectedAccessStatus === 'Hold' ? 'Pending' : selectedAccessStatus === 'Denied' ? 'Revoked' : 'Granted';
       const payload = {
         name: userFormData.name,
         displayName: userFormData.name,
@@ -534,7 +550,6 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         clinicName: userFormData.clinicName,
         phone: userFormData.phone,
         accessStatus: databaseAccessStatus,
-        photoUrl: userFormData.photoURL || '',
         passwordReset: userFormData.passwordReset || 'Never reset',
       };
 
@@ -735,9 +750,13 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     }
 
     try {
-      const paidAtDate = new Date();
-      const startDate = paidAtDate.toISOString();
-      const expiryDate = new Date(paidAtDate.getTime() + durationValue * 24 * 60 * 60 * 1000).toISOString();
+      const startDateValue = new Date(`${paymentForm.fromDate}T00:00:00`);
+      if (Number.isNaN(startDateValue.getTime())) {
+        window.alert('Please select a valid from date.');
+        return;
+      }
+      const startDate = startDateValue.toISOString();
+      const expiryDate = new Date(startDateValue.getTime() + durationValue * 24 * 60 * 60 * 1000).toISOString();
       const paymentPayload = {
         clinicId,
         clinicName,
@@ -772,8 +791,8 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
           amount: amountValue,
           durationDays: durationValue,
           status: paymentForm.status,
-          paidAt: payment.paidAt,
-          startDate: payment.startDate,
+          paidAt: startDate,
+          startDate,
           expiryDate: payment.expiryDate,
           notes: paymentForm.notes.trim(),
         } : payment));
@@ -800,7 +819,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         notes: paymentForm.notes.trim(),
       }, ...currentPayments]);
       setEditingPaymentId(null);
-      setPaymentForm({ clinicId: '', clinicName: '', pack: 'TRIAL', amount: '', durationDays: '30', status: 'PAID', notes: '' });
+      setPaymentForm({ clinicId: '', clinicName: '', pack: 'TRIAL', amount: '', fromDate: new Date().toISOString().slice(0, 10), durationDays: '30', status: 'PAID', notes: '' });
       setBillingTab('overview');
       void recordAuditEvent('Billing added', `Billing for ${clinicName} was added: ${paymentForm.pack}, ₹${amountValue.toLocaleString('en-IN')}, ${paymentForm.status}.`);
       fetchClinics();
@@ -924,6 +943,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       clinicName: clinic.name,
       pack,
       amount: payment ? String(payment.amount) : String(getPackPrice(pack)),
+      fromDate: payment ? payment.startDate.slice(0, 10) : new Date().toISOString().slice(0, 10),
       durationDays: payment ? String(payment.durationDays) : String(getPackMeta(pack).validityDays),
       status: payment?.status || 'PAID',
       notes: payment?.notes || '',
@@ -1603,7 +1623,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                 ) : (
                   clinics.map((clinic) => {
                     const clinicUsers = users.filter((user) => (user.clinicName || '').toLowerCase() === clinic.name.toLowerCase() || user.clinicName === clinic.name);
-                    const status = clinicUsers.some((user) => (user.accessStatus || 'Granted') === 'Denied') ? 'Denied' : clinicUsers.some((user) => (user.accessStatus || 'Granted') === 'Hold') ? 'Hold' : 'Granted';
+                    const status = clinicAccess[clinic.id] || 'Granted';
                     return (
                       <div key={clinic.id} className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-800/60 p-4 md:flex-row md:items-center md:justify-between">
                         <div>
@@ -1615,26 +1635,19 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                             value={status}
                             onChange={async (e) => {
                               const newStatus = e.target.value as 'Granted' | 'Hold' | 'Denied';
-                              // Update local state immediately for responsive UI
-                              setUsers(users.map(user => 
-                                clinicUsers.some(cu => cu.id === user.id) 
-                                  ? { ...user, accessStatus: newStatus }
-                                  : user
-                              ));
-                              
-                              // Save to Firestore
                               try {
-                                const databaseStatus = newStatus === 'Hold' ? 'Pending' : newStatus === 'Denied' ? 'Revoked' : 'Granted';
-                                for (const user of clinicUsers.filter((item) => item.source !== 'doctors')) {
-                                  const userRef = doc(db, user.source === 'doctors' ? 'doctors' : 'users', user.id);
-                                  await updateDoc(userRef, { accessStatus: databaseStatus });
-                                }
+                                const response = await fetch('/api/clinic-access', {
+                                  method: 'POST',
+                                  credentials: 'include',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ clinicId: clinic.id, status: newStatus }),
+                                });
+                                if (!response.ok) throw new Error('Unable to update clinic access.');
+                                setClinicAccess((current) => ({ ...current, [clinic.id]: newStatus }));
                                 void recordAuditEvent('Access changed', `${clinic.name} access changed to ${newStatus} for ${clinicUsers.length} linked user(s).`);
                               } catch (error) {
                                 console.error('Error updating clinic access:', error);
                                 window.alert('Failed to update access. Please try again.');
-                                // Revert local state on error
-                                fetchUsers();
                               }
                             }}
                             className="rounded-lg bg-slate-700 border border-slate-600 px-3 py-2 text-sm font-medium text-white focus:border-emerald-400 focus:outline-none"
@@ -1682,50 +1695,14 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
               {billingTab === 'overview' ? (
                 <>
-                  <div className="mb-6">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div>
-                        <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Clinic billing</div>
-                        <h3 className="mt-1 text-xl font-bold text-white">Billing by clinic</h3>
-                      </div>
-                      <span className="rounded-full bg-slate-700 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">{clinics.length} clinics</span>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      {clinics.map((clinic) => {
-                        const clinicPayments = payments.filter((payment) => payment.clinicId === clinic.id || payment.clinicName.toLowerCase() === clinic.name.toLowerCase());
-                        const latestPayment = clinicPayments[0];
-                        return (
-                          <div key={clinic.id} className="rounded-xl border border-slate-800 bg-slate-800/70 p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="font-semibold text-white">{clinic.name}</div>
-                                <div className="mt-1 text-xs text-slate-400">{clinic.email}</div>
-                              </div>
-                              <span className="rounded-full bg-slate-700 px-2 py-1 text-[10px] text-slate-200">{latestPayment ? latestPayment.status : 'No billing'}</span>
-                            </div>
-                            <div className="mt-4 flex items-center justify-between gap-3">
-                              <div className="text-sm text-slate-300">{latestPayment ? `${latestPayment.pack} · ₹${Number(latestPayment.amount).toLocaleString('en-IN')}` : 'No payment recorded'}</div>
-                              <div className="flex gap-2">
-                                {latestPayment && <button onClick={() => openClinicBilling(clinic, latestPayment)} className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-violet-400">Edit billing</button>}
-                                <button onClick={() => openClinicBilling(clinic)} className="rounded-lg bg-violet-500 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-400">Add billing</button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
                   <div className="grid gap-4 lg:grid-cols-2">
                     {PACK_OPTIONS.map((pack) => {
                       const activeCount = clinics.filter((clinic) => (clinic.featurePlan || 'TRIAL') === pack.value).length;
                       const packClinics = clinics.filter((clinic) => (clinic.featurePlan || 'TRIAL') === pack.value);
                       const isExpanded = expandedBillingPack === pack.value;
                       return (
-                        <button
+                        <div
                           key={pack.value}
-                          type="button"
-                          aria-expanded={isExpanded}
                           onClick={() => setExpandedBillingPack(isExpanded ? null : pack.value)}
                           className={`rounded-2xl border p-5 text-left transition ${isExpanded ? 'border-emerald-400/50 bg-slate-800' : 'border-slate-800 bg-slate-800/70 hover:border-emerald-400/40'}`}
                         >
@@ -1738,13 +1715,25 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                           </div>
                           <div className="mt-4 text-sm text-slate-400">{activeCount} clinics assigned</div>
                           {isExpanded && (
-                            <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-700 pt-4">
-                              {packClinics.length > 0 ? packClinics.map((clinic) => (
-                                <span key={clinic.id} className="rounded-full bg-slate-700 px-2 py-1 text-[10px] text-slate-200">{clinic.name}</span>
-                              )) : <span className="text-xs text-slate-500">No clinics assigned</span>}
+                            <div className="mt-4 space-y-2 border-t border-slate-700 pt-4">
+                              {packClinics.length > 0 ? packClinics.map((clinic) => {
+                                const latestPayment = payments.find((payment) => payment.clinicId === clinic.id || payment.clinicName.toLowerCase() === clinic.name.toLowerCase());
+                                return (
+                                  <div key={clinic.id} className="flex flex-col gap-2 rounded-lg bg-slate-900/60 p-3 sm:flex-row sm:items-center sm:justify-between" onClick={(event) => event.stopPropagation()}>
+                                    <div>
+                                      <div className="text-sm font-semibold text-white">{clinic.name}</div>
+                                      <div className="text-xs text-slate-400">{latestPayment ? `${latestPayment.status} · ₹${Number(latestPayment.amount).toLocaleString('en-IN')}` : 'No billing recorded'}</div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      {latestPayment && <button onClick={() => openClinicBilling(clinic, latestPayment)} className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-violet-400">Edit billing</button>}
+                                      <button onClick={() => openClinicBilling(clinic)} className="rounded-lg bg-violet-500 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-400">Add billing</button>
+                                    </div>
+                                  </div>
+                                );
+                              }) : <span className="text-xs text-slate-500">No clinics assigned</span>}
                             </div>
                           )}
-                        </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -1820,6 +1809,17 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                         placeholder={paymentForm.pack === 'TRIAL' ? '0 (auto-filled for Trial)' : paymentForm.pack === 'ENTERPRISE' ? 'Enter custom amount' : 'Auto-filled based on pack'}
                       />
                       <p className="mt-1 text-xs text-slate-500">Auto-fills based on selected pack. Edit to apply discounts.</p>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-slate-300">From date</label>
+                      <input
+                        type="date"
+                        value={paymentForm.fromDate}
+                        onChange={(event) => setPaymentForm((current) => ({ ...current, fromDate: event.target.value }))}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-white focus:border-violet-400 focus:outline-none"
+                      />
+                      <p className="mt-1 text-xs text-slate-500">Plan expiry is calculated from this date.</p>
                     </div>
 
                     <div>
@@ -2015,11 +2015,6 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2">Profile photo URL</label>
-                <input type="url" value={userFormData.photoURL} onChange={(e) => setUserFormData({ ...userFormData, photoURL: e.target.value })} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none" placeholder="https://example.com/avatar.jpg" />
-              </div>
-
-              <div>
                 <label className="block text-sm font-semibold mb-2">Email</label>
                 <input type="email" value={userFormData.email} onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none" />
               </div>
@@ -2049,14 +2044,14 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                 <PhoneInput value={userFormData.phone} onChange={handleUserPhoneChange} />
               </div>
 
-              <div>
+              {!editingUser && <div>
                 <label className="block text-sm font-semibold mb-2">Access status</label>
                 <select value={userFormData.accessStatus} onChange={(e) => setUserFormData({ ...userFormData, accessStatus: e.target.value as 'Granted' | 'Hold' | 'Denied' })} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none">
                   <option value="Granted">Granted</option>
                   <option value="Hold">Hold</option>
                   <option value="Denied">Denied</option>
                 </select>
-              </div>
+              </div>}
 
               <div>
                 <label className="block text-sm font-semibold mb-2">Password reset</label>
