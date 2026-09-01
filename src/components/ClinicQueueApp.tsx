@@ -48,7 +48,8 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedTrackTokenId, setSelectedTrackTokenId] = useState<string>('tok_03');
   const [isSeeding, setIsSeeding] = useState(false);
-  const isStaffRole = role === 'staff';
+  const normalizedRole = String(role || '').toUpperCase();
+  const isStaffRole = normalizedRole === 'STAFF';
   const roleSwitchOptions = isStaffRole ? ['RECEPTIONIST'] : ['DOCTOR', 'RECEPTIONIST', 'TV_DISPLAY'];
 
   // Modals state
@@ -64,12 +65,12 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
 
   // Set role based on login
   useEffect(() => {
-    if (role === 'doctor') {
+    if (normalizedRole === 'DOCTOR') {
       setCurrentRole('DOCTOR');
-    } else if (role === 'staff') {
+    } else if (normalizedRole === 'STAFF') {
       setCurrentRole('RECEPTIONIST');
     }
-  }, [role]);
+  }, [normalizedRole]);
 
   useEffect(() => {
     if (isStaffRole && currentRole === 'DOCTOR') {
@@ -86,28 +87,35 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
   }, []);
 
   // Load the current clinic queue from MySQL. Queue mutations remain on Firebase until migrated.
+  // Poll periodically so Doctor, Receptionist and TV views stay in sync in real time.
   useEffect(() => {
-    const controller = new AbortController();
+    let active = true;
+    const abortController = new AbortController();
     const loadQueue = async () => {
       try {
         const response = await fetch(`/api/staff/queue/${encodeURIComponent(clinicId)}`, {
-          signal: controller.signal,
+          signal: abortController.signal,
           credentials: 'include',
         });
         const payload = await response.json();
+        if (!active) return;
         if (!response.ok) throw new Error(payload.error || 'Unable to load queue.');
         setClinic(payload.clinic as Clinic);
         setSession(payload.session as QueueSession | null);
         setTokens((payload.tokens || []) as TokenItem[]);
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          console.warn('MySQL queue load failed:', error);
-        }
+      } catch (error: any) {
+        if (!active && (error?.name === 'AbortError' || abortController.signal.aborted)) return;
+        console.warn('MySQL queue load failed:', error);
       }
     };
 
     loadQueue();
-    return () => controller.abort();
+    const pollId = window.setInterval(loadQueue, 5000);
+    return () => {
+      active = false;
+      abortController.abort();
+      window.clearInterval(pollId);
+    };
   }, [clinicId]);
 
   const handleGoogleSignIn = async () => {

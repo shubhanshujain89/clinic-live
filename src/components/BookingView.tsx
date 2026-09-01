@@ -80,7 +80,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
   const handleGatewayPaymentSuccess = async (details: { paymentMethod: string; transactionId: string }) => {
     setIsProcessingPayment(true);
     try {
-      const tokenId = 'tok_' + Date.now();
+      const tokenId = 'tok_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
       const randSeq = Math.floor(Math.random() * 80) + 110;
       const tokenNumber = `A-${randSeq}`;
 
@@ -114,6 +114,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
               lastEditedBy: 'PATIENT',
             }
           : undefined,
+        triageNotes: details.transactionId ? `Gateway Txn: ${details.transactionId}` : undefined,
       };
 
       // Write directly to Firestore
@@ -170,7 +171,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
 
     setTimeout(async () => {
       try {
-        const tokenId = 'tok_' + Date.now();
+const tokenId = 'tok_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
         const randSeq = Math.floor(Math.random() * 80) + 110;
         const tokenNumber = `A-${randSeq}`;
 
@@ -206,6 +207,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
                 lastEditedBy: 'PATIENT',
               }
             : undefined,
+          triageNotes: isPaidOnline && utrRefNumber.trim() ? `UPI UTR: ${utrRefNumber.trim()}` : undefined,
         };
 
         // Write directly to Firestore
@@ -798,14 +800,16 @@ export const BookingView: React.FC<BookingViewProps> = ({
       {/* Hosted Payment Gateway Overlay Modal */}
       {showGatewayModal && (
         <PaymentGatewayPage
-          amount={totalAmount}
-          doctorName={clinic.doctorName}
-          clinicName={clinic.name}
+          clinic={clinic}
           patientName={patientName}
           patientPhone={patientPhone}
+          patientAge={patientAge}
+          patientGender={patientGender}
+          primaryConcern={primaryConcern}
+          amount={totalAmount}
           consultationFee={consultationFee}
-          convenienceFee={platformFee}
-          onPaymentSuccess={handleGatewayPaymentSuccess}
+          platformFee={platformFee}
+          onSuccess={handleGatewayPaymentSuccess}
           onCancel={() => setShowGatewayModal(false)}
         />
       )}

@@ -35,9 +35,9 @@ export const DelayBroadcastModal: React.FC<DelayBroadcastModalProps> = ({
       // Sound chime
       soundManager.playChime();
 
-      // Dispatch delay broadcast WhatsApp notifications to all waiting patients
+      // Dispatch delay broadcast WhatsApp notifications to ALL waiting patients
       if (notifyWhatsApp && delayMinutes > 0) {
-        for (const token of waitingTokens.slice(0, 5)) {
+        for (const token of waitingTokens) {
           await WhatsAppService.sendWhatsAppNotification(
             token,
             'DOCTOR_DELAY_ALERT',

@@ -4,6 +4,8 @@
  */
 
 import { BaseRepository } from './base.js';
+import { executeUpdate } from '../connection.js';
+import crypto from 'crypto';
 
 export interface DoctorStatus {
   id: string;
@@ -39,36 +41,40 @@ export class DoctorStatusRepository extends BaseRepository<DoctorStatus> {
   }
 
   /**
-   * Find or create doctor status
+   * Find or create doctor status.
+   * Uses INSERT ... ON DUPLICATE KEY UPDATE to prevent race conditions
+   * when two requests try to create the same (clinic, doctor) row.
    */
   async findOrCreate(clinicId: string, doctorId: string): Promise<DoctorStatus> {
-    let status = await this.findOne({ clinic_id: clinicId, doctor_id: doctorId });
-    if (!status) {
-      status = await this.create({
-        id: crypto.randomUUID(),
-        clinicId,
-        doctorId,
-        status: 'IN',
-      } as any);
-    }
-    return status;
+    const existing = await this.findOne({ clinic_id: clinicId, doctor_id: doctorId });
+    if (existing) return existing;
+
+    const id = crypto.randomUUID();
+    await executeUpdate(
+      `INSERT INTO \`doctor_status\` (id, clinic_id, doctor_id, status)
+       VALUES (?, ?, ?, 'IN')
+       ON DUPLICATE KEY UPDATE doctor_id = doctor_id`,
+      [id, clinicId, doctorId]
+    );
+
+    const result = await this.findOne({ clinic_id: clinicId, doctor_id: doctorId });
+    if (result) return result;
+    throw new Error('Failed to create doctor status');
   }
 
   /**
    * Update doctor status
    */
   async updateStatus(clinicId: string, doctorId: string, status: DoctorStatus['status']): Promise<DoctorStatus | null> {
-    const existing = await this.findOne({ clinic_id: clinicId, doctor_id: doctorId });
-    if (existing) {
-      return this.update(existing.id, { status });
-    } else {
-      return this.create({
-        id: crypto.randomUUID(),
-        clinicId,
-        doctorId,
-        status,
-      } as any);
-    }
+    const id = crypto.randomUUID();
+    await executeUpdate(
+      `INSERT INTO \`doctor_status\` (id, clinic_id, doctor_id, status)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE status = VALUES(status)`,
+      [id, clinicId, doctorId, status]
+    );
+
+    return this.findOne({ clinic_id: clinicId, doctor_id: doctorId });
   }
 
   /**

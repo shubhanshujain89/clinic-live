@@ -10,11 +10,30 @@ import { SCHEMA_SQL, SEED_DATA_SQL } from './schema.js';
 import { hashPassword } from '../db.js';
 
 /**
- * Split SQL statements by semicolon, handling edge cases
+ * Split SQL statements by semicolon, handling edge cases.
+ * Respects single-quoted and double-quoted string literals so that
+ * semicolons inside values are not treated as statement boundaries.
  */
 function splitSqlStatements(sql: string): string[] {
   sql = sql.replace(/^\s*--[^\r\n]*(?:\r?\n|$)/gm, '');
-  return sql.split(';').map(statement => statement.trim()).filter(Boolean);
+  const statements: string[] = [];
+  let current = '';
+  let inSingle = false;
+  let inDouble = false;
+  for (let i = 0; i < sql.length; i++) {
+    const char = sql[i];
+    const prev = i > 0 ? sql[i - 1] : '';
+    if (char === "'" && !inDouble && prev !== '\\') inSingle = !inSingle;
+    else if (char === '"' && !inSingle && prev !== '\\') inDouble = !inDouble;
+    if (char === ';' && !inSingle && !inDouble) {
+      statements.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+  if (current.trim()) statements.push(current.trim());
+  return statements.filter(Boolean);
 }
 
 /**
@@ -199,13 +218,17 @@ switch (command) {
       .catch(() => process.exit(1));
     break;
   case 'seed':
-    runSeedData().catch(() => process.exit(1));
+    runSeedData()
+      .finally(() => closePool())
+      .catch(() => process.exit(1));
     break;
   case 'reset':
     resetDatabase().catch(() => process.exit(1));
     break;
   case 'drop':
-    dropAllTables().catch(() => process.exit(1));
+    dropAllTables()
+      .finally(() => closePool())
+      .catch(() => process.exit(1));
     break;
   default:
     console.log(`

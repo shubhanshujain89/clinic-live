@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import crypto from 'crypto';
 import net from 'net';
-import { getDatabase, readDoc, listQuery, writeDoc, updateDoc, deleteDoc, findUserByEmail, verifyPassword, createPublicBooking, getPublicTracking, resetUserPassword, DEFAULT_USER_PASSWORD } from './server/db.js';
+import { getDatabase, readDoc, listQuery, writeDoc, updateDoc, deleteDoc, findUserByEmail, verifyPassword, createPublicBooking, getPublicTracking, resetUserPassword, DEFAULT_USER_PASSWORD, extractTableName } from './server/db.js';
 import { repositories } from './server/db/repositories/index.js';
 import { services } from './server/db/services/index.js';
 
@@ -31,6 +31,8 @@ const getAvailablePort = async (preferredPort: number): Promise<number> => {
 
 const PORT = Number(process.env.PORT || process.env.BACKEND_PORT || 4000);
 
+const sessions = new Map<string, AuthContext & { createdAt: number }>();
+
 const databaseReady = getDatabase();
 
 type AuthContext = {
@@ -41,7 +43,38 @@ type AuthContext = {
   email: string;
 };
 
-const sessions = new Map<string, AuthContext>();
+// Session cleanup: evict expired sessions every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  const TTL_MS = 8 * 60 * 60 * 1000;
+  for (const [token, ctx] of sessions) {
+    if (now - ctx.createdAt > TTL_MS) sessions.delete(token);
+  }
+}, 10 * 60 * 1000);
+
+// Rate limiting: simple in-memory rate limiter
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 30;
+
+function checkRateLimit(key: string, max = RATE_LIMIT_MAX): boolean {
+  const now = Date.now();
+  const entry = rateLimitStore.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitStore.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  entry.count++;
+  return entry.count <= max;
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitStore) {
+    if (now > entry.resetAt) rateLimitStore.delete(key);
+  }
+}, 60_000);
+
 const cookieValue = (req: express.Request, name: string) => {
   const cookies = String(req.headers.cookie || '').split(';');
   const entry = cookies.find((item) => item.trim().startsWith(`${name}=`));
@@ -60,7 +93,15 @@ const getClinicAccessStatus = async (clinicId: string | null, clinicName?: strin
   const record = await repositories.settings.findOne({ key: `clinic_access_${resolvedClinicId}`, clinic_id: null });
   return record?.value || 'Granted';
 };
-const tableForPath = (value: string) => String(value).replace(/^\/+|\/+$/g, '').split('/')[0];
+const serverTableMap: Record<string, string> = {
+  clinics: 'clinics', doctors: 'doctors', users: 'staff_users', staff_users: 'staff_users', staff: 'staff_users',
+  patients: 'patients', sessions: 'sessions', queue_sessions: 'sessions', appointments: 'appointments',
+  tokens: 'tokens', queue_events: 'queue_events', doctor_status: 'doctor_status', settings: 'settings', whatsapp_logs: 'whatsapp_logs',
+};
+const tableForPath = (value: string) => {
+  const raw = String(value).replace(/^\/+|\/+$/g, '').split('/')[0];
+  return serverTableMap[raw] || raw;
+};
 const secureEqual = (left: string, right: string) => {
   const leftBuffer = Buffer.from(left);
   const rightBuffer = Buffer.from(right);
@@ -93,7 +134,7 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
-  res.setHeader('X-Powered-By', 'ClinicFlow Pro');
+  res.removeHeader('X-Powered-By');
   next();
 });
 
@@ -350,6 +391,11 @@ app.post('/api/staff/queue/:tokenId/complete', async (req, res) => {
 
 app.post('/api/patient/book', async (req, res) => {
   try {
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(`booking:${clientIp}`, 10)) {
+      res.status(429).json({ error: 'Too many booking attempts. Please try again later.' });
+      return;
+    }
     const { clinicId, doctorId, patientName, phone, age, reason } = req.body || {};
     if (!clinicId || !doctorId || !String(patientName || '').trim() || !String(phone || '').trim()) {
       res.status(400).json({ error: 'Clinic, doctor, patient name, and mobile number are required.' });
@@ -468,6 +514,11 @@ app.patch('/api/patient/track/:trackingId/notes', async (req, res) => {
 
 app.post('/api/auth/login', async (req, res) => {
   try {
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(`login:${clientIp}`, 10)) {
+      res.status(429).json({ error: 'Too many login attempts. Please try again later.' });
+      return;
+    }
     const { email = '', password = '', role: requestedRole = '' } = req.body || {};
     const normalizedEmail = String(email).trim();
     const normalizedPassword = String(password);
@@ -520,7 +571,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const token = crypto.randomBytes(32).toString('hex');
-    sessions.set(token, context);
+    sessions.set(token, { ...context, createdAt: Date.now() });
     const isSecureCookie = process.env.NODE_ENV === 'production' || String(req.headers['x-forwarded-proto'] || '').toLowerCase() === 'https';
     const cookieAttributes = [
       'Path=/',
@@ -566,7 +617,15 @@ app.get('/api/audit', async (req, res) => {
 
   try {
     const records = await repositories.settings.findAll({ where: { category: 'audit' }, orderBy: 'updated_at', orderDirection: 'DESC', limit: 100 });
-    res.status(200).json(records.map((record) => {
+    const visible = context.role === 'SUPER_ADMIN' ? records : records.filter((r) => {
+      try {
+        const parsed = JSON.parse(r.value || '{}');
+        return !parsed.clinicId || parsed.clinicId === context.clinicId;
+      } catch {
+        return false;
+      }
+    });
+    res.status(200).json(visible.map((record) => {
       try {
         return { id: record.id, ...(JSON.parse(record.value || '{}')), timestamp: record.updatedAt.toISOString() };
       } catch {
@@ -594,7 +653,7 @@ app.post('/api/audit', async (req, res) => {
     const record = await repositories.settings.create({
       id: crypto.randomUUID(),
       key: `audit_${Date.now()}_${crypto.randomUUID()}`,
-      value: JSON.stringify({ title: String(title), detail: String(detail), actor: context.email, role: context.role, time: new Date().toISOString() }),
+      value: JSON.stringify({ title: String(title), detail: String(detail), actor: context.email, role: context.role, clinicId: context.clinicId, time: new Date().toISOString() }),
       category: 'audit',
       clinicId: null,
     } as any);
@@ -615,7 +674,9 @@ app.get('/api/clinic-access', async (req, res) => {
     const records = await repositories.settings.findAll({ where: { category: 'clinic_access' } });
     const access: Record<string, string> = {};
     records.forEach((record) => {
-      if (record.value) access[record.key.replace(/^clinic_access_/, '')] = record.value;
+      if (record.value && (context.role === 'SUPER_ADMIN' || context.clinicId === record.key.replace(/^clinic_access_/, ''))) {
+        access[record.key.replace(/^clinic_access_/, '')] = record.value;
+      }
     });
     res.status(200).json(access);
   } catch (error) {
@@ -675,8 +736,16 @@ app.post('/api/users/reset-password', async (req, res) => {
       return;
     }
 
+    if (context.role === 'CLINIC_ADMIN') {
+      const targetUser = await repositories.staffUsers.findById(userId);
+      if (!targetUser || targetUser.clinicId !== context.clinicId) {
+        res.status(403).json({ error: 'Cannot reset passwords for users outside your clinic.' });
+        return;
+      }
+    }
+
     const result = await resetUserPassword(userId, defaultPassword);
-    res.status(200).json({ ok: true, ...result });
+    res.status(200).json({ ...result, ok: true });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to reset password.' });
   }
@@ -739,8 +808,7 @@ app.get('/api/db/doc', async (req, res) => {
 app.post('/api/db/doc', async (req, res) => {
   try {
     const { path: documentPath, value } = req.body || {};
-    console.log('POST /api/db/doc - path:', documentPath, 'value keys:', Object.keys(value || {}));
-    
+
     if (!documentPath) {
       res.status(400).json({ error: 'Document path is required.' });
       return;
@@ -752,7 +820,6 @@ app.post('/api/db/doc', async (req, res) => {
       return;
     }
     
-    console.log('Calling writeDoc for:', documentPath);
     const result = await writeDoc(documentPath, value || {});
     if (tableForPath(documentPath) === 'clinics' && !String(documentPath).includes('/')) {
       const accessKey = `clinic_access_${result.id}`;
@@ -761,7 +828,6 @@ app.post('/api/db/doc', async (req, res) => {
         await repositories.settings.create({ id: crypto.randomUUID(), key: accessKey, value: 'Hold', category: 'clinic_access', clinicId: null } as any);
       }
     }
-    console.log('writeDoc result:', result);
     res.status(200).json({ id: result.id });
   } catch (error) {
     console.error('Database write error:', error);
@@ -822,7 +888,7 @@ app.post('/api/db/query', async (req, res) => {
 
     const docs = await listQuery(collectionPath, clauses || []);
     const context = (req as express.Request & { auth?: AuthContext }).auth;
-    const visibleDocs = context ? docs.filter((item) => canAccessRecord(context, item, tableForPath(collectionPath))) : docs;
+    const visibleDocs = context ? docs.filter((item: Record<string, any>) => canAccessRecord(context, item, tableForPath(collectionPath))) : docs;
     res.status(200).json({ docs: visibleDocs });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to query records.' });
@@ -836,7 +902,11 @@ app.get('/api/whatsapp/webhook', (req, res) => {
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'clinic_meta_verify_secret_token';
+  const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
+  if (!VERIFY_TOKEN) {
+    console.warn('[WhatsApp Webhook] WHATSAPP_VERIFY_TOKEN not configured.');
+    return res.sendStatus(503);
+  }
 
   if (mode === 'subscribe' && token === VERIFY_TOKEN) {
     console.log('[WhatsApp Webhook] Verification successful!');
@@ -849,7 +919,24 @@ app.get('/api/whatsapp/webhook', (req, res) => {
 // Receives delivery receipts, read receipts, inbound customer replies
 app.post('/api/whatsapp/webhook', (req, res) => {
   const body = req.body;
-  console.log('[WhatsApp Webhook] Inbound Payload received:', JSON.stringify(body, null, 2));
+
+  // Verify X-Hub-Signature-256 using the WhatsApp App Secret
+  const signature = req.headers['x-hub-signature-256'];
+  const appSecret = process.env.WHATSAPP_APP_SECRET;
+  if (!appSecret) {
+    console.warn('[WhatsApp Webhook] WHATSAPP_APP_SECRET not configured.');
+    return res.sendStatus(503);
+  }
+  if (signature) {
+    const expected = `sha256=${crypto.createHmac('sha256', appSecret).update(JSON.stringify(body)).digest('hex')}`;
+    if (!secureEqual(String(signature), expected)) {
+      console.warn('[WhatsApp Webhook] Invalid signature.');
+      return res.sendStatus(403);
+    }
+  } else {
+    console.warn('[WhatsApp Webhook] Missing signature header.');
+    return res.sendStatus(403);
+  }
 
   if (body.object === 'whatsapp_business_account') {
     return res.status(200).send('EVENT_RECEIVED');
@@ -865,15 +952,29 @@ app.post('/api/whatsapp/send-template', (_req, res) => {
   });
 });
 
-app.get('/api/queue-summary', (_req, res) => {
-  res.status(200).json({
-    clinicName: 'Apex Super Specialty Care & Cardiology',
-    totalPatients: 2,
-    waiting: 0,
-    serving: 0,
-    completed: 2,
-    status: 'live',
-  });
+app.get('/api/queue-summary', async (req, res) => {
+  try {
+    const context = authContext(req);
+    if (!context || !context.clinicId) {
+      res.status(401).json({ error: 'Authentication required.' });
+      return;
+    }
+    const session = await repositories.sessions.findActiveByClinicId(context.clinicId);
+    const stats = session
+      ? await repositories.tokens.getQueueStats('', session.id)
+      : { waiting: 0, serving: 0, completed: 0, total: 0 };
+    const clinic = await repositories.clinics.findById(context.clinicId);
+    res.status(200).json({
+      clinicName: clinic?.name || '',
+      totalPatients: stats.total,
+      waiting: stats.waiting,
+      serving: stats.serving,
+      completed: stats.completed,
+      status: session ? 'live' : 'idle',
+    });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to load queue summary.' });
+  }
 });
 
 // Site Settings API
@@ -905,10 +1006,15 @@ app.get('/api/site/settings', async (_req, res) => {
 
 app.post('/api/site/settings', async (req, res) => {
   try {
+    const context = authContext(req);
+    if (!context || !['SUPER_ADMIN', 'CLINIC_ADMIN'].includes(context.role)) {
+      res.status(401).json({ error: 'Authentication required.' });
+      return;
+    }
     const settings = req.body || {};
     for (const [key, value] of Object.entries(settings)) {
       const canonicalKey = normalizeSettingKey(key);
-      await repositories.settings.setValue(canonicalKey, String(value), null, 'site');
+      await repositories.settings.setValue(canonicalKey, String(value), undefined, 'site');
     }
     res.status(200).json({ ok: true });
   } catch (error) {
@@ -946,10 +1052,15 @@ app.get('/api/site/content', async (_req, res) => {
 
 app.post('/api/site/content', async (req, res) => {
   try {
+    const context = authContext(req);
+    if (!context || !['SUPER_ADMIN', 'CLINIC_ADMIN'].includes(context.role)) {
+      res.status(401).json({ error: 'Authentication required.' });
+      return;
+    }
     const content = req.body || {};
     for (const [key, value] of Object.entries(content)) {
       const canonicalKey = normalizeSettingKey(key);
-      await repositories.settings.setValue(canonicalKey, String(value), null, 'content');
+      await repositories.settings.setValue(canonicalKey, String(value), undefined, 'content');
     }
     res.status(200).json({ ok: true });
   } catch (error) {
@@ -996,5 +1107,18 @@ databaseReady.then(() => startServer()).catch((error) => {
   console.error('Failed to start backend server:', error);
   process.exit(1);
 });
+
+// Graceful shutdown: close the database pool on SIGTERM/SIGINT
+const shutdown = async () => {
+  try {
+    const { closeDatabase } = await import('./server/db.js');
+    await closeDatabase();
+  } catch {
+    // Best-effort cleanup
+  }
+  process.exit(0);
+};
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
 
 export default app;

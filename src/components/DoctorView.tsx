@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { Clinic, TokenItem, QueueSession, DoctorStatus } from '../types/queue';
 import { db, doc, updateDoc, collection, setDoc } from '../lib/firebase';
+import type { User } from '../lib/firebase';
 import { soundManager } from '../lib/audio';
 import { WhatsAppService } from '../lib/whatsappService';
 
@@ -37,7 +38,7 @@ interface DoctorViewProps {
   clinic: Clinic;
   session: QueueSession | null;
   tokens: TokenItem[];
-  currentUser: any;
+  currentUser: User | null;
   onGoogleSignIn: () => void;
   onViewPreNotes?: (token: TokenItem) => void;
 }

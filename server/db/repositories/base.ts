@@ -4,6 +4,7 @@
  */
 
 import { executeQuery, executeQueryOne, executeInsert, executeUpdate, executeTransaction } from '../connection.js';
+import crypto from 'crypto';
 
 export interface BaseEntity {
   id: string;
@@ -60,7 +61,8 @@ export abstract class BaseRepository<T extends BaseEntity> {
     }
 
     if (options.orderBy) {
-      sql += ` ORDER BY \`${options.orderBy}\` ${options.orderDirection || 'ASC'}`;
+      const direction = options.orderDirection === 'DESC' ? 'DESC' : 'ASC';
+      sql += ` ORDER BY \`${options.orderBy}\` ${direction}`;
     }
 
     if (options.limit) {

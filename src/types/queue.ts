@@ -16,7 +16,7 @@ export type DoctorStatus = 'IN' | 'OUT';
 
 export type TokenType = 'ONLINE' | 'WALK_IN' | 'VIP';
 
-export type TokenStatus = 'WAITING' | 'SERVING' | 'COMPLETED' | 'HOLD' | 'NO_SHOW' | 'CANCELLED';
+export type TokenStatus = 'WAITING' | 'CALLED' | 'IN_CONSULTATION' | 'SERVING' | 'COMPLETED' | 'HOLD' | 'NO_SHOW' | 'CANCELLED';
 
 export interface PreConsultationAttachment {
   name: string;
@@ -81,10 +81,10 @@ export interface TokenItem {
 export interface Clinic {
   id: string;
   name: string;
-  doctorName: string;
-  specialty: string;
-  cabinNumber: string;
-  doctorStatus: DoctorStatus;
+  doctorName?: string;
+  specialty?: string;
+  cabinNumber?: string;
+  doctorStatus: DoctorStatus | 'ON_BREAK' | 'EMERGENCY';
   delayMinutes: number; // Broadcast delay in minutes
   delayReason?: string;
   avgConsultationMinutes: number; // Rolling average calculated
@@ -96,6 +96,8 @@ export interface Clinic {
   revenueToday?: number;
   phone?: string;
   address?: string;
+  email?: string;
+  operatingHours?: string;
   qrCodeUrl?: string;
   featurePlan?: FeaturePlan;
   subscriptionPack?: ClinicPack | null;
@@ -124,12 +126,16 @@ export interface QueueSession {
   date: string;
   activeTokenId?: string;
   activeTokenNumber?: string;
-  status: 'ACTIVE' | 'PAUSED' | 'CLOSED';
+  status: SessionStatus;
   totalTokensIssued: number;
   rollingAvgMinutes: number;
   completedCount: number;
   totalRevenue: number;
 }
+
+// Unifies client and server session statuses.
+// Client views may only render a subset, but the type accepts the full server model.
+export type SessionStatus = 'ACTIVE' | 'PAUSED' | 'CLOSED' | 'COMPLETED' | 'CANCELLED';
 
 export interface WhatsAppLog {
   id: string;
@@ -138,7 +144,9 @@ export interface WhatsAppLog {
   phone: string;
   templateName: string;
   messageBody: string;
-  status: 'SENT' | 'DELIVERED' | 'READ' | 'QUEUED';
+  // Accepts both server (lowercase) and legacy client (UPPERCASE) values.
+  // WhatsAppLogsModal normalizes casing for display.
+  status: 'sent' | 'delivered' | 'read' | 'failed' | 'pending' | 'SENT' | 'DELIVERED' | 'READ' | 'QUEUED';
   timestamp: string;
   metaMessageId?: string;
 }

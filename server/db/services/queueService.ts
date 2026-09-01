@@ -263,26 +263,14 @@ export class QueueService {
         [clinicId, token.session_id, token.doctor_id]
       );
       const nextToken = (nextRows as any[])[0];
-      if (nextToken) {
-        await connection.execute(
-          `UPDATE \`tokens\` SET status = 'SERVING', called_at = CURRENT_TIMESTAMP
-           WHERE id = ? AND status = 'WAITING'`,
-          [nextToken.id]
-        );
-        await connection.execute(
-          `UPDATE \`clinics\`
-           SET current_running_token = ?, current_running_token_id = ?, avg_consultation_minutes = ?
-           WHERE id = ?`,
-          [nextToken.token_number, nextToken.id, rollingAverage, clinicId]
-        );
-      } else {
-        await connection.execute(
-          `UPDATE \`clinics\`
-           SET current_running_token = 'None', current_running_token_id = '', avg_consultation_minutes = ?
-           WHERE id = ?`,
-          [rollingAverage, clinicId]
-        );
-      }
+      // Do NOT auto-advance the next token to SERVING — the doctor/receptionist
+      // explicitly calls the next patient when ready.
+      await connection.execute(
+        `UPDATE \`clinics\`
+         SET current_running_token = 'None', current_running_token_id = '', avg_consultation_minutes = ?
+         WHERE id = ?`,
+        [rollingAverage, clinicId]
+      );
 
       return {
         id: token.id,
@@ -300,6 +288,7 @@ export class QueueService {
 
   /**
    * Update token status (e.g., start consultation, complete, hold)
+   * Validates the state transition to protect the token state machine.
    */
   async updateTokenStatus(
     tokenId: string, 
@@ -311,6 +300,22 @@ export class QueueService {
   ): Promise<TokenWithDetails | null> {
     const token = await repositories.tokens.findById(tokenId);
     if (!token) return null;
+
+    const allowedTransitions: Record<Token['status'], Token['status'][]> = {
+      WAITING: ['CALLED', 'HOLD', 'CANCELLED', 'NO_SHOW'],
+      CALLED: ['IN_CONSULTATION', 'HOLD'],
+      IN_CONSULTATION: ['COMPLETED', 'HOLD'],
+      SERVING: ['HOLD', 'COMPLETED'],
+      HOLD: ['WAITING', 'CALLED'],
+      COMPLETED: [],
+      CANCELLED: [],
+      NO_SHOW: [],
+    };
+    const permitted = allowedTransitions[token.status] || [];
+    // Allow updating an existing status in place (e.g. metadata-only writes).
+    if (status !== token.status && !permitted.includes(status)) {
+      throw new Error(`Invalid status transition: ${token.status} -> ${status}`);
+    }
 
     const updatedToken = await repositories.tokens.updateStatus(tokenId, status, additionalData);
     if (!updatedToken) return null;

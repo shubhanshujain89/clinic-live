@@ -70,7 +70,51 @@ export default function App() {
       const id = path.slice('/track/'.length);
       setTrackingId(id);
       setCurrentPage('patient-tracking');
+    } else if (path === '/booking') {
+      setCurrentPage('patient-booking');
+    } else if (path === '/login') {
+      setCurrentPage('login');
+    } else if (path === '/what-we-provide') {
+      setCurrentPage('what-we-provide');
+    } else if (path === '/why-choose-us') {
+      setCurrentPage('why-choose-us');
+    } else if (path === '/benefits') {
+      setCurrentPage('benefits');
+    } else if (path === '/contact') {
+      setCurrentPage('contact');
+    } else {
+      setCurrentPage('landing');
     }
+  }, []);
+
+  // Sync UI with browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path === '/site/admin') {
+        setCurrentPage('site-admin');
+      } else if (path.startsWith('/track/')) {
+        const id = path.slice('/track/'.length);
+        setTrackingId(id);
+        setCurrentPage('patient-tracking');
+      } else if (path === '/booking') {
+        setCurrentPage('patient-booking');
+      } else if (path === '/login') {
+        setCurrentPage('login');
+      } else if (path === '/what-we-provide') {
+        setCurrentPage('what-we-provide');
+      } else if (path === '/why-choose-us') {
+        setCurrentPage('why-choose-us');
+      } else if (path === '/benefits') {
+        setCurrentPage('benefits');
+      } else if (path === '/contact') {
+        setCurrentPage('contact');
+      } else {
+        setCurrentPage('landing');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   useEffect(() => {
@@ -109,7 +153,7 @@ export default function App() {
       window.history.pushState({}, '', '/site/admin');
     } else if (page === 'landing') {
       setCurrentPage('landing');
-      setUserSession(null);
+      // Do NOT log the user out when navigating Home — only clear the loaded page.
       window.history.pushState({}, '', '/');
     }
   };
@@ -154,16 +198,24 @@ export default function App() {
       window.alert('Passwords do not match.');
       return;
     }
+    // Do not store plaintext passwords in localStorage. Password changes are
+    // handled server-side by an administrator via the reset-password flow.
     const nextProfile = {
       displayName: profileForm.displayName || 'User',
       photoURL: profileForm.photoURL || '',
-      password: profileForm.password || undefined,
     };
     localStorage.setItem(`clinicflow-profile-${userSession.userId}`, JSON.stringify(nextProfile));
+    if (profileForm.password) {
+      void fetch('/api/users/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ userId: userSession.userId, defaultPassword: profileForm.password }),
+      }).catch(() => {});
+    }
     setProfileOpen(false);
     if (authUser) {
-      authUser.displayName = nextProfile.displayName;
-      authUser.photoURL = nextProfile.photoURL;
+      setAuthUser({ ...authUser, displayName: nextProfile.displayName, photoURL: nextProfile.photoURL });
     }
     window.alert('Profile updated successfully.');
   };

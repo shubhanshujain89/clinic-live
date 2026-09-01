@@ -4,6 +4,8 @@
  */
 
 import { BaseRepository } from './base.js';
+import { executeUpdate } from '../connection.js';
+import crypto from 'crypto';
 
 export interface Setting {
   id: string;
@@ -61,24 +63,45 @@ export class SettingsRepository extends BaseRepository<Setting> {
 
   /**
    * Set setting value
+   * Uses delete+insert for global keys (clinic_id IS NULL) to guarantee
+   * a single record per key, since MySQL UNIQUE keys treat NULL as distinct.
    */
   async setValue(key: string, value: string, clinicId?: string, category?: string): Promise<Setting> {
     const where: Record<string, any> = { key };
     if (clinicId) where.clinic_id = clinicId;
     else where.clinic_id = null;
-    
+
     const existing = await this.findOne(where);
     if (existing) {
       return this.update(existing.id, { value, category }) as Promise<Setting>;
-    } else {
+    }
+
+    if (!clinicId) {
+      await executeUpdate(
+        `DELETE FROM \`settings\` WHERE clinic_id IS NULL AND \`key\` = ?`,
+        [key]
+      );
+      // Re-check after delete to avoid a race where the record changed
+      const recheck = await this.findOne(where);
+      if (recheck) {
+        return this.update(recheck.id, { value, category }) as Promise<Setting>;
+      }
       return this.create({
         id: crypto.randomUUID(),
         key,
         value,
-        clinicId: clinicId || null,
+        clinicId: null,
         category: category || 'general',
       } as any);
     }
+
+    return this.create({
+      id: crypto.randomUUID(),
+      key,
+      value,
+      clinicId: clinicId || null,
+      category: category || 'general',
+    } as any);
   }
 
   /**
