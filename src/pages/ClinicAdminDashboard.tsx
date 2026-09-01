@@ -4,6 +4,9 @@ import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot,
 import { defaultContentSections, defaultSiteSettings, loadContentSections, loadSiteSettings, saveContentSections, saveSiteSettings, initializeSiteConfig, loadSiteSettingsFromDatabase, loadContentSectionsFromDatabase } from '../lib/siteConfig';
 import { FeaturePlan } from '../types/queue';
 import { PhoneInput } from '../components/PhoneInput';
+import { DashboardMode, getDashboardTabs } from './clinicAdminDashboardLogic';
+
+const normalizeDashboardMode = (value?: string): DashboardMode => value === 'site-admin' ? 'site-admin' : 'clinic-admin';
 
 const HOURS_OPTIONS = [
   '9:00 AM - 6:00 PM',
@@ -90,10 +93,11 @@ interface ClinicAdminProps {
   adminId: string;
   onLogout: () => void;
   onManageDoctors: (clinicId: string, clinicName: string) => void;
-  mode?: 'site-admin' | 'clinic-admin';
+  mode?: DashboardMode;
 }
 
 export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLogout, onManageDoctors, mode = 'clinic-admin' }) => {
+  const resolvedMode: DashboardMode = normalizeDashboardMode(mode);
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [appointments, setAppointments] = useState<Array<{ clinicId: string; appointmentType?: string; status?: string }>>([]);
   const [payments, setPayments] = useState<Array<{ id: string; clinicId: string; clinicName: string; pack: FeaturePlan; amount: number; durationDays: number; status: 'PAID' | 'PENDING'; paidAt: string; startDate: string; expiryDate: string; notes?: string }>>([]);
@@ -107,7 +111,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   const [userFilters, setUserFilters] = useState({ search: '', role: 'ALL', clinic: 'ALL', status: 'ALL' });
   const [siteSettings, setSiteSettings] = useState(loadSiteSettings());
   const [savedSiteSettings, setSavedSiteSettings] = useState(loadSiteSettings());
-  const [showSiteSettings, setShowSiteSettings] = useState(mode === 'site-admin');
+  const [showSiteSettings, setShowSiteSettings] = useState(resolvedMode === 'site-admin');
   const [activeTab, setActiveTab] = useState<'dashboard' | 'clinic-summary' | 'content' | 'clinics' | 'users' | 'security' | 'billing' | 'audit' | 'recent-activity'>('dashboard');
   const [contentSections, setContentSections] = useState(loadContentSections());
   const [savedContentSections, setSavedContentSections] = useState(loadContentSections());
@@ -927,19 +931,9 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     window.alert('Settings saved successfully.');
   };
 
-  const isSiteAdmin = mode === 'site-admin';
+  const isSiteAdmin = resolvedMode === 'site-admin';
 
-  const tabs = [
-    { key: 'dashboard', label: 'Dashboard' },
-    { key: 'clinic-summary', label: 'Clinic Wise Summary' },
-    { key: 'content', label: 'Website Content' },
-    { key: 'clinics', label: 'Clinics' },
-    { key: 'users', label: 'Users' },
-    { key: 'security', label: 'Access & Security' },
-    { key: 'billing', label: 'Billing & Packs' },
-    { key: 'audit', label: 'Audit Trail' },
-    { key: 'recent-activity', label: 'Recent Activity' },
-  ] as const;
+  const tabs = getDashboardTabs(resolvedMode);
 
 
 
@@ -1311,6 +1305,10 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
           </div>
         );
       case 'content':
+        if (!isSiteAdmin) {
+          return null;
+        }
+
         const contentCards = [
           {
             key: 'branding',
