@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "description": "Premium clinic queue and token management platform",
+  "author": "YBGP",
   "type": "module",
   "engines": {
     "node": ">=16.0.0"
