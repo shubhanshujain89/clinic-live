@@ -33,6 +33,7 @@ import { db, doc, updateDoc, collection, setDoc } from '../lib/firebase';
 import type { User } from '../lib/firebase';
 import { soundManager } from '../lib/audio';
 import { WhatsAppService } from '../lib/whatsappService';
+import { getDoctorQueueAction } from './doctorQueueLogic';
 
 interface DoctorViewProps {
   clinic: Clinic;
@@ -121,7 +122,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
     setIsSavingEdit(true);
     try {
       const formattedWeight = editWeight.trim() ? `${editWeight.trim()} kg` : undefined;
-      const formattedTemp = editTemp.trim() ? `${editTemp.trim()} Â°F` : undefined;
+      const formattedTemp = editTemp.trim() ? `${editTemp.trim()} °F` : undefined;
       const formattedBp =
         editBpSys.trim() && editBpDia.trim()
           ? `${editBpSys.trim()}/${editBpDia.trim()} mmHg`
@@ -230,21 +231,41 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
 
   // Complete consultation and advance queue
   const handleCompleteConsultation = async () => {
-    if (!activeToken) return;
+    if (!activeToken && !nextToken) return;
     setIsSavingNotes(true);
     try {
-      const response = await fetch(`/api/staff/queue/${encodeURIComponent(activeToken.id)}/complete`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ doctorNotes: doctorRxNotes }),
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || 'Unable to complete consultation.');
+      const action = getDoctorQueueAction({ activeToken, nextToken });
+
+      if (activeToken && action !== 'CALL_NEXT') {
+        const response = await fetch(`/api/staff/queue/${encodeURIComponent(activeToken.id)}/complete`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ doctorNotes: doctorRxNotes }),
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || 'Unable to complete consultation.');
+      }
+
+      if (nextToken) {
+        const response = await fetch(`/api/staff/queue/${encodeURIComponent(nextToken.id)}/call`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || 'Unable to call the next token.');
+
+        soundManager.announceToken(nextToken.tokenNumber, nextToken.patientName, clinic.cabinNumber);
+        showToast(`Called Token #${nextToken.tokenNumber} (${nextToken.patientName}) to Cabin!`);
+      } else {
+        showToast('Consultation completed successfully.');
+      }
 
       setDoctorRxNotes('');
     } catch (err) {
-      console.error('Failed to complete consultation:', err);
+      console.error('Failed to advance consultation queue:', err);
+      showToast('Failed to advance queue. Please check the connection and try again.');
     } finally {
       setIsSavingNotes(false);
     }
@@ -444,7 +465,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
           </div>
           <div className="mt-2 text-xs text-slate-500 flex items-center gap-1">
             <span>{waitingTokens.length} in queue</span>
-            <span>â€¢</span>
+            <span>•</span>
             <span>{holdTokens.length} on hold</span>
           </div>
         </div>
@@ -502,7 +523,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
             <span className="text-xs text-emerald-500/80 font-medium">100% Pre-paid</span>
           </div>
           <div className="mt-2 text-xs text-slate-500">
-            Avg Fee: â‚¹{clinic.consultationFee} / patient
+            Avg Fee: ₹{clinic.consultationFee} / patient
           </div>
         </div>
 
@@ -638,7 +659,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                           activeToken.bloodPressure || activeToken.preConsultationNotes?.bloodPressure || activeToken.preConsultationNotes?.bpReading,
                           activeToken.temperature || activeToken.preConsultationNotes?.temperature || activeToken.preConsultationNotes?.feverTemp,
                           activeToken.weight || activeToken.preConsultationNotes?.weight
-                        ].filter(Boolean).join(' â€¢ ') || 'Normal'}
+                        ].filter(Boolean).join(' • ') || 'Normal'}
                       </span>
                     </div>
                   </div>
@@ -867,7 +888,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
 
                           {notes.duration && (
                             <span className="text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
-                              â±ï¸ {notes.duration}
+                              ⏱ {notes.duration}
                             </span>
                           )}
 
@@ -914,7 +935,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                 onClick={() => setSelectedTokenForModal(null)}
                 className="p-1 rounded-lg text-slate-400 hover:text-white bg-slate-800 text-xs"
               >
-                âœ•
+                ✕
               </button>
             </div>
 
@@ -958,7 +979,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                         selectedTokenForModal.bloodPressure || selectedTokenForModal.preConsultationNotes.bloodPressure || selectedTokenForModal.preConsultationNotes.bpReading,
                         selectedTokenForModal.temperature || selectedTokenForModal.preConsultationNotes.temperature || selectedTokenForModal.preConsultationNotes.feverTemp,
                         selectedTokenForModal.weight || selectedTokenForModal.preConsultationNotes.weight
-                      ].filter(Boolean).join(' â€¢ ') || 'Normal'}
+                      ].filter(Boolean).join(' • ') || 'Normal'}
                     </span>
                   </div>
                 </div>
