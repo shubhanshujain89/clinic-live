@@ -8,6 +8,12 @@ import { DashboardMode, getDashboardTabs } from './clinicAdminDashboardLogic';
 
 const normalizeDashboardMode = (value?: string): DashboardMode => value === 'site-admin' ? 'site-admin' : 'clinic-admin';
 
+export const isAllowedUserCreationRole = (role: string) => {
+  const normalized = String(role || '').trim();
+  const lower = normalized.toLowerCase();
+  return lower !== 'super admin' && lower !== 'site admin' && ['clinic admin', 'doctor', 'support staff'].includes(lower);
+};
+
 const HOURS_OPTIONS = [
   '9:00 AM - 6:00 PM',
   '9:30 AM - 7:00 PM',
@@ -517,17 +523,22 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
   const handleSaveUser = async () => {
     try {
-      const isDoctor = userFormData.role.trim().toLowerCase() === 'doctor';
+      const requestedRole = userFormData.role.trim();
+      if (!isAllowedUserCreationRole(requestedRole)) {
+        window.alert('Super admin accounts are managed separately and cannot be created from this screen.');
+        return;
+      }
+
+      const isDoctor = requestedRole.toLowerCase() === 'doctor';
       const selectedClinic = clinics.find((clinic) => clinic.name.toLowerCase() === userFormData.clinicName.trim().toLowerCase());
       const selectedAccessStatus = editingUser?.accessStatus || userFormData.accessStatus;
       const databaseAccessStatus = selectedAccessStatus === 'Hold' ? 'Pending' : selectedAccessStatus === 'Denied' ? 'Revoked' : 'Granted';
       const roleMap: Record<string, string> = {
-        'Super Admin': 'SUPER_ADMIN',
         'Clinic Admin': 'CLINIC_ADMIN',
         'Doctor': 'DOCTOR',
         'Support Staff': 'STAFF',
       };
-      const dbRole = roleMap[userFormData.role] || 'STAFF';
+      const dbRole = roleMap[requestedRole] || 'STAFF';
       const passwordHash = await hashPassword(DEFAULT_USER_PASSWORD);
       const payload = {
         name: userFormData.name,
@@ -2050,7 +2061,6 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
               <div>
                 <label className="block text-sm font-semibold mb-2">Role</label>
                 <select value={userFormData.role} onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value })} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none">
-                  <option value="Super Admin">Super Admin</option>
                   <option value="Clinic Admin">Clinic Admin</option>
                   <option value="Doctor">Doctor</option>
                   <option value="Support Staff">Support Staff</option>
