@@ -22,6 +22,25 @@ interface UserSession {
   clinicId?: string;
 }
 
+export const resolveAppPageForRoute = (path: string, userRole?: string | null): AppPage => {
+  const normalizedRole = String(userRole || '').toUpperCase();
+
+  if (path === '/site/admin') {
+    if (normalizedRole === 'SUPER_ADMIN') return 'site-admin';
+    if (normalizedRole === 'CLINIC_ADMIN') return 'clinic-admin';
+    return 'site-admin';
+  }
+
+  if (path.startsWith('/track/')) return 'patient-tracking';
+  if (path === '/booking') return 'patient-booking';
+  if (path === '/login') return 'login';
+  if (path === '/what-we-provide') return 'what-we-provide';
+  if (path === '/why-choose-us') return 'why-choose-us';
+  if (path === '/benefits') return 'benefits';
+  if (path === '/contact') return 'contact';
+  return 'landing';
+};
+
 export default function App() {
   const { settings, content } = useSiteConfig();
   const [currentPage, setCurrentPage] = useState<AppPage>('landing');
@@ -64,58 +83,28 @@ export default function App() {
 
   useEffect(() => {
     const path = window.location.pathname;
-    if (path === '/site/admin') {
-      setCurrentPage('site-admin');
-    } else if (path.startsWith('/track/')) {
+    const nextPage = resolveAppPageForRoute(path, userSession?.role);
+    if (path.startsWith('/track/')) {
       const id = path.slice('/track/'.length);
       setTrackingId(id);
-      setCurrentPage('patient-tracking');
-    } else if (path === '/booking') {
-      setCurrentPage('patient-booking');
-    } else if (path === '/login') {
-      setCurrentPage('login');
-    } else if (path === '/what-we-provide') {
-      setCurrentPage('what-we-provide');
-    } else if (path === '/why-choose-us') {
-      setCurrentPage('why-choose-us');
-    } else if (path === '/benefits') {
-      setCurrentPage('benefits');
-    } else if (path === '/contact') {
-      setCurrentPage('contact');
-    } else {
-      setCurrentPage('landing');
     }
-  }, []);
+    setCurrentPage(nextPage);
+  }, [userSession]);
 
   // Sync UI with browser back/forward navigation
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname;
-      if (path === '/site/admin') {
-        setCurrentPage('site-admin');
-      } else if (path.startsWith('/track/')) {
+      const nextPage = resolveAppPageForRoute(path, userSession?.role);
+      if (path.startsWith('/track/')) {
         const id = path.slice('/track/'.length);
         setTrackingId(id);
-        setCurrentPage('patient-tracking');
-      } else if (path === '/booking') {
-        setCurrentPage('patient-booking');
-      } else if (path === '/login') {
-        setCurrentPage('login');
-      } else if (path === '/what-we-provide') {
-        setCurrentPage('what-we-provide');
-      } else if (path === '/why-choose-us') {
-        setCurrentPage('why-choose-us');
-      } else if (path === '/benefits') {
-        setCurrentPage('benefits');
-      } else if (path === '/contact') {
-        setCurrentPage('contact');
-      } else {
-        setCurrentPage('landing');
       }
+      setCurrentPage(nextPage);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [userSession]);
 
   useEffect(() => {
     if (!userSession) return;
@@ -130,6 +119,8 @@ export default function App() {
   }, [userSession, authUser]);
 
   const handleNavigate = (page: string, role?: string) => {
+    const effectiveRole = role || userSession?.role || '';
+
     if (page === 'login') {
       setCurrentPage('login');
       window.history.pushState({}, '', '/login');
@@ -149,8 +140,16 @@ export default function App() {
       setCurrentPage('contact');
       window.history.pushState({}, '', '/contact');
     } else if (page === 'site-admin') {
-      setCurrentPage('site-admin');
-      window.history.pushState({}, '', '/site/admin');
+      if (effectiveRole === 'SUPER_ADMIN') {
+        setCurrentPage('site-admin');
+        window.history.pushState({}, '', '/site/admin');
+      } else if (effectiveRole === 'CLINIC_ADMIN') {
+        setCurrentPage('clinic-admin');
+        window.history.pushState({}, '', '/login');
+      } else {
+        setCurrentPage('site-admin');
+        window.history.pushState({}, '', '/site/admin');
+      }
     } else if (page === 'landing') {
       setCurrentPage('landing');
       // Do NOT log the user out when navigating Home — only clear the loaded page.
