@@ -6,21 +6,12 @@
 import { repositories } from './db/repositories/index.js';
 import { services } from './db/services/index.js';
 import crypto from 'crypto';
+import { hashPassword, verifyPassword } from './db/password.js';
 
-// Re-export password utilities
-export const DEFAULT_USER_PASSWORD = 'Clinic@123';
+export { hashPassword, verifyPassword };
 
-export const hashPassword = (password: string, salt = crypto.randomBytes(16).toString('hex')) => {
-  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
-  return `${salt}:${hash}`;
-};
-
-export const verifyPassword = (password: string, storedHash: string) => {
-  const [salt, expected] = String(storedHash || '').split(':');
-  if (!salt || !expected) return false;
-  const actual = crypto.scryptSync(password, salt, 64).toString('hex');
-  return crypto.timingSafeEqual(Buffer.from(actual, 'hex'), Buffer.from(expected, 'hex'));
-};
+// Default password can be overridden via DEFAULT_USER_PASSWORD env for production deployments
+export const DEFAULT_USER_PASSWORD = process.env.DEFAULT_USER_PASSWORD || 'Clinic@123';
 
 // User authentication
 export const findUserByEmail = async (email: string) => {
@@ -86,6 +77,8 @@ const extractTableName = (pathValue: string) => {
   return tableMap[firstSegment] || firstSegment || 'settings';
 };
 
+export { extractTableName };
+
 const extractRecordId = (pathValue: string) => {
   const cleaned = pathValue.replace(/^\/+|\/+$/g, '').trim();
   const segments = cleaned.split('/').filter(Boolean);
@@ -94,7 +87,13 @@ const extractRecordId = (pathValue: string) => {
 
 const normalizeKey = (key: string) => key.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
 const isPaymentsPath = (pathValue: string) => extractTableName(pathValue) === 'payments';
-const paymentFromSetting = (setting: any) => ({ id: setting.id, ...JSON.parse(setting.value || '{}') });
+const paymentFromSetting = (setting: any) => {
+  try {
+    return { id: setting.id, ...JSON.parse(setting.value || '{}') };
+  } catch {
+    return { id: setting.id, error: 'Invalid payment record' };
+  }
+};
 
 // Map repository methods to generic CRUD operations
 const repositoryMap: Record<string, any> = {
@@ -117,7 +116,20 @@ export const listQuery = async (pathValue: string, clauses: Array<{ field: strin
     const settings = await repositories.settings.findAll({ where: { category: 'billing' }, orderBy: 'updated_at', orderDirection: 'DESC' });
     let payments = settings.map(paymentFromSetting);
     clauses.forEach((clause) => {
-      if (clause.op === '==' || !clause.op) payments = payments.filter((payment) => payment[clause.field] === clause.value);
+      const op = clause.op || '==';
+      payments = payments.filter((payment) => {
+        const fieldValue = payment[clause.field];
+        switch (op) {
+          case '==': return fieldValue === clause.value;
+          case '!=': return fieldValue !== clause.value;
+          case '>': return fieldValue > clause.value;
+          case '<': return fieldValue < clause.value;
+          case '>=': return fieldValue >= clause.value;
+          case '<=': return fieldValue <= clause.value;
+          case 'in': return Array.isArray(clause.value) && clause.value.includes(fieldValue);
+          default: return true;
+        }
+      });
     });
     return payments;
   }
@@ -194,17 +206,20 @@ export const updateDoc = async (pathValue: string, value: Record<string, any>) =
   const id = extractRecordId(pathValue) || value?.id;
   if (!id) throw new Error(`Cannot update document without an id: ${pathValue}`);
 
+  // Never allow the primary key to be replaced through a generic update.
+  const { id: _ignoredId, ...safeValue } = value || {};
+
   if (isPaymentsPath(pathValue)) {
     const existing = await readDoc(pathValue);
     if (!existing) throw new Error(`Payment not found: ${id}`);
-    await repositories.settings.update(id, { value: JSON.stringify({ ...existing, ...value, id }), category: 'billing' });
+    await repositories.settings.update(id, { value: JSON.stringify({ ...existing, ...safeValue, id }), category: 'billing' });
     return { id };
   }
 
   const repo = repositoryMap[table];
   if (!repo) throw new Error(`Unknown table: ${table}`);
 
-  await repo.update(id, value);
+  await repo.update(id, safeValue);
   return { id };
 };
 

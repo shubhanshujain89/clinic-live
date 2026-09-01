@@ -29,8 +29,9 @@ const getPackMeta = (plan?: FeaturePlan) => PACK_OPTIONS.find((pack) => pack.val
 const getPackPrice = (plan: FeaturePlan): number => {
   const meta = getPackMeta(plan);
   if (!meta || meta.price === 'Custom') return 0;
-  // Extract numeric value from price string like "₹1,499/mo" or "₹0"
-  const numericPrice = meta.price.replace(/[₹,/mo]/g, '').trim();
+  // Extract all digits (handles "₹1,499/mo", "₹4,999/mo", "₹0") without
+  // accidentally stripping letters from strings.
+  const numericPrice = meta.price.replace(/[^\d]/g, '');
   return parseFloat(numericPrice) || 0;
 };
 

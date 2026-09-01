@@ -112,7 +112,7 @@ export const WhatsAppLogsModal: React.FC<WhatsAppLogsModalProps> = ({ onClose })
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-white">{log.patientName}</span>
                       <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                        {log.status}
+                        {String(log.status).toUpperCase()}
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-400 mt-1 font-mono">{log.phone}</p>

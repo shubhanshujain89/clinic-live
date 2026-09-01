@@ -116,14 +116,18 @@ export class ClinicRepository extends BaseRepository<Clinic> {
 
   /**
    * Get all active clinics
+   * A clinic is considered "active" if it is not explicitly denied/gated via clinic_access settings
    */
   async findActive(): Promise<Clinic[]> {
-    const rows = await executeQuery(
-      `SELECT * FROM \`clinics\`
-       WHERE \`feature_plan\` IN (?, ?, ?, ?, ?)
-       ORDER BY \`name\` ASC`,
-      ['TRIAL', 'BASIC', 'STANDARD', 'PREMIUM', 'ENTERPRISE']
-    );
+    const sql = `
+      SELECT c.* FROM \`clinics\` c
+      LEFT JOIN \`settings\` s
+        ON s.\`key\` = CONCAT('clinic_access_', c.id) AND s.clinic_id IS NULL
+      WHERE c.\`feature_plan\` IN (?, ?, ?, ?, ?)
+        AND (s.value IS NULL OR s.value NOT IN ('Denied'))
+      ORDER BY c.\`name\` ASC
+    `;
+    const rows = await executeQuery(sql, ['TRIAL', 'BASIC', 'STANDARD', 'PREMIUM', 'ENTERPRISE']);
     return rows.map(row => this.mapRowToEntity(row));
   }
 

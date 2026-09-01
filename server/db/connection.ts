@@ -13,7 +13,16 @@ if (fs.existsSync(envPath)) {
       if (key && valueParts.length > 0) {
         const normalizedKey = key.trim();
         if (process.env[normalizedKey] === undefined) {
-          process.env[normalizedKey] = valueParts.join('=').trim();
+          let rawValue = valueParts.join('=').trim();
+          // Strip matching surrounding quotes (single or double)
+          if (rawValue.length >= 2) {
+            const first = rawValue[0];
+            const last = rawValue[rawValue.length - 1];
+            if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
+              rawValue = rawValue.slice(1, -1);
+            }
+          }
+          process.env[normalizedKey] = rawValue;
         }
       }
     }

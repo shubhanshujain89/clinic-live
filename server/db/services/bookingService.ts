@@ -5,6 +5,8 @@
 
 import { repositories } from '../repositories/index.js';
 import { executeTransaction } from '../connection.js';
+import type mysql from 'mysql2/promise';
+import type { Session } from '../repositories/sessions.js';
 import crypto from 'crypto';
 
 export interface BookingInput {
@@ -26,6 +28,65 @@ export interface BookingResult {
 
 export class BookingService {
   /**
+   * Atomically get or create today's active session for a clinic.
+   * Runs inside a transaction (the passed connection) with FOR UPDATE locking
+   * so concurrent bookings cannot both create a duplicate session.
+   */
+  private async getOrCreateSession(
+    connection: mysql.PoolConnection,
+    clinicId: string,
+    today: Date
+  ): Promise<Session> {
+    const todayStr = today.toISOString().split('T')[0];
+
+    const [existingRows] = await connection.execute(
+      `SELECT * FROM \`sessions\`
+       WHERE clinic_id = ? AND status = 'ACTIVE' AND date = ?
+       LIMIT 1 FOR UPDATE`,
+      [clinicId, todayStr]
+    );
+    const existing = (existingRows as any[])[0];
+    if (existing) return existing;
+
+    // No active session — create one. If two requests race, one INSERT will
+    // fail with a duplicate-key error on uk_sessions_clinic_date and retry.
+    const sessionId = crypto.randomUUID();
+    try {
+      await connection.execute(
+        `INSERT INTO \`sessions\` (id, clinic_id, date, status, total_tokens_issued, rolling_avg_minutes, completed_count, total_revenue)
+         VALUES (?, ?, ?, 'ACTIVE', 0, 8, 0, 0)
+         ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`,
+        [sessionId, clinicId, todayStr]
+      );
+    } catch (error: any) {
+      const message = error?.message || String(error);
+      if (message.includes('Duplicate')) {
+        const [retryRows] = await connection.execute(
+          `SELECT * FROM \`sessions\`
+           WHERE clinic_id = ? AND status = 'ACTIVE' AND date = ? LIMIT 1`,
+          [clinicId, todayStr]
+        );
+        const retry = (retryRows as any[])[0];
+        if (retry) return retry;
+      }
+      throw error;
+    }
+
+    await connection.execute(
+      `UPDATE \`clinics\` SET active_session_id = ? WHERE id = ?`,
+      [sessionId, clinicId]
+    );
+
+    const [createdRows] = await connection.execute(
+      `SELECT * FROM \`sessions\` WHERE id = ? LIMIT 1`,
+      [sessionId]
+    );
+    const created = (createdRows as any[])[0];
+    if (!created) throw new Error('Failed to create session');
+    return created;
+  }
+
+  /**
    * Create a public booking (patient self-booking)
    */
   async createPublicBooking(input: BookingInput): Promise<BookingResult> {
@@ -41,29 +102,18 @@ export class BookingService {
       throw new Error('Doctor not available');
     }
 
-    // Get or create active session for today
     const today = new Date();
-    let session = await repositories.sessions.findActiveByClinicId(input.clinicId);
-    if (!session) {
-      session = await repositories.sessions.create({
-        id: crypto.randomUUID(),
-        clinicId: input.clinicId,
-        date: today,
-        status: 'ACTIVE',
-      } as any);
-      
-      // Update clinic's active session
-      await repositories.clinics.update(input.clinicId, { activeSessionId: session.id });
-    }
 
-    // Generate tracking ID
-    const trackingId = crypto.randomBytes(9).toString('base64url');
-    const patientId = crypto.randomUUID();
-    const tokenId = crypto.randomUUID();
-    const now = new Date();
-
-    // Create patient, token, and appointment in a transaction
+    // Create patient, token, session (if needed), and appointment in a transaction
     return executeTransaction(async (connection) => {
+      const session = await this.getOrCreateSession(connection, input.clinicId, today);
+
+      // Generate tracking ID
+      const trackingId = crypto.randomBytes(9).toString('base64url');
+      const patientId = crypto.randomUUID();
+      const tokenId = crypto.randomUUID();
+      const now = new Date();
+
       // Get next token sequence atomically
       const dateStr = today.toISOString().split('T')[0];
       const [seqResult] = await connection.execute(
@@ -137,23 +187,13 @@ export class BookingService {
     }
 
     const today = new Date();
-    let session = await repositories.sessions.findActiveByClinicId(input.clinicId);
-    if (!session) {
-      session = await repositories.sessions.create({
-        id: crypto.randomUUID(),
-        clinicId: input.clinicId,
-        date: today,
-        status: 'ACTIVE',
-      } as any);
-      await repositories.clinics.update(input.clinicId, { activeSessionId: session.id });
-    }
-
-    const trackingId = crypto.randomBytes(9).toString('base64url');
-    const patientId = crypto.randomUUID();
-    const tokenId = crypto.randomUUID();
-    const now = new Date();
 
     return executeTransaction(async (connection) => {
+      const session = await this.getOrCreateSession(connection, input.clinicId, today);
+      const trackingId = crypto.randomBytes(9).toString('base64url');
+      const patientId = crypto.randomUUID();
+      const tokenId = crypto.randomUUID();
+      const now = new Date();
       const dateStr = today.toISOString().split('T')[0];
       const [seqResult] = await connection.execute(
         `SELECT COALESCE(MAX(sequence_number), 0) as max_sequence

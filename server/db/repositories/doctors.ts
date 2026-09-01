@@ -46,7 +46,14 @@ export class DoctorRepository extends BaseRepository<Doctor> {
       availableDays: Array.isArray(row.available_days)
         ? row.available_days
         : row.available_days
-          ? JSON.parse(row.available_days)
+          ? (() => {
+              try {
+                const parsed = JSON.parse(row.available_days);
+                return Array.isArray(parsed) ? parsed : [];
+              } catch {
+                return [];
+              }
+            })()
           : [],
       availableHours: row.available_hours,
       rating: parseFloat(row.rating),

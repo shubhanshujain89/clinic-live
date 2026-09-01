@@ -41,6 +41,9 @@ CREATE TABLE IF NOT EXISTS clinics (
     INDEX idx_clinics_active_session (active_session_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Support doctor profile photos on existing installations
+ALTER TABLE doctors ADD COLUMN photo_url TEXT;
+
 -- Doctors table
 CREATE TABLE IF NOT EXISTS doctors (
     id VARCHAR(64) PRIMARY KEY,
@@ -51,6 +54,7 @@ CREATE TABLE IF NOT EXISTS doctors (
     experience VARCHAR(50),
     phone VARCHAR(50),
     email VARCHAR(255),
+    photo_url TEXT,
     bio TEXT,
     consultation_fee DECIMAL(10,2) DEFAULT 0.00,
     available_days JSON,

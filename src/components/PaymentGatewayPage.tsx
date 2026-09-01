@@ -21,17 +21,22 @@ import {
 } from 'lucide-react';
 import { Clinic, TokenItem } from '../types/queue';
 
+interface PaymentGatewaySuccessDetails {
+  paymentMethod: string;
+  transactionId: string;
+}
+
 interface PaymentGatewayPageProps {
   clinic: Clinic;
   patientName: string;
   patientPhone: string;
-  patientAge: string;
-  patientGender: 'Male' | 'Female' | 'Other';
+  patientAge?: string;
+  patientGender?: 'Male' | 'Female' | 'Other';
   primaryConcern?: string;
   amount: number;
   consultationFee: number;
   platformFee: number;
-  onSuccess: (paymentMethodUsed: string, transactionId: string) => void;
+  onSuccess: (details: PaymentGatewaySuccessDetails) => void;
   onCancel: () => void;
 }
 
@@ -77,11 +82,16 @@ export const PaymentGatewayPage: React.FC<PaymentGatewayPageProps> = ({
   const [orderId] = useState(() => 'ORD-CARE-' + Math.floor(100000 + Math.random() * 900000));
   const [txId] = useState(() => 'TXN_' + Date.now().toString(36).toUpperCase() + Math.floor(1000 + Math.random() * 9000));
 
+  const mountedRef = React.useRef(true);
   useEffect(() => {
+    mountedRef.current = true;
     const timer = setInterval(() => {
       setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
-    return () => clearInterval(timer);
+    return () => {
+      mountedRef.current = false;
+      clearInterval(timer);
+    };
   }, []);
 
   const formatTimer = (seconds: number) => {
@@ -117,14 +127,14 @@ export const PaymentGatewayPage: React.FC<PaymentGatewayPageProps> = ({
     // If card payment, simulate 3D Secure OTP step
     if (activeTab === 'CARDS') {
       setTimeout(() => {
-        setProcessingStage('OTP');
+        if (mountedRef.current) setProcessingStage('OTP');
       }, 1200);
     } else {
       // Simulate direct bank confirmation
       setTimeout(() => {
-        setProcessingStage('SUCCESS');
+        if (mountedRef.current) setProcessingStage('SUCCESS');
         setTimeout(() => {
-          onSuccess(methodName, txId);
+          if (mountedRef.current) onSuccess({ paymentMethod: methodName, transactionId: txId });
         }, 1200);
       }, 2000);
     }
@@ -134,7 +144,7 @@ export const PaymentGatewayPage: React.FC<PaymentGatewayPageProps> = ({
     e.preventDefault();
     setProcessingStage('SUCCESS');
     setTimeout(() => {
-      onSuccess('CARD', txId);
+      if (mountedRef.current) onSuccess({ paymentMethod: 'CARD', transactionId: txId });
     }, 1200);
   };
 

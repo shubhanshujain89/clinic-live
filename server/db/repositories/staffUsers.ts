@@ -6,6 +6,7 @@
 import { BaseRepository } from './base.js';
 import { executeQuery, executeQueryOne } from '../connection.js';
 import crypto from 'crypto';
+import { hashPassword, verifyPassword } from '../password.js';
 
 export interface StaffUser {
   id: string;
@@ -57,7 +58,7 @@ export class StaffUserRepository extends BaseRepository<StaffUser> {
     if (entity.id !== undefined) columns.id = entity.id;
     if (entity.clinicId !== undefined) columns.clinic_id = entity.clinicId;
     if (entity.doctorId !== undefined) columns.doctor_id = entity.doctorId;
-    if (entity.email !== undefined) columns.email = entity.email;
+    if (entity.email !== undefined) columns.email = String(entity.email).toLowerCase();
     if (entity.passwordHash !== undefined) columns.password_hash = entity.passwordHash;
     if (entity.role !== undefined) columns.role = entity.role;
     if (entity.displayName !== undefined) columns.display_name = entity.displayName;
@@ -73,10 +74,12 @@ export class StaffUserRepository extends BaseRepository<StaffUser> {
   }
 
   /**
-   * Find user by email
+   * Find user by email (case-insensitive)
    */
   async findByEmail(email: string): Promise<StaffUser | null> {
-    return this.findOne({ email: email.toLowerCase() });
+    const sql = `SELECT * FROM \`staff_users\` WHERE LOWER(\`email\`) = ? LIMIT 1`;
+    const result = await executeQueryOne<any>(sql, [String(email).toLowerCase()]);
+    return result ? this.mapRowToEntity(result) : null;
   }
 
   /**
@@ -120,22 +123,17 @@ export class StaffUserRepository extends BaseRepository<StaffUser> {
   }
 
   /**
-   * Hash password using scrypt (compatible with existing implementation)
+   * Hash password using scrypt (shared implementation)
    */
   static hashPassword(password: string, salt?: string): string {
-    const actualSalt = salt || crypto.randomBytes(16).toString('hex');
-    const hash = crypto.scryptSync(password, actualSalt, 64).toString('hex');
-    return `${actualSalt}:${hash}`;
+    return hashPassword(password, salt);
   }
 
   /**
-   * Verify password
+   * Verify password (shared implementation)
    */
   static verifyPassword(password: string, storedHash: string): boolean {
-    const [salt, expected] = String(storedHash || '').split(':');
-    if (!salt || !expected) return false;
-    const actual = crypto.scryptSync(password, salt, 64).toString('hex');
-    return crypto.timingSafeEqual(Buffer.from(actual, 'hex'), Buffer.from(expected, 'hex'));
+    return verifyPassword(password, storedHash);
   }
 }
 

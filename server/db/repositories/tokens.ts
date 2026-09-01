@@ -261,11 +261,33 @@ export class TokenRepository extends BaseRepository<Token> {
    * Call next token (mark as CALLED)
    */
   async callNextToken(doctorId: string, sessionId: string): Promise<Token | null> {
-    const waitingTokens = await this.findWaitingByDoctorAndSession(doctorId, sessionId);
-    if (waitingTokens.length === 0) return null;
-    
-    const nextToken = waitingTokens[0];
-    return this.updateStatus(nextToken.id, 'CALLED');
+    return executeTransaction(async (connection) => {
+      const [rows] = await connection.execute(
+        `SELECT * FROM \`tokens\`
+         WHERE doctor_id = ? AND session_id = ? AND status IN ('WAITING', 'CALLED', 'IN_CONSULTATION', 'SERVING')
+         ORDER BY priority ASC, sequence_number ASC
+         LIMIT 1
+         FOR UPDATE`,
+        [doctorId, sessionId]
+      );
+      const nextToken = (rows as any[])[0];
+      if (!nextToken || nextToken.status !== 'WAITING') return null;
+
+      await connection.execute(
+        `UPDATE \`tokens\` SET status = 'CALLED', called_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'WAITING'`,
+        [nextToken.id]
+      );
+
+      // Keep the clinic display in sync with the called token
+      await connection.execute(
+        `UPDATE \`clinics\`
+         SET current_running_token = ?, current_running_token_id = ?
+         WHERE id = ?`,
+        [nextToken.token_number, nextToken.id, nextToken.clinic_id]
+      );
+
+      return this.mapRowToEntity(nextToken);
+    });
   }
 
   /**

@@ -143,12 +143,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
               >
                 Book appointment now
               </button>
-              <button
-                onClick={() => onNavigate('login')}
-                className="inline-flex items-center justify-center rounded-xl border border-slate-600 bg-slate-900/60 px-6 py-3.5 text-sm font-bold text-white transition duration-300 hover:border-emerald-400/50 hover:bg-emerald-500/8"
-              >
-                Sign in
-              </button>
             </div>
 
             <div className="animate-in-up delay-400 mt-6 flex flex-wrap items-center justify-center gap-2 text-[11px] font-medium text-slate-300 lg:justify-start">

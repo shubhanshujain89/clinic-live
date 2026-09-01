@@ -53,7 +53,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      const tokenId = 'tok_' + Date.now();
+      const tokenId = 'tok_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
       const randSeq = Math.floor(Math.random() * 80) + 120;
       const tokenNumber = isVip ? `VIP-${randSeq}` : `W-${randSeq}`;
 
