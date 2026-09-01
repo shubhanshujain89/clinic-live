@@ -29,7 +29,7 @@ const getAvailablePort = async (preferredPort: number): Promise<number> => {
   });
 };
 
-const PORT = Number(process.env.PORT || process.env.BACKEND_PORT || 4000);
+const PORT = Number(process.env.BACKEND_PORT || process.env.PORT || 4000);
 
 const sessions = new Map<string, AuthContext & { createdAt: number }>();
 
