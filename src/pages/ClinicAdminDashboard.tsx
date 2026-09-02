@@ -141,6 +141,8 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   const [unsubscribeAppointments, setUnsubscribeAppointments] = useState<(() => void) | null>(null);
   const [unsubscribePayments, setUnsubscribePayments] = useState<(() => void) | null>(null);
   const [unsubscribeAuditLogs, setUnsubscribeAuditLogs] = useState<(() => void) | null>(null);
+  const timersRef = React.useRef<number[]>([]);
+  const listenersRef = React.useRef<(() => void)[]>([]);
   const [clinicAccess, setClinicAccess] = useState<Record<string, 'Granted' | 'Hold' | 'Denied'>>({});
   const [auditLogs, setAuditLogs] = useState<Array<{ id: string; title: string; detail: string; time: string; timestamp: any }>>([]);
   const [paymentForm, setPaymentForm] = useState({
@@ -178,6 +180,11 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     let cancelled = false;
     let listenersStarted = false;
     let cleanupListeners: (() => void) | undefined;
+
+    const clearDashboardTimers = () => {
+      timersRef.current.forEach((timerId) => window.clearInterval(timerId));
+      timersRef.current = [];
+    };
 
     const syncFromStorage = () => {
       const loadedSettings = loadSiteSettings();
@@ -254,6 +261,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
           setLoading(false);
         }
       });
+      listenersRef.current.push(unsubscribeClinicsListener);
       setUnsubscribeClinics(unsubscribeClinicsListener);
 
       const appointmentsRef = collection(db, 'appointments');
@@ -271,10 +279,12 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       }, (error) => {
         console.error('Error fetching appointment records:', error);
       });
+      listenersRef.current.push(unsubscribeAppointmentsListener);
       setUnsubscribeAppointments(unsubscribeAppointmentsListener);
 
       void fetchPayments();
       const paymentRefreshTimer = window.setInterval(fetchPayments, 2500);
+      timersRef.current.push(paymentRefreshTimer);
       setUnsubscribePayments(() => () => window.clearInterval(paymentRefreshTimer));
 
       const fetchAuditLogs = async () => {
@@ -289,6 +299,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       };
       void fetchAuditLogs();
       const auditTimer = window.setInterval(fetchAuditLogs, 2500);
+      timersRef.current.push(auditTimer);
       setUnsubscribeAuditLogs(() => () => window.clearInterval(auditTimer));
 
       const fetchClinicAccess = async () => {
@@ -302,6 +313,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       };
       void fetchClinicAccess();
       const clinicAccessTimer = window.setInterval(fetchClinicAccess, 2500);
+      timersRef.current.push(clinicAccessTimer);
 
       const setupUsersListener = async () => {
         const staffPaths = ['staff_users', 'users'];
@@ -313,6 +325,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
             const unsubscribe = onSnapshot(staffRef, () => {
               fetchUsers();
             });
+            listenersRef.current.push(unsubscribe);
             unsubscribeFunctions.push(unsubscribe);
           } catch (error) {
             console.warn(`Unable to set up listener for ${pathName}:`, error);
@@ -324,6 +337,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
           const unsubscribe = onSnapshot(doctorsRef, () => {
             fetchUsers();
           });
+          listenersRef.current.push(unsubscribe);
           unsubscribeFunctions.push(unsubscribe);
         } catch (error) {
           console.warn('Unable to set up listener for doctors:', error);
@@ -338,12 +352,14 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
       await setupUsersListener();
       cleanupListeners = () => {
+        clearDashboardTimers();
+        listenersRef.current.forEach((unsub) => unsub());
+        listenersRef.current = [];
         if (unsubscribeClinics) unsubscribeClinics();
         if (unsubscribeUsers) unsubscribeUsers();
         if (unsubscribeAppointments) unsubscribeAppointments();
         if (unsubscribePayments) unsubscribePayments();
         if (unsubscribeAuditLogs) unsubscribeAuditLogs();
-        window.clearInterval(clinicAccessTimer);
       };
     };
 
@@ -362,7 +378,9 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         return;
       }
 
-      startListeners();
+      if (listenersRef.current.length === 0 && timersRef.current.length === 0) {
+        startListeners();
+      }
     });
 
     return () => {

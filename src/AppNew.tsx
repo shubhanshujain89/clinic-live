@@ -43,6 +43,10 @@ export const resolveAppPageForRoute = (path: string, userRole?: string | null): 
   return 'landing';
 };
 
+const isPublicRoute = (path: string) => {
+  return path === '/login' || path === '/booking' || path.startsWith('/track/') || path === '/what-we-provide' || path === '/why-choose-us' || path === '/benefits' || path === '/contact';
+};
+
 export default function App() {
   const { settings, content } = useSiteConfig();
   const [currentPage, setCurrentPage] = useState<AppPage>('landing');
@@ -64,11 +68,12 @@ export default function App() {
       if (!user) {
         setUserSession(null);
         const path = window.location.pathname;
-        // Don't override public pages (tracking, booking) when no auth
-        const isPublicPage = path.startsWith('/track/') || path === '/booking';
+        const isPublicPage = isPublicRoute(path);
         if (path === '/site/admin') {
           setCurrentPage('site-admin');
-        } else if (!isPublicPage) {
+        } else if (path === '/site/login' || path === '/login' || isPublicPage) {
+          setCurrentPage(resolveAppPageForRoute(path, null));
+        } else {
           setCurrentPage('landing');
         }
       } else {
