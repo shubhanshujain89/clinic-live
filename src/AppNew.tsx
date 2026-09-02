@@ -73,21 +73,28 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAuthUser(user);
       if (!user) {
-        setUserSession(null);
+        setUserSession((current) => current ?? null);
         const path = window.location.pathname;
         const isPublicPage = isPublicRoute(path);
         if (path === '/site/admin') {
           setCurrentPage('site-admin');
+          window.history.replaceState({}, '', '/login');
         } else if (path === '/site/login' || path === '/login' || isPublicPage) {
           setCurrentPage(resolveAppPageForRoute(path, null));
         } else {
           setCurrentPage('landing');
         }
       } else {
-        setUserSession({
+        const nextSession = {
           userId: user.uid,
           role: user.role || 'CLINIC_ADMIN',
           clinicId: user.clinicId,
+        };
+        setUserSession((current) => {
+          if (current && current.userId === nextSession.userId && current.role === nextSession.role) {
+            return current;
+          }
+          return nextSession;
         });
       }
       setIsLoading(false);
@@ -228,15 +235,12 @@ export default function App() {
   const handleLogout = () => {
     void signOut(auth);
     setUserSession(null);
+    setAuthUser(null);
     setProfileOpen(false);
     setSiteAdminLogin({ username: '', password: '' });
     setSiteAdminError('');
-    if (window.location.pathname === '/site/admin') {
-      setCurrentPage('site-admin');
-    } else {
-      setCurrentPage('landing');
-    }
-    setAuthUser(null);
+    setCurrentPage('login');
+    window.history.replaceState({}, '', '/login');
   };
 
   const handleSaveProfile = () => {
