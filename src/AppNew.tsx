@@ -73,11 +73,11 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAuthUser(user);
       if (!user) {
-        setUserSession((current) => current ?? null);
+        setUserSession(null);
         const path = window.location.pathname;
         const isPublicPage = isPublicRoute(path);
         if (path === '/site/admin') {
-          setCurrentPage('site-admin');
+          setCurrentPage('login');
           window.history.replaceState({}, '', '/login');
         } else if (path === '/site/login' || path === '/login' || isPublicPage) {
           setCurrentPage(resolveAppPageForRoute(path, null));
@@ -346,7 +346,7 @@ export default function App() {
         )}
 
         {/* Site Admin Login */}
-        {currentPage === 'site-admin' && (!userSession || userSession.role !== 'SUPER_ADMIN') && (
+        {currentPage === 'site-admin' && !userSession && (
           <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
             <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900/80 p-8 shadow-2xl">
               <div className="mb-6 text-center">
