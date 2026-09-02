@@ -572,15 +572,6 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
           </span>
         </button>
 
-        {/* Button 5: WhatsApp Logs */}
-        <button
-          onClick={onOpenWhatsAppLogs}
-          className="bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-white font-bold p-4 rounded-2xl shadow-md flex flex-col items-center justify-center text-center transition-all group"
-        >
-          <MessageSquare className="w-5 h-5 mb-1 text-emerald-400 group-hover:scale-110 transition-transform" />
-          <span className="text-xs sm:text-sm">WhatsApp API</span>
-          <span className="text-[10px] text-slate-400 font-normal">Utility Templates</span>
-        </button>
       </div>
 
       {/* Active Serving Banner (If Any) */}

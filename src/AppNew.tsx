@@ -31,6 +31,8 @@ export const resolveAppPageForRoute = (path: string, userRole?: string | null): 
     return 'site-admin';
   }
 
+  if (path === '/site/login') return 'login';
+
   if (path.startsWith('/track/')) return 'patient-tracking';
   if (path === '/booking') return 'patient-booking';
   if (path === '/login') return 'login';
@@ -88,6 +90,9 @@ export default function App() {
       const id = path.slice('/track/'.length);
       setTrackingId(id);
     }
+    if (path === '/site/login') {
+      window.history.replaceState({}, '', '/login');
+    }
     setCurrentPage(nextPage);
   }, [userSession]);
 
@@ -99,6 +104,9 @@ export default function App() {
       if (path.startsWith('/track/')) {
         const id = path.slice('/track/'.length);
         setTrackingId(id);
+      }
+      if (path === '/site/login') {
+        window.history.replaceState({}, '', '/login');
       }
       setCurrentPage(nextPage);
     };
@@ -247,10 +255,11 @@ export default function App() {
   }
 
   const isAdminArea = currentPage === 'site-admin' || currentPage === 'clinic-admin' || currentPage === 'doctor-management';
+  const showPublicHeader = !userSession && !isAdminArea;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white flex flex-col">
-      {!isAdminArea && (
+      {showPublicHeader && (
         <GlobalHeader
           currentPage={currentPage}
           onNavigate={handleNavigate}

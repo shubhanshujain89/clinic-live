@@ -9,3 +9,7 @@ test('site admin route is blocked for clinic admins', () => {
 test('site admin route is allowed for super admins', () => {
   assert.equal(resolveAppPageForRoute('/site/admin', 'SUPER_ADMIN'), 'site-admin');
 });
+
+test('site login route opens the login page', () => {
+  assert.equal(resolveAppPageForRoute('/site/login', null), 'login');
+});
