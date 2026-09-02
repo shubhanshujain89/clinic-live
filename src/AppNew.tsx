@@ -344,6 +344,7 @@ export default function App() {
                   />
                 </div>
                 <button
+                  type="button"
                   onClick={async () => {
                     try {
                       const result = await signInWithEmailAndPassword(auth, siteAdminLogin.username, siteAdminLogin.password, 'SUPER_ADMIN');
