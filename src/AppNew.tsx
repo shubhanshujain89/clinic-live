@@ -31,6 +31,13 @@ export const resolveAppPageForRoute = (path: string, userRole?: string | null): 
     return 'site-admin';
   }
 
+  if ((path === '/site/login' || path === '/login') && normalizedRole) {
+    if (normalizedRole === 'SUPER_ADMIN') return 'site-admin';
+    if (normalizedRole === 'CLINIC_ADMIN') return 'clinic-admin';
+    if (normalizedRole === 'DOCTOR' || normalizedRole === 'STAFF') return 'clinic-queue';
+    return 'landing';
+  }
+
   if (path === '/site/login') return 'login';
 
   if (path.startsWith('/track/')) return 'patient-tracking';
@@ -178,15 +185,19 @@ export default function App() {
 
     if (uiRole === 'SUPER_ADMIN') {
       setCurrentPage('site-admin');
+      window.history.replaceState({}, '', '/site/admin');
       return;
     }
 
     if (uiRole === 'CLINIC_ADMIN') {
       setCurrentPage('clinic-admin');
+      window.history.replaceState({}, '', '/site/admin');
     } else if (uiRole === 'DOCTOR' || uiRole === 'STAFF') {
       setCurrentPage('clinic-queue');
+      window.history.replaceState({}, '', '/site/admin');
     } else {
       setCurrentPage('landing');
+      window.history.replaceState({}, '', '/');
     }
   };
 
