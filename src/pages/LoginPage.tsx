@@ -72,7 +72,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) 
             </div>
           )}
 
-          <form onSubmit={handleEmailLogin} className="space-y-4">
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            void handleEmailLogin(e);
+          }} className="space-y-4" noValidate>
             <div>
               <label className="block text-sm font-semibold mb-2">Email</label>
               <div className="relative">
