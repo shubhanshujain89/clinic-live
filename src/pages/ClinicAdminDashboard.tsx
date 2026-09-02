@@ -11,7 +11,7 @@ const normalizeDashboardMode = (value?: string): DashboardMode => value === 'sit
 export const isAllowedUserCreationRole = (role: string) => {
   const normalized = String(role || '').trim();
   const lower = normalized.toLowerCase();
-  return lower !== 'super admin' && lower !== 'site admin' && ['clinic admin', 'doctor', 'support staff'].includes(lower);
+  return lower !== 'super admin' && lower !== 'site admin' && ['clinic admin', 'doctor', 'reception'].includes(lower);
 };
 
 const HOURS_OPTIONS = [
@@ -536,7 +536,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       const roleMap: Record<string, string> = {
         'Clinic Admin': 'CLINIC_ADMIN',
         'Doctor': 'DOCTOR',
-        'Support Staff': 'STAFF',
+        'Reception': 'STAFF',
       };
       const dbRole = roleMap[requestedRole] || 'STAFF';
       const passwordHash = await hashPassword(DEFAULT_USER_PASSWORD);
@@ -2063,7 +2063,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                 <select value={userFormData.role} onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value })} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none">
                   <option value="Clinic Admin">Clinic Admin</option>
                   <option value="Doctor">Doctor</option>
-                  <option value="Support Staff">Support Staff</option>
+                  <option value="Reception">Reception</option>
                 </select>
               </div>
 

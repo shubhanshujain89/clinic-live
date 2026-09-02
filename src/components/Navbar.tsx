@@ -139,17 +139,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             </div>
 
-            {!isBasicPlan && (
-              <button
-                onClick={onToggleWhatsAppLogs}
-                title="Meta WhatsApp Cloud API Logs"
-                className="relative p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 transition-colors"
-              >
-                <MessageSquare className="w-4 h-4" />
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full" />
-              </button>
-            )}
-
             {/* Seed / Reset Demo Data */}
             <button
               onClick={onSeedData}
