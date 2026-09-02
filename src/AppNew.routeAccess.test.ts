@@ -13,3 +13,7 @@ test('site admin route is allowed for super admins', () => {
 test('site login route opens the login page', () => {
   assert.equal(resolveAppPageForRoute('/site/login', null), 'login');
 });
+
+test('login route stays on the login page when no authenticated user is present', () => {
+  assert.equal(resolveAppPageForRoute('/login', null), 'login');
+});
