@@ -102,6 +102,14 @@ export default function App() {
       const id = path.slice('/track/'.length);
       setTrackingId(id);
     }
+    if (userSession && (path === '/login' || path === '/site/login')) {
+      const securePath = userSession.role === 'SUPER_ADMIN' ? '/site/admin' : '/site/admin';
+      if (window.location.pathname !== securePath) {
+        window.history.replaceState({}, '', securePath);
+      }
+      setCurrentPage(nextPage);
+      return;
+    }
     if (path === '/site/login') {
       window.history.replaceState({}, '', '/login');
     }
@@ -142,6 +150,19 @@ export default function App() {
     const effectiveRole = role || userSession?.role || '';
 
     if (page === 'login') {
+      if (userSession) {
+        if (userSession.role === 'SUPER_ADMIN') {
+          setCurrentPage('site-admin');
+          window.history.replaceState({}, '', '/site/admin');
+        } else if (userSession.role === 'CLINIC_ADMIN') {
+          setCurrentPage('clinic-admin');
+          window.history.replaceState({}, '', '/site/admin');
+        } else if (userSession.role === 'DOCTOR' || userSession.role === 'STAFF') {
+          setCurrentPage('clinic-queue');
+          window.history.replaceState({}, '', '/site/admin');
+        }
+        return;
+      }
       setCurrentPage('login');
       window.history.pushState({}, '', '/login');
     } else if (page === 'booking') {
@@ -165,7 +186,10 @@ export default function App() {
         window.history.pushState({}, '', '/site/admin');
       } else if (effectiveRole === 'CLINIC_ADMIN') {
         setCurrentPage('clinic-admin');
-        window.history.pushState({}, '', '/login');
+        window.history.pushState({}, '', '/site/admin');
+      } else if (effectiveRole === 'DOCTOR' || effectiveRole === 'STAFF') {
+        setCurrentPage('clinic-queue');
+        window.history.pushState({}, '', '/site/admin');
       } else {
         setCurrentPage('site-admin');
         window.history.pushState({}, '', '/site/admin');
