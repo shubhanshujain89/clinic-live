@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
-import { verifyPassword } from './password.ts';
+import { verifyPassword } from './password';
 
 const pbkdf2Hash = (password: string, saltHex?: string) => {
   const salt = saltHex ? Buffer.from(saltHex, 'hex') : crypto.randomBytes(16);
