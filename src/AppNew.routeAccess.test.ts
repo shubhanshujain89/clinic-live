@@ -17,3 +17,8 @@ test('site login route opens the login page', () => {
 test('login route stays on the login page when no authenticated user is present', () => {
   assert.equal(resolveAppPageForRoute('/login', null), 'login');
 });
+
+test('login route redirects a logged-in clinic admin to the dashboard', () => {
+  assert.equal(resolveAppPageForRoute('/login', 'CLINIC_ADMIN'), 'clinic-admin');
+  assert.equal(resolveAppPageForRoute('/login', 'SUPER_ADMIN'), 'site-admin');
+});
