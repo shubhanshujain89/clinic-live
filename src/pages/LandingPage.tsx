@@ -19,7 +19,15 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
-  const { content } = useSiteConfig();
+  const { content, settings } = useSiteConfig();
+  const openForm = (url: string, label: string) => {
+    if (!url.trim()) {
+      window.alert(`${label} link is not configured yet.`);
+      return;
+    }
+
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
   const trustMetrics = [
     { value: '400+', label: 'Clinics onboarded' },
     { value: '60%', label: 'Less waiting stress' },
@@ -378,14 +386,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
             </div>
             <div className="flex flex-col items-stretch gap-3 sm:flex-row">
               <button
-                onClick={() => onNavigate('booking')}
+                onClick={() => openForm(settings.freeTrialFormUrl, 'Free trial form')}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 via-cyan-500 to-sky-500 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-[0_18px_60px_rgba(34,211,238,0.3)] transition hover:-translate-y-1"
               >
                 Start free trial
                 <ArrowRight className="h-4 w-4" />
               </button>
               <button
-                onClick={() => onNavigate('login')}
+                onClick={() => openForm(settings.salesFormUrl, 'Sales form')}
                 className="inline-flex items-center justify-center rounded-xl border border-slate-600 bg-slate-900/60 px-6 py-3.5 text-sm font-bold text-white transition hover:border-emerald-400/50 hover:bg-emerald-500/8"
               >
                 Talk to sales

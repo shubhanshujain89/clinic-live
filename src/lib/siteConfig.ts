@@ -12,6 +12,8 @@ export interface SiteSettings {
   linkedinUrl: string;
   xUrl: string;
   youtubeUrl: string;
+  freeTrialFormUrl: string;
+  salesFormUrl: string;
   heroTitle: string;
   heroSubtitle: string;
   whatsappEnabled: boolean;
@@ -42,6 +44,8 @@ export const defaultSiteSettings: SiteSettings = {
   linkedinUrl: 'https://linkedin.com/company/clinicflow',
   xUrl: 'https://x.com/clinicflow',
   youtubeUrl: 'https://youtube.com/@clinicflow',
+  freeTrialFormUrl: '',
+  salesFormUrl: '',
   heroTitle: 'Digital Queue Management, built for modern clinics',
   heroSubtitle: 'Patients scan a QR code, get a numbered token instantly, and know exactly when their turn arrives. No chaos, no overcrowding, no missed calls.',
   whatsappEnabled: true,

@@ -117,9 +117,6 @@ export default function App() {
       setCurrentPage(nextPage);
       return;
     }
-    if (path === '/site/login') {
-      window.history.replaceState({}, '', '/login');
-    }
     setCurrentPage(nextPage);
   }, [userSession]);
 
@@ -131,9 +128,6 @@ export default function App() {
       if (path.startsWith('/track/')) {
         const id = path.slice('/track/'.length);
         setTrackingId(id);
-      }
-      if (path === '/site/login') {
-        window.history.replaceState({}, '', '/login');
       }
       setCurrentPage(nextPage);
     };

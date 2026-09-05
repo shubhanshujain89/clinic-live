@@ -1387,6 +1387,8 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
               { label: 'LinkedIn URL', value: siteSettings.linkedinUrl, onChange: (value: string) => setSiteSettings({ ...siteSettings, linkedinUrl: value }) },
               { label: 'X / Twitter URL', value: siteSettings.xUrl, onChange: (value: string) => setSiteSettings({ ...siteSettings, xUrl: value }) },
               { label: 'YouTube URL', value: siteSettings.youtubeUrl, onChange: (value: string) => setSiteSettings({ ...siteSettings, youtubeUrl: value }) },
+              { label: 'Start free trial Google Form URL', value: siteSettings.freeTrialFormUrl, onChange: (value: string) => setSiteSettings({ ...siteSettings, freeTrialFormUrl: value }), type: 'url' },
+              { label: 'Talk to sales Google Form URL', value: siteSettings.salesFormUrl, onChange: (value: string) => setSiteSettings({ ...siteSettings, salesFormUrl: value }), type: 'url' },
             ],
           },
         ];

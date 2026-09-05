@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, LogIn, Calendar, LogOut } from 'lucide-react';
+import { Heart, LogOut } from 'lucide-react';
 import { useSiteConfig } from '../lib/siteConfig';
 
 interface GlobalHeaderProps {
@@ -64,32 +64,6 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
           </div>
 
           <div className="hidden md:flex items-center gap-2.5 shrink-0">
-            <button
-              onClick={() => onNavigate('booking')}
-              className={`px-4 py-2 rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 ${
-                currentPage === 'patient-booking'
-                  ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-400/40'
-                  : 'text-slate-200 hover:text-white hover:bg-slate-800/80'
-              }`}
-            >
-              <Calendar className="w-4 h-4" />
-              Book Appointment
-            </button>
-
-            {!isLoggedIn && (
-              <button
-                onClick={() => onNavigate('login')}
-                className={`px-4 py-2 rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 ${
-                  currentPage === 'login'
-                    ? 'bg-purple-500/15 text-purple-300 border border-purple-400/40'
-                    : 'text-slate-200 hover:text-white hover:bg-slate-800/80'
-                }`}
-              >
-                <LogIn className="w-4 h-4" />
-                Login
-              </button>
-            )}
-
             {isLoggedIn && (
               <>
                 <button
@@ -111,20 +85,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
           </div>
 
           <div className="md:hidden flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => onNavigate('booking')}
-              className="p-2 rounded-xl text-slate-200 hover:bg-slate-800/80 transition-colors"
-            >
-              <Calendar className="w-5 h-5" />
-            </button>
-            {!isLoggedIn ? (
-              <button
-                onClick={() => onNavigate('login')}
-                className="p-2 rounded-xl text-slate-200 hover:bg-slate-800/80 transition-colors"
-              >
-                <LogIn className="w-5 h-5" />
-              </button>
-            ) : (
+            {isLoggedIn ? (
               <>
                 <button
                   onClick={onOpenProfile}
@@ -139,7 +100,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
                   <LogOut className="w-5 h-5" />
                 </button>
               </>
-            )}
+            ) : null}
           </div>
         </div>
 

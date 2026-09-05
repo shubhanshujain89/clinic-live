@@ -219,8 +219,17 @@ export const signInWithEmailAndPassword = async (_auth: unknown, email: string, 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: normalizedEmail, password: normalizedPassword, role: role || undefined, clinicId }),
   });
-  const payload = await response.json();
-  if (!response.ok) throw new Error(payload.error || 'Authentication failed.');
+  const responseText = await response.text();
+  let payload: { user?: User; error?: string } = {};
+  if (responseText.trim()) {
+    try {
+      payload = JSON.parse(responseText) as typeof payload;
+    } catch {
+      throw new Error(`Authentication service returned an invalid response (${response.status}).`);
+    }
+  }
+  if (!response.ok) throw new Error(payload.error || `Authentication failed (${response.status}).`);
+  if (!payload.user) throw new Error('Authentication service returned an incomplete response.');
   const user: User = { ...payload.user, displayName: payload.user.displayName || payload.user.email };
   auth.currentUser = user;
   return { user };
