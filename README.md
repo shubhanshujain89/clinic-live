@@ -36,9 +36,15 @@ Visit `http://localhost:3000` in your browser.
 
 ### Default Test Credentials
 
+Seed data requires `SUPER_ADMIN_PASSWORD` to be set to a strong password (at least 12 characters). Do not use a shared production password.
+
 ```
+Email: superadmin@clinic.local
+Password: value configured in SUPER_ADMIN_PASSWORD
+Role: Super Administrator
+
 Email: admin@clinic.local
-Password: admin
+Password: admin (development seed only)
 Role: Clinic Administrator
 
 Email: doctor@clinic.local
@@ -91,8 +97,12 @@ git push origin main
      ```
      NODE_ENV=production
      PORT=<auto-assigned by Hostinger>
-     SUPER_ADMIN_PASSWORD=<change_to_strong_password>
-     DATABASE_PATH=./data/clinicflow.sqlite
+   DB_HOST=<mysql-host>
+   DB_PORT=3306
+   DB_USER=<mysql-user>
+   DB_PASSWORD=<mysql-password>
+   DB_NAME=<mysql-database>
+   SUPER_ADMIN_PASSWORD=<strong-bootstrap-password-at-least-12-characters>
      ```
    - **IMPORTANT**: Change default admin password before deploying
 
@@ -102,9 +112,9 @@ git push origin main
    - Enable automatic deployments on git push
 
 4. **Database Persistence**
-   - Hostinger will create `data/` directory automatically
-   - Database persists between deployments
-   - Backup `data/clinicflow.sqlite` regularly
+   - Create the MySQL database and user in Hostinger before starting the server.
+   - Run `npm run db:migrate` and `npm run db:seed` once with the production environment variables.
+   - Back up the MySQL database regularly.
 
 ### 4. Post-Deployment Verification
 

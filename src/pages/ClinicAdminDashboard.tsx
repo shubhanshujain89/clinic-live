@@ -23,8 +23,6 @@ const HOURS_OPTIONS = [
   'Custom Hours'
 ];
 
-const DEFAULT_USER_PASSWORD = 'Clinic@123';
-
 const PACK_OPTIONS = [
   { value: 'TRIAL', label: 'Trial Pack', validityDays: 30, price: '₹0' },
   { value: 'BASIC', label: 'Basic Pack', validityDays: 30, price: '₹1,499/mo' },
@@ -557,7 +555,16 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         'Reception': 'STAFF',
       };
       const dbRole = roleMap[requestedRole] || 'STAFF';
-      const passwordHash = await hashPassword(DEFAULT_USER_PASSWORD);
+      let passwordHash = '';
+      if (!editingUser) {
+        const initialPassword = window.prompt('Set an initial password (at least 12 characters):', '');
+        if (!initialPassword) return;
+        if (initialPassword.length < 12) {
+          window.alert('Password must be at least 12 characters.');
+          return;
+        }
+        passwordHash = await hashPassword(initialPassword);
+      }
       const payload = {
         name: userFormData.name,
         displayName: userFormData.name,
@@ -568,8 +575,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         clinicName: userFormData.clinicName,
         phone: userFormData.phone,
         accessStatus: databaseAccessStatus,
-        passwordHash: passwordHash,
-        passwordReset: userFormData.passwordReset || 'Never reset',
+        ...(passwordHash ? { passwordHash } : {}),
       };
 
       if (!payload.name || !payload.email) {
@@ -626,7 +632,6 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
             phone: payload.phone,
             accessStatus: databaseAccessStatus,
             passwordHash: passwordHash,
-            passwordReset: 'Default (Clinic@123)',
             createdAt: new Date().toISOString()
           });
         }
@@ -666,14 +671,19 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
   const handleResetUserPassword = async (userId: string) => {
     if (!userId) return;
-    if (!window.confirm(`Reset this user's password to the default password: ${DEFAULT_USER_PASSWORD}?`)) return;
+    const newPassword = window.prompt('Enter a new password (at least 12 characters):', '');
+    if (!newPassword) return;
+    if (newPassword.length < 12) {
+      window.alert('Password must be at least 12 characters.');
+      return;
+    }
 
     try {
       const response = await fetch('/api/users/reset-password', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, defaultPassword: DEFAULT_USER_PASSWORD })
+        body: JSON.stringify({ userId, newPassword })
       });
       const payload = await response.json().catch(() => ({}));
 
@@ -681,11 +691,11 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         throw new Error(payload?.error || 'Unable to reset password.');
       }
 
-      setUsers((currentUsers) => currentUsers.map((user) => user.id === userId ? { ...user, passwordReset: `Default (${DEFAULT_USER_PASSWORD})` } : user));
-      setUserFormData((current) => ({ ...current, passwordReset: `Default (${DEFAULT_USER_PASSWORD})` }));
-      setSaveMessage('User password reset to default successfully.');
+      setUsers((currentUsers) => currentUsers.map((user) => user.id === userId ? { ...user, passwordReset: 'Reset securely' } : user));
+      setUserFormData((current) => ({ ...current, passwordReset: 'Reset securely' }));
+      setSaveMessage('User password reset successfully.');
       void recordAuditEvent('Password reset', `Password was reset for ${users.find((user) => user.id === userId)?.name || 'a user'}.`);
-      window.alert(`Password reset to ${DEFAULT_USER_PASSWORD}`);
+      window.alert('Password reset successfully.');
     } catch (error) {
       console.error('Error resetting user password:', error);
       window.alert(error instanceof Error ? error.message : 'Unable to reset the user password.');
@@ -2117,7 +2127,6 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <div className="text-sm text-slate-200">{userFormData.passwordReset || 'Never reset'}</div>
-                      <div className="text-xs text-slate-400">Default password: {DEFAULT_USER_PASSWORD}</div>
                     </div>
                     <button
                       type="button"

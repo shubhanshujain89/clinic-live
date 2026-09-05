@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import crypto from 'crypto';
 import net from 'net';
-import { getDatabase, readDoc, listQuery, writeDoc, updateDoc, deleteDoc, findUserByEmail, verifyPassword, createPublicBooking, getPublicTracking, resetUserPassword, DEFAULT_USER_PASSWORD, extractTableName } from './server/db.js';
+import { getDatabase, readDoc, listQuery, writeDoc, updateDoc, deleteDoc, findUserByEmail, verifyPassword, createPublicBooking, getPublicTracking, resetUserPassword, extractTableName } from './server/db.js';
 import { repositories } from './server/db/repositories/index.js';
 import { services } from './server/db/services/index.js';
 
@@ -81,7 +81,16 @@ const cookieValue = (req: express.Request, name: string) => {
   return entry ? decodeURIComponent(entry.trim().slice(name.length + 1)) : '';
 };
 
-const authContext = (req: express.Request) => sessions.get(cookieValue(req, 'clinicflow_session'));
+const authContext = (req: express.Request) => {
+  const token = cookieValue(req, 'clinicflow_session');
+  const session = sessions.get(token);
+  const maxAge = Number(process.env.SESSION_MAX_AGE || 8 * 60 * 60);
+  if (!session || Date.now() - session.createdAt > maxAge * 1000) {
+    if (token) sessions.delete(token);
+    return undefined;
+  }
+  return session;
+};
 
 const getClinicAccessStatus = async (clinicId: string | null, clinicName?: string) => {
   let resolvedClinicId = clinicId;
@@ -111,12 +120,57 @@ const secureEqual = (left: string, right: string) => {
 const canAccessRecord = (context: AuthContext, record: Record<string, any>, table: string) => {
   if (context.role === 'SUPER_ADMIN') return true;
   const recordClinicId = table === 'clinics' ? record.id : (record.clinicId || record.clinic_id);
+  if (!recordClinicId) return false;
   if (recordClinicId && recordClinicId !== context.clinicId) return false;
   if (context.role === 'DOCTOR' && table === 'doctors') {
     return (record.id || record.doctorId) === context.doctorId;
   }
   if (context.role === 'DOCTOR' && record.doctorId && record.doctorId !== context.doctorId) return false;
-  return !recordClinicId || recordClinicId === context.clinicId;
+  return recordClinicId === context.clinicId;
+};
+
+const prepareDatabaseMutation = (
+  context: AuthContext,
+  table: string,
+  value: Record<string, any>,
+  current?: Record<string, any> | null,
+) => {
+  if (context.role === 'SUPER_ADMIN') return value;
+  if (table !== 'staff_users') return value;
+  if (context.role !== 'CLINIC_ADMIN') {
+    throw new Error('This role cannot modify staff users.');
+  }
+
+  const next = { ...value };
+  if (current) {
+    if (current.clinicId !== context.clinicId && current.clinic_id !== context.clinicId) {
+      throw new Error('Access denied.');
+    }
+    delete next.passwordHash;
+    delete next.password_hash;
+  }
+  if (next.role && !['CLINIC_ADMIN', 'DOCTOR', 'STAFF'].includes(String(next.role).toUpperCase())) {
+    throw new Error('Invalid staff role.');
+  }
+  if (next.clinicId !== undefined && next.clinicId !== context.clinicId) {
+    throw new Error('A clinic admin cannot assign another clinic.');
+  }
+  if (next.clinic_id !== undefined && next.clinic_id !== context.clinicId) {
+    throw new Error('A clinic admin cannot assign another clinic.');
+  }
+  next.clinicId = context.clinicId;
+  delete next.clinic_id;
+  delete next.passwordReset;
+  delete next.password_reset;
+  delete next.accessStatus;
+  delete next.access_status;
+  return next;
+};
+
+const sanitizeDatabaseRecord = (table: string, record: Record<string, any>) => {
+  if (table !== 'staff_users') return record;
+  const { passwordHash, password_hash, passwordReset, password_reset, ...safeRecord } = record;
+  return safeRecord;
 };
 
 const requireDatabaseAccess = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -132,6 +186,24 @@ const requireDatabaseAccess = (req: express.Request, res: express.Response, next
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+app.use((req, res, next) => {
+  const stateChangingMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+  const hasSessionCookie = Boolean(cookieValue(req, 'clinicflow_session'));
+  const origin = String(req.headers.origin || '');
+  if (stateChangingMethod && hasSessionCookie && origin) {
+    const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+    const protocol = forwardedProto || req.protocol;
+    const forwardedHost = String(req.headers['x-forwarded-host'] || '').split(',')[0].trim();
+    const host = forwardedHost || req.get('host');
+    const expectedOrigin = `${protocol}://${host}`;
+    if (origin !== expectedOrigin) {
+      res.status(403).json({ error: 'Cross-site request blocked.' });
+      return;
+    }
+  }
+  next();
+});
 
 app.use((req, res, next) => {
   res.removeHeader('X-Powered-By');
@@ -397,17 +469,29 @@ app.post('/api/patient/book', async (req, res) => {
       return;
     }
     const { clinicId, doctorId, patientName, phone, age, reason } = req.body || {};
-    if (!clinicId || !doctorId || !String(patientName || '').trim() || !String(phone || '').trim()) {
+    const normalizedPatientName = String(patientName || '').trim();
+    const normalizedPhone = String(phone || '').trim();
+    const normalizedReason = String(reason || '').trim();
+    const normalizedAge = age === undefined || age === null || age === '' ? undefined : Number(age);
+    if (!clinicId || !doctorId || !normalizedPatientName || !normalizedPhone) {
       res.status(400).json({ error: 'Clinic, doctor, patient name, and mobile number are required.' });
+      return;
+    }
+    if (normalizedPatientName.length > 120 || normalizedPhone.length > 30 || normalizedReason.length > 500) {
+      res.status(400).json({ error: 'Booking details exceed the allowed length.' });
+      return;
+    }
+    if (normalizedAge !== undefined && (!Number.isInteger(normalizedAge) || normalizedAge < 0 || normalizedAge > 120)) {
+      res.status(400).json({ error: 'Age must be a whole number between 0 and 120.' });
       return;
     }
     const booking = await createPublicBooking({
       clinicId: String(clinicId),
       doctorId: String(doctorId),
-      patientName: String(patientName),
-      phone: String(phone),
-      age: age ? Number(age) : undefined,
-      reason: reason ? String(reason) : undefined,
+      patientName: normalizedPatientName,
+      phone: normalizedPhone,
+      age: normalizedAge,
+      reason: normalizedReason || undefined,
     });
     res.status(201).json(booking);
   } catch (error) {
@@ -438,6 +522,11 @@ app.get('/api/patient/track/:trackingId', async (req, res) => {
 
 app.patch('/api/patient/track/:trackingId/notes', async (req, res) => {
   try {
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(`patient-notes:${clientIp}`, 5)) {
+      res.status(429).json({ error: 'Too many note submissions. Please try again later.' });
+      return;
+    }
     const trackingId = String(req.params.trackingId || '');
     if (!/^[A-Za-z0-9_-]{12}$/.test(trackingId)) {
       res.status(400).json({ error: 'Invalid tracking ID.' });
@@ -482,6 +571,10 @@ app.patch('/api/patient/track/:trackingId/notes', async (req, res) => {
 
     if (!notes.symptoms || typeof notes.symptoms !== 'string' || !String(notes.symptoms).trim()) {
       res.status(400).json({ error: 'Symptoms are required.' });
+      return;
+    }
+    if (String(notes.symptoms).length > 2000 || String(notes.allergies || '').length > 1000 || String(notes.duration || '').length > 100) {
+      res.status(400).json({ error: 'Patient notes exceed the allowed length.' });
       return;
     }
 
@@ -576,7 +669,7 @@ app.post('/api/auth/login', async (req, res) => {
     const cookieAttributes = [
       'Path=/',
       'HttpOnly',
-      isSecureCookie ? 'SameSite=None' : 'SameSite=Lax',
+      'SameSite=Lax',
       `Max-Age=${8 * 60 * 60}`,
       ...(isSecureCookie ? ['Secure'] : []),
     ];
@@ -603,8 +696,7 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/logout', (req, res) => {
   const token = cookieValue(req, 'clinicflow_session');
   sessions.delete(token);
-  const isSecureCookie = process.env.NODE_ENV === 'production' || String(req.headers['x-forwarded-proto'] || '').toLowerCase() === 'https';
-  res.setHeader('Set-Cookie', `clinicflow_session=; Path=/; HttpOnly; ${isSecureCookie ? 'SameSite=None; Secure' : 'SameSite=Lax'}; Max-Age=0`);
+  res.setHeader('Set-Cookie', 'clinicflow_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
   res.status(204).end();
 });
 
@@ -724,7 +816,7 @@ app.post('/api/users/reset-password', async (req, res) => {
   try {
     const context = authContext(req);
     const userId = String(req.body?.userId || '').trim();
-    const defaultPassword = String(req.body?.defaultPassword || DEFAULT_USER_PASSWORD).trim() || DEFAULT_USER_PASSWORD;
+    const newPassword = String(req.body?.newPassword || '');
 
     if (!context || !['SUPER_ADMIN', 'CLINIC_ADMIN'].includes(context.role)) {
       res.status(403).json({ error: 'Only administrators can reset passwords.' });
@@ -733,6 +825,10 @@ app.post('/api/users/reset-password', async (req, res) => {
 
     if (!userId) {
       res.status(400).json({ error: 'User id is required.' });
+      return;
+    }
+    if (newPassword.length < 12) {
+      res.status(400).json({ error: 'New password must be at least 12 characters.' });
       return;
     }
 
@@ -744,8 +840,8 @@ app.post('/api/users/reset-password', async (req, res) => {
       }
     }
 
-    const result = await resetUserPassword(userId, defaultPassword);
-    res.status(200).json({ ...result, ok: true });
+    const result = await resetUserPassword(userId, newPassword);
+    res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to reset password.' });
   }
@@ -799,7 +895,7 @@ app.get('/api/db/doc', async (req, res) => {
       res.status(403).json({ error: 'Access denied.' });
       return;
     }
-    res.status(200).json({ exists: true, data: docResult });
+    res.status(200).json({ exists: true, data: sanitizeDatabaseRecord(tableForPath(documentPath), docResult) });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to load document.' });
   }
@@ -815,12 +911,14 @@ app.post('/api/db/doc', async (req, res) => {
     }
 
     const context = (req as express.Request & { auth?: AuthContext }).auth;
-    if (context && context.role !== 'SUPER_ADMIN' && !canAccessRecord(context, value || {}, tableForPath(documentPath))) {
+    const table = tableForPath(documentPath);
+    const safeValue = context ? prepareDatabaseMutation(context, table, value || {}) : value || {};
+    if (context && context.role !== 'SUPER_ADMIN' && !canAccessRecord(context, safeValue, table)) {
       res.status(403).json({ error: 'Access denied.' });
       return;
     }
     
-    const result = await writeDoc(documentPath, value || {});
+    const result = await writeDoc(documentPath, safeValue);
     if (tableForPath(documentPath) === 'clinics' && !String(documentPath).includes('/')) {
       const accessKey = `clinic_access_${result.id}`;
       const accessRecord = await repositories.settings.findOne({ key: accessKey, clinic_id: null });
@@ -846,11 +944,13 @@ app.post('/api/db/doc/update', async (req, res) => {
 
     const context = (req as express.Request & { auth?: AuthContext }).auth;
     const current = await readDoc(documentPath);
-    if (context && (!current || !canAccessRecord(context, { ...current, ...value }, tableForPath(documentPath)))) {
+    const table = tableForPath(documentPath);
+    const safeValue = context ? prepareDatabaseMutation(context, table, value || {}, current) : value || {};
+    if (context && (!current || !canAccessRecord(context, { ...current, ...safeValue }, table))) {
       res.status(403).json({ error: 'Access denied.' });
       return;
     }
-    await updateDoc(documentPath, value || {});
+    await updateDoc(documentPath, safeValue);
     res.status(200).json({ ok: true });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to update document.' });
@@ -888,7 +988,9 @@ app.post('/api/db/query', async (req, res) => {
 
     const docs = await listQuery(collectionPath, clauses || []);
     const context = (req as express.Request & { auth?: AuthContext }).auth;
-    const visibleDocs = context ? docs.filter((item: Record<string, any>) => canAccessRecord(context, item, tableForPath(collectionPath))) : docs;
+    const table = tableForPath(collectionPath);
+    const visibleDocs = (context ? docs.filter((item: Record<string, any>) => canAccessRecord(context, item, table)) : docs)
+      .map((item: Record<string, any>) => sanitizeDatabaseRecord(table, item));
     res.status(200).json({ docs: visibleDocs });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to query records.' });

@@ -22,7 +22,7 @@ export interface StaffUser {
   clinicName?: string;
   accessStatus: 'Granted' | 'Pending' | 'Revoked';
   photoUrl?: string;
-  passwordReset?: string;
+  passwordReset?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -119,7 +119,7 @@ export class StaffUserRepository extends BaseRepository<StaffUser> {
    * Update password hash
    */
   async updatePassword(id: string, passwordHash: string, passwordReset?: string): Promise<StaffUser | null> {
-    return this.update(id, { passwordHash, passwordReset });
+    return this.update(id, { passwordHash, passwordReset: passwordReset ?? null });
   }
 
   /**

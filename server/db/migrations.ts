@@ -75,6 +75,10 @@ export async function runMigrations(): Promise<void> {
  */
 export async function runSeedData(): Promise<void> {
   console.log('🌱 Running seed data insertion...');
+  const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD?.trim();
+  if (!superAdminPassword || superAdminPassword.length < 12) {
+    throw new Error('SUPER_ADMIN_PASSWORD must be configured with at least 12 characters before seeding.');
+  }
   
   const statements = splitSqlStatements(SEED_DATA_SQL);
   
@@ -84,7 +88,7 @@ export async function runSeedData(): Promise<void> {
 
     if (executableStatement.includes('INSERT IGNORE INTO staff_users')) {
       executableStatement = executableStatement
-        .replace('__SUPER_ADMIN_PASSWORD_HASH__', hashPassword('admin'))
+        .replace('__SUPER_ADMIN_PASSWORD_HASH__', hashPassword(superAdminPassword))
         .replace('__ADMIN_PASSWORD_HASH__', hashPassword('admin'))
         .replace('__DOCTOR_PASSWORD_HASH__', hashPassword('doctor'))
         .replace('__STAFF_PASSWORD_HASH__', hashPassword('staff'));

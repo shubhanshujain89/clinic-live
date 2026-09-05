@@ -30,10 +30,10 @@ export const findUserByEmail = async (email: string) => {
   };
 };
 
-export const resetUserPassword = async (userId: string, defaultPassword: string = DEFAULT_USER_PASSWORD) => {
-  const passwordHash = hashPassword(defaultPassword);
-  await repositories.staffUsers.updatePassword(userId, passwordHash, `Default: ${defaultPassword}`);
-  return { ok: true, defaultPassword };
+export const resetUserPassword = async (userId: string, newPassword: string) => {
+  const passwordHash = hashPassword(newPassword);
+  await repositories.staffUsers.updatePassword(userId, passwordHash);
+  return { ok: true };
 };
 
 // Public booking
