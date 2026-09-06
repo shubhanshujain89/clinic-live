@@ -312,11 +312,16 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
       return;
     }
 
-    const session = await repositories.sessions.findActiveByClinicId(requestedClinicId);
-    const doctors = await repositories.doctors.findActiveByClinicId(requestedClinicId);
+    const todaySession = await repositories.sessions.findByClinicAndDate(requestedClinicId, new Date());
+    const session = todaySession?.status === 'ACTIVE' ? todaySession : null;
+    const doctors = await repositories.doctors.findByClinicId(requestedClinicId);
+    const activeDoctors = doctors.filter((doctor) => doctor.status === 'active');
     const scopedDoctors = context.role === 'DOCTOR'
       ? doctors.filter((doctor) => doctor.id === context.doctorId)
       : doctors;
+    const scopedActiveDoctors = context.role === 'DOCTOR'
+      ? activeDoctors.filter((doctor) => doctor.id === context.doctorId)
+      : activeDoctors;
     const tokens = session
       ? (await Promise.all(scopedDoctors.map((doctor) => repositories.tokens.findByDoctorAndSession(doctor.id, session.id)))).flat()
       : [];
@@ -325,7 +330,7 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
       clinic: {
         id: clinic.id,
         name: clinic.name,
-        doctorId: scopedDoctors[0]?.id || '',
+        doctorId: scopedActiveDoctors[0]?.id || '',
         doctorName: clinic.doctorName || '',
         specialty: clinic.specialty || '',
         cabinNumber: clinic.cabinNumber || '',
