@@ -152,7 +152,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
       </header>
 
       {/* Main Massive Center Display: Currently Serving */}
-      <main className="my-4 grid min-h-0 flex-1 grid-cols-1 items-stretch gap-5 lg:grid-cols-12 lg:gap-6">
+      <main className="tv-display-main my-4 grid min-h-0 flex-1 grid-cols-1 items-stretch gap-5 lg:grid-cols-12 lg:gap-6">
         
         {/* Now Serving Card */}
         <div className="relative flex min-h-[18rem] flex-col justify-center overflow-hidden rounded-[2rem] border-2 border-teal-400/50 bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950/50 p-6 text-center shadow-2xl sm:min-h-[24rem] sm:p-10 lg:col-span-6 lg:min-h-0 lg:p-12 xl:col-span-5">
@@ -246,23 +246,25 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
       </main>
 
       {/* Bottom Signage Footer Ticker */}
-      <footer className="flex flex-col items-center justify-between gap-2 border-t border-slate-800/80 pt-3 text-[11px] font-medium text-slate-400 sm:flex-row sm:text-xs">
+      <footer className="grid grid-cols-1 items-center gap-2 border-t border-slate-800/80 pt-3 text-center text-[11px] font-medium text-slate-400 sm:grid-cols-3 sm:text-xs sm:text-left">
         <div className="flex items-center space-x-2">
           <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
           <span>Live queue · Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
-        <div className="text-center sm:text-right">
+        <div className="text-center">
           <span>Estimated Pacing: ~{clinic.avgConsultationMinutes || 8.5} mins/patient</span>
           {clinic.delayMinutes > 0 && (
             <span className="text-amber-400 font-bold ml-2">
               (⚠️ Delay Broadcast: +{clinic.delayMinutes} mins)
             </span>
           )}
+        </div>
+        <div className="text-center sm:text-right">
           <a
             href="https://ybgp.in"
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-2 font-bold text-teal-300 transition hover:text-teal-200"
+            className="font-bold text-teal-300 transition hover:text-teal-200"
           >
             YBGP - Your Business Growth Partner &rarr;
           </a>

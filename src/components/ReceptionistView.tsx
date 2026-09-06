@@ -437,8 +437,9 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
         </div>
       )}
 
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5 sm:gap-4">
       {/* Patient currently in the cabin */}
-      <div className="rounded-xl border border-teal-500/30 bg-teal-950/20 p-4 sm:p-5">
+      <div className="col-span-2 min-h-20 rounded-2xl border border-teal-500/30 bg-teal-950/20 p-4 sm:col-span-4 sm:p-5 lg:col-span-1">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-teal-300">In cabin now</p>
@@ -473,7 +474,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
       </div>
 
       {/* Main control bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="contents">
         
         {/* Button 1: Call Next Token */}
         <button
@@ -520,6 +521,8 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
             {clinic.delayMinutes > 0 ? `+${clinic.delayMinutes}m Active` : 'Add Delay to ETAs'}
           </span>
         </button>
+
+      </div>
 
       </div>
 
