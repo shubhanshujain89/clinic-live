@@ -289,7 +289,6 @@ app.get('/api/health', (_req, res) => {
     status: 'ok',
     app: 'ClinicFlow Pro',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
   });
 });
 
@@ -330,8 +329,13 @@ const parseSpecializationList = (value: unknown): string[] => {
   return [];
 };
 
-app.get('/api/clinics', async (_req, res) => {
+app.get('/api/clinics', async (req, res) => {
   try {
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    if (!(await checkRateLimit(`public-clinics:${clientIp}`, 60))) {
+      res.status(429).json({ error: 'Too many requests. Please try again later.' });
+      return;
+    }
     const clinics = await repositories.clinics.findActive();
     const publicClinics = clinics.map((clinic) => ({
       id: clinic.id,
@@ -344,13 +348,19 @@ app.get('/api/clinics', async (_req, res) => {
     }));
     res.status(200).json(publicClinics);
   } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to load clinics.' });
+    res.status(500).json({ error: 'Unable to load clinics.' });
   }
 });
 
 app.get('/api/clinics/:clinicId/doctors', async (req, res) => {
   try {
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    if (!(await checkRateLimit(`public-doctors:${clientIp}`, 60))) {
+      res.status(429).json({ error: 'Too many requests. Please try again later.' });
+      return;
+    }
     const { clinicId } = req.params;
+    if (!await requireActivePlan(res, clinicId)) return;
     const specializationFilter = String(req.query.specialization || '').trim();
     const doctors = await repositories.doctors.findActiveByClinicId(clinicId);
     const publicDoctors = doctors
@@ -367,7 +377,7 @@ app.get('/api/clinics/:clinicId/doctors', async (req, res) => {
       }));
     res.status(200).json(publicDoctors);
   } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to load doctors.' });
+    res.status(500).json({ error: 'Unable to load doctors.' });
   }
 });
 
@@ -897,13 +907,13 @@ app.post('/api/auth/login', async (req, res) => {
     res.status(200).json(responseData);
   } catch (error) {
     console.error('Authentication error:', error instanceof Error ? error.message : error);
-    const errorMsg = error instanceof Error ? error.message : 'Login failed';
-    res.status(500).json({ error: errorMsg });
+    res.status(500).json({ error: 'Login service temporarily unavailable.' });
   }
 });
 
 app.post('/api/auth/logout', (req, res) => {
-  res.setHeader('Set-Cookie', 'clinicflow_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+  const isSecureCookie = process.env.NODE_ENV === 'production' || String(req.headers['x-forwarded-proto'] || '').toLowerCase() === 'https';
+  res.setHeader('Set-Cookie', `clinicflow_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${isSecureCookie ? '; Secure' : ''}`);
   res.status(204).end();
 });
 
@@ -1076,7 +1086,7 @@ app.get('/api/db/health', async (_req, res) => {
     res.status(500).json({
       status: 'error',
       database: 'mysql',
-      message: error instanceof Error ? error.message : 'Database unavailable',
+      message: 'Database unavailable',
     });
   }
 });
@@ -1288,6 +1298,7 @@ app.get('/api/queue-summary', async (req, res) => {
       res.status(401).json({ error: 'Authentication required.' });
       return;
     }
+    if (!await requireActivePlan(res, context.clinicId, context.role)) return;
     const session = await repositories.sessions.findActiveByClinicId(context.clinicId);
     const stats = session
       ? await repositories.tokens.getQueueStats('', session.id)
@@ -1335,7 +1346,7 @@ app.get('/api/site/settings', async (_req, res) => {
 
     res.status(200).json(settingsMap);
   } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to load site settings' });
+    res.status(500).json({ error: 'Failed to load site settings.' });
   }
 });
 
@@ -1381,7 +1392,7 @@ app.get('/api/site/content', async (_req, res) => {
 
     res.status(200).json(contentMap);
   } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to load site content' });
+    res.status(500).json({ error: 'Failed to load site content.' });
   }
 });
 
