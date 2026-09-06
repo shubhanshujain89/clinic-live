@@ -28,7 +28,15 @@ export const resolveAppPageForRoute = (path: string, userRole?: string | null): 
   if (path === '/site/admin') {
     if (normalizedRole === 'SUPER_ADMIN') return 'site-admin';
     if (normalizedRole === 'CLINIC_ADMIN') return 'clinic-admin';
-    return 'site-admin';
+    if (normalizedRole === 'DOCTOR' || normalizedRole === 'STAFF') return 'clinic-queue';
+    return 'login';
+  }
+
+  if (path === '/site/queue') {
+    if (normalizedRole === 'DOCTOR' || normalizedRole === 'STAFF') return 'clinic-queue';
+    if (normalizedRole === 'CLINIC_ADMIN') return 'clinic-admin';
+    if (normalizedRole === 'SUPER_ADMIN') return 'site-admin';
+    return 'login';
   }
 
   if ((path === '/site/login' || path === '/login') && normalizedRole) {
@@ -76,7 +84,7 @@ export default function App() {
         setUserSession(null);
         const path = window.location.pathname;
         const isPublicPage = isPublicRoute(path);
-        if (path === '/site/admin') {
+        if (path === '/site/admin' || path === '/site/queue') {
           setCurrentPage('login');
           window.history.replaceState({}, '', '/login');
         } else if (path === '/site/login' || path === '/login' || isPublicPage) {
@@ -110,7 +118,7 @@ export default function App() {
       setTrackingId(id);
     }
     if (userSession && (path === '/login' || path === '/site/login')) {
-      const securePath = userSession.role === 'SUPER_ADMIN' ? '/site/admin' : '/site/admin';
+      const securePath = userSession.role === 'DOCTOR' || userSession.role === 'STAFF' ? '/site/queue' : '/site/admin';
       if (window.location.pathname !== securePath) {
         window.history.replaceState({}, '', securePath);
       }
@@ -171,7 +179,7 @@ export default function App() {
           window.history.replaceState({}, '', '/site/admin');
         } else if (userSession.role === 'DOCTOR' || userSession.role === 'STAFF') {
           setCurrentPage('clinic-queue');
-          window.history.replaceState({}, '', '/site/admin');
+          window.history.replaceState({}, '', '/site/queue');
         }
         return;
       }
@@ -201,7 +209,7 @@ export default function App() {
         window.history.pushState({}, '', '/site/admin');
       } else if (effectiveRole === 'DOCTOR' || effectiveRole === 'STAFF') {
         setCurrentPage('clinic-queue');
-        window.history.pushState({}, '', '/site/admin');
+        window.history.pushState({}, '', '/site/queue');
       } else {
         setCurrentPage('site-admin');
         window.history.pushState({}, '', '/site/admin');
@@ -230,7 +238,7 @@ export default function App() {
       window.history.replaceState({}, '', '/site/admin');
     } else if (uiRole === 'DOCTOR' || uiRole === 'STAFF') {
       setCurrentPage('clinic-queue');
-      window.history.replaceState({}, '', '/site/admin');
+      window.history.replaceState({}, '', '/site/queue');
     } else {
       setCurrentPage('landing');
       window.history.replaceState({}, '', '/');
