@@ -41,6 +41,20 @@ function splitSqlStatements(sql: string): string[] {
  */
 export async function runMigrations(): Promise<void> {
   console.log('🔄 Running database migrations...');
+  await executeQuery(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      version VARCHAR(100) PRIMARY KEY,
+      applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  const baseline = await executeQuery<{ version: string }>(
+    'SELECT version FROM schema_migrations WHERE version = ? LIMIT 1',
+    ['baseline-20260906']
+  );
+  if (baseline.length > 0) {
+    console.log('✅ Database migrations already applied');
+    return;
+  }
   
   const statements = splitSqlStatements(SCHEMA_SQL);
   
@@ -73,6 +87,10 @@ export async function runMigrations(): Promise<void> {
   await executeQuery(`ALTER TABLE appointments MODIFY appointment_type ENUM('ONLINE', 'WALK_IN', 'VIP', 'EMERGENCY') DEFAULT 'ONLINE'`);
   await executeQuery(`UPDATE appointments SET appointment_type = 'EMERGENCY' WHERE appointment_type = 'VIP'`);
   await executeQuery(`ALTER TABLE appointments MODIFY appointment_type ENUM('ONLINE', 'WALK_IN', 'EMERGENCY') DEFAULT 'ONLINE'`);
+  await executeQuery(
+    `INSERT IGNORE INTO schema_migrations (version) VALUES (?)`,
+    ['baseline-20260906']
+  );
   
   console.log('✅ All migrations completed successfully');
 }
@@ -128,7 +146,7 @@ export async function runSeedData(): Promise<void> {
       } else {
         console.error(`❌ Failed: ${executableStatement.substring(0, 80)}...`);
         console.error(`   Error: ${errorMessage}`);
-        // Don't throw for seed data - it's okay if some already exist
+        throw error;
       }
     }
   }
@@ -186,9 +204,13 @@ async function testConnection(): Promise<boolean> {
  * Drop all tables (use with caution!)
  */
 export async function dropAllTables(): Promise<void> {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Refusing to drop production tables. Use an approved maintenance procedure.');
+  }
   console.log('⚠️  Dropping all tables...');
   
   const tables = [
+    'rate_limits',
     'whatsapp_logs',
     'settings',
     'doctor_status',
@@ -199,7 +221,8 @@ export async function dropAllTables(): Promise<void> {
     'patients',
     'staff_users',
     'doctors',
-    'clinics'
+    'clinics',
+    'schema_migrations'
   ];
   
   for (const table of tables) {

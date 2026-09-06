@@ -41,6 +41,14 @@ CREATE TABLE IF NOT EXISTS clinics (
     INDEX idx_clinics_active_session (active_session_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Shared rate-limit counters for multi-instance deployments
+CREATE TABLE IF NOT EXISTS rate_limits (
+    rate_key VARCHAR(255) PRIMARY KEY,
+    request_count INT NOT NULL DEFAULT 0,
+    reset_at TIMESTAMP NOT NULL,
+    INDEX idx_rate_limits_reset_at (reset_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Doctors table
 CREATE TABLE IF NOT EXISTS doctors (
     id VARCHAR(64) PRIMARY KEY,

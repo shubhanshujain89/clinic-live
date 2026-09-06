@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { auth, onAuthStateChanged, User, signInWithEmailAndPassword, signOut } from './lib/firebase';
 import { GlobalHeader } from './components/GlobalHeader';
 import { useSiteConfig } from './lib/siteConfig';
-import { LandingPage } from './pages/LandingPage';
-import { LoginPage } from './pages/LoginPage';
-import { ClinicAdminDashboard } from './pages/ClinicAdminDashboard';
-import { DoctorManagement } from './pages/DoctorManagement';
-import { PatientBooking } from './pages/PatientBooking';
-import { PatientTracking } from './pages/PatientTracking';
-import { ClinicQueueApp } from './components/ClinicQueueApp';
-import { WhatWeProvidePage } from './pages/WhatWeProvidePage';
-import { WhyChooseUsPage } from './pages/WhyChooseUsPage';
-import { BenefitsPage } from './pages/BenefitsPage';
-import { ContactPage } from './pages/ContactPage';
+
+const LandingPage = lazy(() => import('./pages/LandingPage').then(({ LandingPage }) => ({ default: LandingPage })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then(({ LoginPage }) => ({ default: LoginPage })));
+const ClinicAdminDashboard = lazy(() => import('./pages/ClinicAdminDashboard').then(({ ClinicAdminDashboard }) => ({ default: ClinicAdminDashboard })));
+const DoctorManagement = lazy(() => import('./pages/DoctorManagement').then(({ DoctorManagement }) => ({ default: DoctorManagement })));
+const PatientBooking = lazy(() => import('./pages/PatientBooking').then(({ PatientBooking }) => ({ default: PatientBooking })));
+const PatientTracking = lazy(() => import('./pages/PatientTracking').then(({ PatientTracking }) => ({ default: PatientTracking })));
+const ClinicQueueApp = lazy(() => import('./components/ClinicQueueApp').then(({ ClinicQueueApp }) => ({ default: ClinicQueueApp })));
+const WhatWeProvidePage = lazy(() => import('./pages/WhatWeProvidePage').then(({ WhatWeProvidePage }) => ({ default: WhatWeProvidePage })));
+const WhyChooseUsPage = lazy(() => import('./pages/WhyChooseUsPage').then(({ WhyChooseUsPage }) => ({ default: WhyChooseUsPage })));
+const BenefitsPage = lazy(() => import('./pages/BenefitsPage').then(({ BenefitsPage }) => ({ default: BenefitsPage })));
+const ContactPage = lazy(() => import('./pages/ContactPage').then(({ ContactPage }) => ({ default: ContactPage })));
 
 type AppPage = 'landing' | 'what-we-provide' | 'why-choose-us' | 'benefits' | 'contact' | 'login' | 'clinic-admin' | 'site-admin' | 'doctor-management' | 'patient-booking' | 'patient-tracking' | 'clinic-queue';
 
@@ -332,6 +333,7 @@ export default function App() {
 
       {/* Page Content */}
       <div className="flex-1 min-h-0">
+        <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-400">Loading ClinicFlow...</div>}>
         {/* Landing Page */}
         {currentPage === 'landing' && (
           <LandingPage onNavigate={handleNavigate} />
@@ -473,6 +475,7 @@ export default function App() {
             onLogout={handleLogout}
           />
         )}
+        </Suspense>
       </div>
 
       {profileOpen && userSession && (

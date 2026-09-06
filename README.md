@@ -194,7 +194,8 @@ See `.env.example` for complete configuration. Key variables:
 
 ## Production Notes
 
-- The current session store is process-local. Deploy as a single application instance until sessions are moved to shared MySQL or Redis storage.
+- Authentication uses signed expiring cookies shared across instances; set a long random `SESSION_SECRET` in every instance.
+- Rate-limit counters are stored in MySQL and are initialized by `npm run db:migrate`.
 - Run `npm run db:migrate` and `npm run db:seed` as a release step before the first start.
 - `npm run db:reset` and `npm run db:drop` are destructive commands and must never run against production data.
 - `npm test`, `npm run lint`, and `npm run build` are the required pre-deploy checks.

@@ -50,6 +50,7 @@ DEBUG_MODE=false
 SUPER_ADMIN_USERNAME=superadmin@your-domain.example
 SESSION_SECRET=<long-random-secret>
 SESSION_MAX_AGE=28800
+TRUST_PROXY=true
 ```
 
 ### Step 3: Build Configuration
@@ -153,7 +154,8 @@ clinicflow-pro/
 - MySQL is configured with `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME`.
 - Run `npm run db:migrate` before the first deployment.
 - Queue and patient history older than the current day is automatically removed.
-- The current session store is process-local, so use one application instance until shared session storage is implemented.
+- Authentication uses signed expiring cookies shared across instances. Keep the same long random `SESSION_SECRET` on every instance.
+- Rate-limit counters are stored in MySQL and are initialized by `npm run db:migrate`.
 - Back up MySQL regularly for production data.
 
 ### Seed Accounts

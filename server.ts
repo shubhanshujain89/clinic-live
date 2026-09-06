@@ -2,15 +2,16 @@ import express from 'express';
 import path from 'path';
 import crypto from 'crypto';
 import { getDatabase, readDoc, listQuery, writeDoc, updateDoc, deleteDoc, findUserByEmail, verifyPassword, createPublicBooking, getPublicTracking, resetUserPassword, extractTableName } from './server/db.js';
+import { executeQueryOne } from './server/db/connection.js';
 import { repositories } from './server/db/repositories/index.js';
 import { services } from './server/db/services/index.js';
 
 const app = express();
-app.set('trust proxy', 1);
+app.set('trust proxy', process.env.TRUST_PROXY === 'true' ? 1 : false);
 
 const PORT = Number(process.env.BACKEND_PORT || process.env.PORT || 4000);
-
-const sessions = new Map<string, AuthContext & { createdAt: number }>();
+const SESSION_TTL_SECONDS = Number(process.env.SESSION_MAX_AGE || 8 * 60 * 60);
+const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'clinicflow-development-session-secret');
 
 const databaseReady = getDatabase();
 
@@ -34,18 +35,6 @@ type AuthContext = {
   email: string;
 };
 
-// Session cleanup: evict expired sessions every 10 minutes
-setInterval(() => {
-  const now = Date.now();
-  const TTL_MS = 8 * 60 * 60 * 1000;
-  for (const [token, ctx] of sessions) {
-    if (now - ctx.createdAt > TTL_MS) sessions.delete(token);
-  }
-}, 10 * 60 * 1000);
-
-// Rate limiting: simple in-memory rate limiter
-const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 30;
 
 app.use((_req, res, next) => {
@@ -53,26 +42,33 @@ app.use((_req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' https:; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
   next();
 });
 
-function checkRateLimit(key: string, max = RATE_LIMIT_MAX): boolean {
-  const now = Date.now();
-  const entry = rateLimitStore.get(key);
-  if (!entry || now > entry.resetAt) {
-    rateLimitStore.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
+const checkRateLimit = async (key: string, max = RATE_LIMIT_MAX): Promise<boolean> => {
+  try {
+    await executeQueryOne(
+      `INSERT INTO rate_limits (rate_key, request_count, reset_at)
+       VALUES (?, 1, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 60 SECOND))
+       ON DUPLICATE KEY UPDATE
+         request_count = IF(reset_at <= CURRENT_TIMESTAMP, 1, request_count + 1),
+         reset_at = IF(reset_at <= CURRENT_TIMESTAMP, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 60 SECOND), reset_at)`,
+      [key]
+    );
+    const record = await executeQueryOne<{ request_count: number }>(
+      'SELECT request_count FROM rate_limits WHERE rate_key = ?',
+      [key]
+    );
+    return Number(record?.request_count || 0) <= max;
+  } catch (error) {
+    console.error('Rate limit storage unavailable:', error instanceof Error ? error.message : error);
+    return false;
   }
-  entry.count++;
-  return entry.count <= max;
-}
-
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitStore) {
-    if (now > entry.resetAt) rateLimitStore.delete(key);
-  }
-}, 60_000);
+};
 
 const cookieValue = (req: express.Request, name: string) => {
   const cookies = String(req.headers.cookie || '').split(';');
@@ -80,15 +76,28 @@ const cookieValue = (req: express.Request, name: string) => {
   return entry ? decodeURIComponent(entry.trim().slice(name.length + 1)) : '';
 };
 
+const createSessionToken = (context: AuthContext) => {
+  if (!SESSION_SECRET) throw new Error('SESSION_SECRET must be configured in production.');
+  const payload = Buffer.from(JSON.stringify({ ...context, exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS })).toString('base64url');
+  const signature = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
+  return `${payload}.${signature}`;
+};
+
 const authContext = (req: express.Request) => {
   const token = cookieValue(req, 'clinicflow_session');
-  const session = sessions.get(token);
-  const maxAge = Number(process.env.SESSION_MAX_AGE || 8 * 60 * 60);
-  if (!session || Date.now() - session.createdAt > maxAge * 1000) {
-    if (token) sessions.delete(token);
+  if (!token || !SESSION_SECRET) return undefined;
+  const [payload, signature] = token.split('.');
+  if (!payload || !signature) return undefined;
+  const expectedSignature = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
+  if (!secureEqual(signature, expectedSignature)) return undefined;
+  try {
+    const session = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as AuthContext & { exp?: number };
+    if (!session.exp || session.exp <= Math.floor(Date.now() / 1000)) return undefined;
+    if (!session.userId || !session.role || !session.email) return undefined;
+    return session;
+  } catch {
     return undefined;
   }
-  return session;
 };
 
 const getClinicAccessStatus = async (clinicId: string | null, clinicName?: string) => {
@@ -502,7 +511,7 @@ app.delete('/api/staff/queue/:tokenId/cancel', async (req, res) => {
 app.post('/api/patient/book', async (req, res) => {
   try {
     const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
-    if (!checkRateLimit(`booking:${clientIp}`, 10)) {
+    if (!(await checkRateLimit(`booking:${clientIp}`, 10))) {
       res.status(429).json({ error: 'Too many booking attempts. Please try again later.' });
       return;
     }
@@ -513,6 +522,10 @@ app.post('/api/patient/book', async (req, res) => {
     const normalizedAge = age === undefined || age === null || age === '' ? undefined : Number(age);
     if (!clinicId || !doctorId || !normalizedPatientName || !normalizedPhone) {
       res.status(400).json({ error: 'Clinic, doctor, patient name, and mobile number are required.' });
+      return;
+    }
+    if (!(await checkRateLimit(`booking-phone:${normalizedPhone}`, 3))) {
+      res.status(429).json({ error: 'Too many bookings for this mobile number. Please try again later.' });
       return;
     }
     if (normalizedPatientName.length > 120 || normalizedPhone.length > 30 || normalizedReason.length > 500) {
@@ -581,6 +594,11 @@ app.post('/api/staff/queue/:clinicId/walk-in', async (req, res) => {
 
 app.get('/api/patient/track/:trackingId', async (req, res) => {
   try {
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    if (!(await checkRateLimit(`patient-track:${clientIp}`, 60))) {
+      res.status(429).json({ error: 'Too many tracking attempts. Please try again later.' });
+      return;
+    }
     res.setHeader('Cache-Control', 'no-store');
     const trackingId = String(req.params.trackingId || '');
     if (!/^[A-Za-z0-9_-]{12}$/.test(trackingId)) {
@@ -604,7 +622,7 @@ app.get('/api/patient/track/:trackingId', async (req, res) => {
 app.patch('/api/patient/track/:trackingId/notes', async (req, res) => {
   try {
     const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
-    if (!checkRateLimit(`patient-notes:${clientIp}`, 5)) {
+    if (!(await checkRateLimit(`patient-notes:${clientIp}`, 5))) {
       res.status(429).json({ error: 'Too many note submissions. Please try again later.' });
       return;
     }
@@ -689,7 +707,7 @@ app.patch('/api/patient/track/:trackingId/notes', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
-    if (!checkRateLimit(`login:${clientIp}`, 10)) {
+    if (!(await checkRateLimit(`login:${clientIp}`, 10))) {
       res.status(429).json({ error: 'Too many login attempts. Please try again later.' });
       return;
     }
@@ -750,14 +768,13 @@ app.post('/api/auth/login', async (req, res) => {
       return;
     }
 
-    const token = crypto.randomBytes(32).toString('hex');
-    sessions.set(token, { ...context, createdAt: Date.now() });
+    const token = createSessionToken(context);
     const isSecureCookie = process.env.NODE_ENV === 'production' || String(req.headers['x-forwarded-proto'] || '').toLowerCase() === 'https';
     const cookieAttributes = [
       'Path=/',
       'HttpOnly',
       'SameSite=Lax',
-      `Max-Age=${8 * 60 * 60}`,
+      `Max-Age=${SESSION_TTL_SECONDS}`,
       ...(isSecureCookie ? ['Secure'] : []),
     ];
     res.setHeader('Set-Cookie', `clinicflow_session=${encodeURIComponent(token)}; ${cookieAttributes.join('; ')}`);
@@ -781,8 +798,6 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 app.post('/api/auth/logout', (req, res) => {
-  const token = cookieValue(req, 'clinicflow_session');
-  sessions.delete(token);
   res.setHeader('Set-Cookie', 'clinicflow_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
   res.status(204).end();
 });
