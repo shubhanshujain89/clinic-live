@@ -149,11 +149,18 @@ export class TokenRepository extends BaseRepository<Token> {
 
   async getCollectedRevenueByClinicAndSession(clinicId: string, sessionId: string): Promise<number> {
     const row = await executeQueryOne<{ total: number | string | null }>(
-      `SELECT COALESCE(SUM(CASE WHEN payment_status = 'PAID' THEN
-         CASE WHEN payment_mode = 'PAY_NOW' THEN GREATEST(amount_paid - 25, 0) ELSE amount_paid END
-         ELSE 0 END), 0) AS total
-       FROM \`tokens\`
-        WHERE clinic_id = ? AND session_id = ? AND status NOT IN ('CANCELLED', 'NO_SHOW')`,
+      `SELECT COALESCE(SUM(
+         CASE
+           WHEN t.status IN ('CANCELLED', 'NO_SHOW') THEN 0
+           WHEN t.payment_status = 'PAID' THEN
+             CASE WHEN t.payment_mode = 'PAY_NOW' THEN GREATEST(t.amount_paid - 25, 0) ELSE t.amount_paid END
+           WHEN t.status = 'COMPLETED' THEN c.consultation_fee
+           ELSE 0
+         END
+       ), 0) AS total
+       FROM \`tokens\` t
+       JOIN \`clinics\` c ON c.id = t.clinic_id
+       WHERE t.clinic_id = ? AND t.session_id = ?`,
       [clinicId, sessionId]
     );
     return Number(row?.total || 0);

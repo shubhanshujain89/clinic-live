@@ -164,7 +164,6 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
         clinic={clinic}
         session={session}
         tokens={tokens}
-        onExitTvMode={() => setCurrentRole('RECEPTIONIST')}
       />
     );
   }

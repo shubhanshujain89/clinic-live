@@ -19,14 +19,12 @@ interface TvDisplayViewProps {
   clinic: Clinic;
   session: QueueSession | null;
   tokens: TokenItem[];
-  onExitTvMode?: () => void;
 }
 
 export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
   clinic,
   session,
   tokens,
-  onExitTvMode,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -147,23 +145,14 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
             {isFullscreen ? <Minimize2 className="w-6 h-6" /> : <Maximize2 className="w-6 h-6" />}
           </button>
 
-          {/* Exit TV Mode Button */}
-          {onExitTvMode && (
-            <button
-              onClick={onExitTvMode}
-              className="px-4 py-2 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-400 hover:text-white transition-all"
-            >
-              Exit Signage
-            </button>
-          )}
         </div>
       </header>
 
       {/* Main Massive Center Display: Currently Serving */}
       <main className="my-4 grid min-h-0 flex-1 grid-cols-1 items-stretch gap-5 lg:grid-cols-12 lg:gap-6">
         
-        {/* Massive Center Token (Col Span 8) */}
-        <div className="relative flex min-h-[18rem] flex-col justify-center overflow-hidden rounded-[2rem] border-2 border-teal-400/50 bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950/50 p-6 text-center shadow-2xl sm:min-h-[24rem] sm:p-10 lg:col-span-8 lg:min-h-0 lg:p-12">
+        {/* Now Serving Card */}
+        <div className="relative flex min-h-[18rem] flex-col justify-center overflow-hidden rounded-[2rem] border-2 border-teal-400/50 bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950/50 p-6 text-center shadow-2xl sm:min-h-[24rem] sm:p-10 lg:col-span-6 lg:min-h-0 lg:p-12 xl:col-span-5">
           <div className="absolute top-0 right-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
           {/* Serving Pill */}
@@ -188,8 +177,8 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
           </div>
         </div>
 
-        {/* Next Up Tokens Column (Col Span 4) */}
-        <div className="lg:col-span-4 space-y-6">
+        {/* Next Patients Card */}
+        <div className="lg:col-span-6 xl:col-span-5">
           
           {/* Upcoming Tokens Box */}
           <div className="rounded-[2rem] border border-slate-700/80 bg-slate-900/90 p-4 shadow-xl sm:p-6">
@@ -234,21 +223,22 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
             </div>
           </div>
 
-          {/* QR Code Tracker for Waiting Room Patients */}
-          <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-slate-700/80 bg-slate-900/90 p-4">
-            <div>
-              <span className="text-xs font-black uppercase tracking-wider text-teal-400 block">
-                Track On Your Phone
-              </span>
-              <p className="text-xs text-slate-400 mt-1">
-                Scan to track your turn on your phone.
-              </p>
-            </div>
-            
-            {/* SVG Stylized QR Code */}
-            <div className="w-20 h-20 bg-white p-2 rounded-2xl flex-shrink-0 flex items-center justify-center shadow-lg">
-              <QrCode className="w-full h-full text-slate-950" />
-            </div>
+        </div>
+
+        {/* Phone Tracking Side Card */}
+        <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-slate-700/80 bg-slate-900/90 p-4 lg:col-span-12 xl:col-span-2 xl:flex-col xl:items-center xl:justify-center xl:text-center">
+          <div>
+            <span className="block text-xs font-black uppercase tracking-wider text-teal-400">
+              Track on your phone
+            </span>
+            <p className="mt-1 text-xs text-slate-400">
+              Scan to follow your turn.
+            </p>
+          </div>
+
+          {/* SVG Stylized QR Code */}
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-lg xl:mt-4">
+            <QrCode className="h-full w-full text-slate-950" />
           </div>
         </div>
       </main>

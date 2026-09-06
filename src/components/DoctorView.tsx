@@ -206,6 +206,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   const tokenRevenue = tokens.reduce((total, token) => (
     token.paymentStatus === 'PAID' && token.status !== 'CANCELLED' && token.status !== 'NO_SHOW'
       ? total + Number(token.amountPaid || 0) - (token.paymentMode === 'PAY_NOW' ? 25 : 0)
+      : token.status === 'COMPLETED' ? total + Number(clinic.consultationFee || 0)
       : total
   ), 0);
   const totalRevenue = Number.isFinite(Number(clinic.revenueToday))
@@ -388,15 +389,15 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
 
         {/* Doctor Profile */}
-        <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 shadow-lg">
+        <div className="min-w-0 bg-slate-900/90 border border-slate-800/90 rounded-2xl p-3 shadow-lg">
           <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-teal-400 ring-1 ring-teal-400/40">
-              <Stethoscope className="h-7 w-7" />
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-teal-400 ring-1 ring-teal-400/40">
+              <Stethoscope className="h-6 w-6" />
             </div>
             <div className="min-w-0">
-              <h2 className="truncate text-sm font-bold text-white">{clinic.doctorName || 'Doctor'}</h2>
-              <p className="truncate text-xs text-slate-400">{clinic.specialty || 'General Practice'}</p>
-              <p className="mt-1 truncate text-[11px] font-mono text-slate-500">{clinic.cabinNumber || 'Cabin'}</p>
+              <h2 className="break-words text-sm font-bold leading-tight text-white">{clinic.doctorName || 'Doctor'}</h2>
+              <p className="mt-0.5 break-words text-[11px] leading-snug text-slate-400">{clinic.specialty || 'General Practice'}</p>
+              <p className="mt-1 break-words text-[10px] font-mono leading-snug text-slate-500">{clinic.cabinNumber || 'Cabin'}</p>
             </div>
           </div>
         </div>
