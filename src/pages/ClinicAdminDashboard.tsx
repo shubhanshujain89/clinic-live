@@ -1987,6 +1987,18 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
           </div>
 
           <div className="hidden items-center gap-2 md:flex">
+            {isSiteAdmin && (
+              <button
+                onClick={() => setActiveTab('content')}
+                className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                  activeTab === 'content'
+                    ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-200'
+                    : 'border-cyan-400/40 bg-cyan-500/10 text-cyan-200 hover:border-cyan-300/60 hover:bg-cyan-500/20'
+                }`}
+              >
+                Website Content
+              </button>
+            )}
             <button onClick={exportReport} className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-emerald-400/50 hover:text-white">Export report</button>
             <button className="rounded-xl bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400">Generate summary</button>
           </div>
