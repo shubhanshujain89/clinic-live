@@ -20,19 +20,17 @@ export interface TrackingResult {
 
 export class TrackingService {
   /**
-   * Get public tracking information for a patient
-   * This endpoint does NOT require authentication
-   * Only returns safe tracking information
+   * Get public tracking information using the patient's mobile number.
+   * This endpoint intentionally returns queue status only.
    */
-  async getPublicTracking(trackingId: string): Promise<TrackingResult | null> {
-    // Validate tracking ID format (cryptographically random, 12 chars base64url)
-    if (!/^[A-Za-z0-9_-]{12}$/.test(trackingId)) {
+  async getPublicTrackingByPhone(phone: string): Promise<TrackingResult | null> {
+    const normalizedPhone = phone.replace(/\D/g, '').replace(/^91/, '').slice(-10);
+    if (!/^\d{10}$/.test(normalizedPhone)) {
       return null;
     }
 
     const sql = `
       SELECT
-        p.tracking_id,
         c.name AS clinic_name,
         d.name AS doctor_name,
         t.token_number,
@@ -50,10 +48,12 @@ export class TrackingService {
       JOIN tokens t ON t.patient_id = p.id
       JOIN clinics c ON c.id = t.clinic_id
       JOIN doctors d ON d.id = t.doctor_id
-      WHERE p.tracking_id = ? AND DATE(p.created_at) = CURRENT_DATE() LIMIT 1
+      WHERE (p.phone = ? OR p.phone = ? OR p.phone = ?)
+        AND DATE(p.created_at) = CURRENT_DATE()
+      ORDER BY p.created_at DESC LIMIT 1
     `;
 
-    const result = await executeQueryOne<any>(sql, [trackingId]);
+    const result = await executeQueryOne<any>(sql, [normalizedPhone, `+91${normalizedPhone}`, `91${normalizedPhone}`]);
     if (!result) return null;
 
     // Calculate patients ahead (waiting tokens with lower sequence number)

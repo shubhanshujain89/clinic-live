@@ -49,11 +49,6 @@ export const createPublicBooking = async (input: {
   return services.booking.createPublicBooking(input);
 };
 
-// Public tracking
-export const getPublicTracking = async (trackingId: string) => {
-  return services.tracking.getPublicTracking(trackingId);
-};
-
 // Generic database operations (for backward compatibility with existing API)
 const tableMap: Record<string, string> = {
   clinics: 'clinics',

@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
 import crypto from 'crypto';
-import { getDatabase, readDoc, listQuery, writeDoc, updateDoc, deleteDoc, findUserByEmail, verifyPassword, createPublicBooking, getPublicTracking, resetUserPassword, extractTableName } from './server/db.js';
+import { getDatabase, readDoc, listQuery, writeDoc, updateDoc, deleteDoc, findUserByEmail, verifyPassword, createPublicBooking, resetUserPassword, extractTableName } from './server/db.js';
 import { executeQueryOne } from './server/db/connection.js';
 import { repositories } from './server/db/repositories/index.js';
 import { services } from './server/db/services/index.js';
@@ -658,7 +658,12 @@ app.post('/api/patient/book', async (req, res) => {
       age: normalizedAge,
       reason: normalizedReason || undefined,
     });
-    res.status(201).json(booking);
+    res.status(201).json({
+      tokenId: booking.tokenId,
+      tokenNumber: booking.tokenNumber,
+      clinicId: booking.clinicId,
+      doctorId: booking.doctorId,
+    });
   } catch (error) {
     res.status(400).json({ error: error instanceof Error ? error.message : 'Unable to create booking.' });
   }
@@ -706,22 +711,27 @@ app.post('/api/staff/queue/:clinicId/walk-in', async (req, res) => {
   }
 });
 
-app.get('/api/patient/track/:trackingId', async (req, res) => {
+app.post('/api/patient/track', async (req, res) => {
   try {
     const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
-    if (!(await checkRateLimit(`patient-track:${clientIp}`, 60))) {
+    if (!(await checkRateLimit(`patient-track-ip:${clientIp}`, 30))) {
       res.status(429).json({ error: 'Too many tracking attempts. Please try again later.' });
       return;
     }
     res.setHeader('Cache-Control', 'no-store');
-    const trackingId = String(req.params.trackingId || '');
-    if (!/^[A-Za-z0-9_-]{12}$/.test(trackingId)) {
-      res.status(404).json({ error: 'Tracking record not found.' });
+    const mobile = String(req.body?.mobile || '').replace(/\D/g, '').replace(/^91/, '').slice(-10);
+    if (!/^\d{10}$/.test(mobile)) {
+      res.status(400).json({ error: 'Enter a valid 10-digit mobile number.' });
       return;
     }
-    const tracking = await getPublicTracking(trackingId);
+    const phoneKey = crypto.createHash('sha256').update(mobile).digest('hex');
+    if (!(await checkRateLimit(`patient-track-phone:${phoneKey}`, 10))) {
+      res.status(429).json({ error: 'Too many tracking attempts for this mobile number. Please try again later.' });
+      return;
+    }
+    const tracking = await services.tracking.getPublicTrackingByPhone(mobile);
     if (!tracking) {
-      res.status(404).json({ error: 'Tracking record not found.' });
+      res.status(404).json({ error: 'No booking found for this mobile number today.' });
       return;
     }
     res.status(200).json({
@@ -730,91 +740,6 @@ app.get('/api/patient/track/:trackingId', async (req, res) => {
     });
   } catch (error) {
     res.status(503).json({ error: 'Connection temporarily unavailable.' });
-  }
-});
-
-app.patch('/api/patient/track/:trackingId/notes', async (req, res) => {
-  try {
-    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
-    if (!(await checkRateLimit(`patient-notes:${clientIp}`, 5))) {
-      res.status(429).json({ error: 'Too many note submissions. Please try again later.' });
-      return;
-    }
-    const trackingId = String(req.params.trackingId || '');
-    if (!/^[A-Za-z0-9_-]{12}$/.test(trackingId)) {
-      res.status(400).json({ error: 'Invalid tracking ID.' });
-      return;
-    }
-
-    const patient = await repositories.patients.findByTrackingId(trackingId);
-    if (!patient) {
-      res.status(404).json({ error: 'Tracking record not found.' });
-      return;
-    }
-
-    const token = await repositories.tokens.findByPatientId(patient.id);
-    if (!token) {
-      res.status(404).json({ error: 'Tracking record not found.' });
-      return;
-    }
-
-    const allowedKeys = new Set([
-      'symptoms',
-      'duration',
-      'severity',
-      'painScale',
-      'allergies',
-      'feverTemp',
-      'temperature',
-      'bpReading',
-      'bloodPressure',
-      'weight',
-      'attachments',
-      'submittedAt',
-      'lastEditedBy',
-    ]);
-
-    const incoming = req.body || {};
-    const notes = Object.keys(incoming || {}).reduce<Record<string, any>>((acc, key) => {
-      if (allowedKeys.has(key)) {
-        acc[key] = incoming[key];
-      }
-      return acc;
-    }, {});
-
-    if (!notes.symptoms || typeof notes.symptoms !== 'string' || !String(notes.symptoms).trim()) {
-      res.status(400).json({ error: 'Symptoms are required.' });
-      return;
-    }
-    if (String(notes.symptoms).length > 2000 || String(notes.allergies || '').length > 1000 || String(notes.duration || '').length > 100) {
-      res.status(400).json({ error: 'Patient notes exceed the allowed length.' });
-      return;
-    }
-
-    if (notes.attachments !== undefined && !Array.isArray(notes.attachments)) {
-      res.status(400).json({ error: 'Attachments must be an array.' });
-      return;
-    }
-
-    const existingNotes = token.preConsultationNotes && typeof token.preConsultationNotes === 'object'
-      ? token.preConsultationNotes
-      : {};
-
-    const nextNotes = {
-      ...existingNotes,
-      ...notes,
-      submittedAt: new Date().toISOString(),
-      lastEditedBy: 'PATIENT',
-    };
-
-    await repositories.tokens.update(token.id, { preConsultationNotes: nextNotes });
-    res.status(200).json({
-      ok: true,
-      trackingId,
-      notes: nextNotes,
-    });
-  } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to update patient notes.' });
   }
 });
 

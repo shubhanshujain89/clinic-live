@@ -23,7 +23,6 @@ import {
 import { Navbar } from './Navbar';
 import { DoctorView } from './DoctorView';
 import { ReceptionistView } from './ReceptionistView';
-import { PatientTrackView } from './PatientTrackView';
 import { BookingView } from './BookingView';
 import { TvDisplayView } from './TvDisplayView';
 import { AddPatientModal } from './AddPatientModal';

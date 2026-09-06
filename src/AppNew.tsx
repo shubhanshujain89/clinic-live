@@ -71,7 +71,6 @@ export default function App() {
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [selectedClinicId, setSelectedClinicId] = useState<string>('');
   const [selectedClinicName, setSelectedClinicName] = useState<string>('');
-  const [trackingId, setTrackingId] = useState('');
   const [siteAdminLogin, setSiteAdminLogin] = useState({ username: '', password: '' });
   const [siteAdminError, setSiteAdminError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -117,10 +116,6 @@ export default function App() {
   useEffect(() => {
     const path = window.location.pathname;
     const nextPage = resolveAppPageForRoute(path, userSession?.role);
-    if (path.startsWith('/track/')) {
-      const id = path.slice('/track/'.length);
-      setTrackingId(id);
-    }
     if (userSession && (path === '/login' || path === '/site/login')) {
       const securePath = userSession.role === 'DOCTOR' || userSession.role === 'STAFF' ? '/site/queue' : '/site/admin';
       if (window.location.pathname !== securePath) {
@@ -148,10 +143,6 @@ export default function App() {
     const handlePopState = () => {
       const path = window.location.pathname;
       const nextPage = resolveAppPageForRoute(path, userSession?.role);
-      if (path.startsWith('/track/')) {
-        const id = path.slice('/track/'.length);
-        setTrackingId(id);
-      }
       setCurrentPage(nextPage);
     };
     window.addEventListener('popstate', handlePopState);
@@ -465,7 +456,7 @@ export default function App() {
         )}
 
         {currentPage === 'patient-tracking' && (
-          <PatientTracking trackingId={trackingId || undefined} onBack={() => handleNavigate('landing')} />
+          <PatientTracking onBack={() => handleNavigate('landing')} />
         )}
 
         {/* Clinic Queue App (for doctors and staff) */}

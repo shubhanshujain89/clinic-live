@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { PhoneInput } from '../components/PhoneInput';
 
 interface TrackingData {
   clinic: string;
@@ -13,51 +14,35 @@ interface TrackingData {
 }
 
 interface PatientTrackingProps {
-  trackingId?: string;
   onBack: () => void;
 }
 
-export const PatientTracking: React.FC<PatientTrackingProps> = ({ trackingId, onBack }) => {
+export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
   const [tracking, setTracking] = useState<TrackingData | null>(null);
   const [unavailable, setUnavailable] = useState(false);
-  const [lookupId, setLookupId] = useState('');
+  const [mobile, setMobile] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   useEffect(() => {
-    if (!trackingId) return;
-    let disposed = false;
-    const loadTracking = async () => {
-      try {
-        const response = await fetch(`/api/patient/track/${encodeURIComponent(trackingId)}`, { cache: 'no-store' });
-        if (!response.ok) throw new Error('Tracking unavailable');
-        const data = await response.json() as TrackingData;
-        if (!disposed) {
-          setTracking(data);
-          setUnavailable(false);
-        }
-      } catch {
-        if (!disposed) {
-          setTracking(null);
-          setUnavailable(true);
-        }
-      }
-    };
+    if (!tracking) return;
+    const interval = window.setInterval(() => {
+      void findBooking();
+    }, 30000);
+    return () => window.clearInterval(interval);
+  }, [tracking]);
 
-    loadTracking();
-    const interval = window.setInterval(loadTracking, 10000);
-    return () => {
-      disposed = true;
-      window.clearInterval(interval);
-    };
-  }, [trackingId]);
-
-  const findBooking = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const normalizedId = lookupId.trim();
-    if (!normalizedId) return;
+  const findBooking = async (event?: React.FormEvent) => {
+    event?.preventDefault();
+    const normalizedMobile = mobile.trim();
+    if (!normalizedMobile) return;
     setIsSearching(true);
     setUnavailable(false);
     try {
-      const response = await fetch(`/api/patient/track/${encodeURIComponent(normalizedId)}`, { cache: 'no-store' });
+      const response = await fetch('/api/patient/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobile: normalizedMobile }),
+        cache: 'no-store',
+      });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'No booking found for this mobile number today.');
       setTracking(data as TrackingData);
@@ -78,19 +63,13 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ trackingId, on
             Connection temporarily unavailable.
           </div>
         )}
-        {!trackingId && !tracking && (
+        {!tracking && (
           <form onSubmit={findBooking} className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4">
             <div>
               <h1 className="text-2xl font-bold">Track your booking</h1>
-              <p className="mt-1 text-sm text-slate-400">Enter the tracking ID from your booking confirmation.</p>
+              <p className="mt-1 text-sm text-slate-400">Enter the mobile number used for today&apos;s booking.</p>
             </div>
-            <input
-              value={lookupId}
-              onChange={(event) => setLookupId(event.target.value)}
-              placeholder="Tracking ID"
-              autoComplete="off"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white placeholder-slate-500 focus:border-teal-400 focus:outline-none"
-            />
+            <PhoneInput value={mobile} onChange={setMobile} className="!bg-slate-950" />
             <button
               type="submit"
               disabled={isSearching}

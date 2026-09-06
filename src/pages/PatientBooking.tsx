@@ -49,8 +49,6 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
     symptoms: '',
   });
 
-  const [bookingId, setBookingId] = useState('');
-
   useEffect(() => {
     fetchClinics();
   }, []);
@@ -146,7 +144,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
         }),
       });
       const responseText = await response.text();
-      let payload: { trackingId?: string; error?: string } = {};
+      let payload: { tokenId?: string; tokenNumber?: string; error?: string } = {};
       if (responseText.trim()) {
         try {
           payload = JSON.parse(responseText) as typeof payload;
@@ -155,9 +153,6 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
         }
       }
       if (!response.ok) throw new Error(payload.error || `Unable to book appointment (${response.status}).`);
-      if (!payload.trackingId) throw new Error('Booking service returned no tracking ID.');
-
-      setBookingId(payload.trackingId);
       setStep('confirm');
     } catch (error) {
       console.error('Error booking appointment:', error);
@@ -423,8 +418,8 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
             <div className="bg-slate-800/50 border border-emerald-400/30 rounded-xl p-6 space-y-4">
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Tracking ID:</span>
-                  <span className="font-mono font-bold">{bookingId}</span>
+                  <span className="text-slate-400">Tracking:</span>
+                  <span className="font-bold">Use your mobile number</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Doctor:</span>
@@ -441,8 +436,8 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
               </div>
 
               <div className="border-t border-slate-700 pt-4">
-                <p className="text-sm text-slate-400">Use this tracking ID to view your live queue status.</p>
-                <a className="text-sm text-emerald-400 font-semibold" href={`/track/${bookingId}`}>Open live tracker</a>
+                <p className="text-sm text-slate-400">Use the mobile number from this booking to view your live queue status.</p>
+                <a className="text-sm text-emerald-400 font-semibold" href="/track">Open live tracker</a>
               </div>
             </div>
 
