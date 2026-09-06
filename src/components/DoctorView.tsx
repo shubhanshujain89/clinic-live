@@ -342,7 +342,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   };
   if (isBasicPlan) {
     return (
-      <div className="space-y-6 max-w-5xl mx-auto pb-12">
+      <div className="space-y-6 max-w-5xl mx-auto">
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -384,7 +384,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Metrics Row */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
 
