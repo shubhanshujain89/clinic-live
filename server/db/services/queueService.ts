@@ -231,7 +231,8 @@ export class QueueService {
     return executeTransaction(async (connection) => {
       const [tokenRows] = await connection.execute(
         `SELECT t.id, t.clinic_id, t.session_id, t.doctor_id, t.token_number,
-                t.status, t.called_at
+          t.status, t.called_at,
+          TIMESTAMPDIFF(SECOND, t.called_at, CURRENT_TIMESTAMP) AS elapsed_seconds
          FROM \`tokens\` t
          JOIN \`sessions\` s ON s.id = t.session_id
          WHERE t.id = ? AND t.clinic_id = ? AND s.clinic_id = ? AND s.status = 'ACTIVE'
@@ -241,9 +242,9 @@ export class QueueService {
       const token = (tokenRows as any[])[0];
       if (!token || (doctorId && token.doctor_id !== doctorId) || token.status !== 'IN_CONSULTATION') return null;
 
-      const startedAt = token.called_at ? new Date(token.called_at).getTime() : 0;
-      const consultationDurationSeconds = startedAt > 0
-        ? Math.max(1, Math.floor((Date.now() - startedAt) / 1000))
+      const elapsedSeconds = Number(token.elapsed_seconds);
+      const consultationDurationSeconds = Number.isFinite(elapsedSeconds) && elapsedSeconds >= 0
+        ? Math.max(1, Math.floor(elapsedSeconds))
         : 480;
       const [updateResult] = await connection.execute(
         `UPDATE \`tokens\`

@@ -47,6 +47,7 @@ type AuthContext = {
   clinicId: string | null;
   doctorId: string | null;
   email: string;
+  authVersion?: string;
 };
 
 const RATE_LIMIT_MAX = 30;
@@ -113,7 +114,10 @@ const authContext = async (req: express.Request) => {
     if (!session.userId || !session.role || !session.email) return undefined;
     if (session.userId !== 'super-admin') {
       const account = await repositories.staffUsers.findById(session.userId);
-      if (!account || account.updatedAt.getTime() > session.iat * 1000) return undefined;
+      const authVersion = account
+        ? crypto.createHash('sha256').update(account.passwordHash).digest('base64url')
+        : '';
+      if (!account || !session.authVersion || !secureEqual(session.authVersion, authVersion)) return undefined;
     }
     return session;
   } catch {
@@ -175,6 +179,10 @@ const enforcePlanWrite = async (
     const clinicUsers = users.filter((user) => user.role !== 'SUPER_ADMIN');
     if (clinicUsers.length >= limits.maxStaffUsers) throw new Error(`${plan.plan} plan allows up to ${limits.maxStaffUsers} clinic users.`);
   }
+};
+const databaseMutationErrorStatus = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  return /plan allows|subscription is|not enabled for the current launch plans|Clinic not found/i.test(message) ? 403 : 500;
 };
 const serverTableMap: Record<string, string> = {
   clinics: 'clinics', doctors: 'doctors', users: 'staff_users', staff_users: 'staff_users', staff: 'staff_users',
@@ -858,7 +866,14 @@ app.post('/api/auth/login', async (req, res) => {
       accountClinicName = account.clinicName || '';
       const role = String(account.role || 'CLINIC_ADMIN').toUpperCase() as AuthContext['role'];
       if (['CLINIC_ADMIN', 'DOCTOR', 'STAFF', 'SUPER_ADMIN'].includes(role)) {
-        context = { userId: account.id, role, clinicId: account.clinicId || null, doctorId: account.doctorId || null, email: account.email };
+        context = {
+          userId: account.id,
+          role,
+          clinicId: account.clinicId || null,
+          doctorId: account.doctorId || null,
+          email: account.email,
+          authVersion: crypto.createHash('sha256').update(account.passwordHash).digest('base64url'),
+        };
       }
     }
 
@@ -1161,7 +1176,7 @@ app.post('/api/db/doc', async (req, res) => {
   } catch (error) {
     console.error('Database write error:', error);
     const errorMsg = error instanceof Error ? error.message : String(error);
-    res.status(500).json({ error: errorMsg });
+    res.status(databaseMutationErrorStatus(error)).json({ error: errorMsg });
   }
 });
 
@@ -1189,7 +1204,7 @@ app.post('/api/db/doc/update', async (req, res) => {
     await updateDoc(documentPath, safeValue);
     res.status(200).json({ ok: true });
   } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to update document.' });
+    res.status(databaseMutationErrorStatus(error)).json({ error: error instanceof Error ? error.message : 'Unable to update document.' });
   }
 });
 
@@ -1216,7 +1231,7 @@ app.post('/api/db/doc/delete', async (req, res) => {
     await deleteDoc(documentPath);
     res.status(200).json({ ok: true });
   } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to delete document.' });
+    res.status(databaseMutationErrorStatus(error)).json({ error: error instanceof Error ? error.message : 'Unable to delete document.' });
   }
 });
 

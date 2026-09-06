@@ -57,7 +57,9 @@ export class TrackingService {
     `;
 
     const candidates = await executeQuery<any>(sql, [normalizedPhone, `+91${normalizedPhone}`, `91${normalizedPhone}`]);
-    const result = candidates.find((candidate) => candidate.session_date === getClinicBusinessDate(new Date(), candidate.timezone));
+    const result = candidates.find((candidate) =>
+      getClinicBusinessDate(new Date(candidate.session_date), candidate.timezone) === getClinicBusinessDate(new Date(), candidate.timezone)
+    );
     if (!result) return null;
 
     // Calculate patients ahead (waiting tokens with lower sequence number)
