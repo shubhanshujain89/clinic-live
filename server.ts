@@ -14,6 +14,18 @@ const SESSION_TTL_SECONDS = Number(process.env.SESSION_MAX_AGE || 8 * 60 * 60);
 const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'clinicflow-development-session-secret');
 
 const databaseReady = getDatabase();
+const rateLimitTableReady = databaseReady.then(async () => {
+  await executeQueryOne(`
+    CREATE TABLE IF NOT EXISTS rate_limits (
+      rate_key VARCHAR(255) PRIMARY KEY,
+      request_count INT NOT NULL DEFAULT 0,
+      reset_at TIMESTAMP NOT NULL,
+      INDEX idx_rate_limits_reset_at (reset_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+}).catch((error) => {
+  console.error('Rate limit table initialization failed:', error instanceof Error ? error.message : error);
+});
 
 const runQueueRetention = async () => {
   try {
@@ -51,6 +63,7 @@ app.use((_req, res, next) => {
 
 const checkRateLimit = async (key: string, max = RATE_LIMIT_MAX): Promise<boolean> => {
   try {
+    await rateLimitTableReady;
     await executeQueryOne(
       `INSERT INTO rate_limits (rate_key, request_count, reset_at)
        VALUES (?, 1, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 60 SECOND))
