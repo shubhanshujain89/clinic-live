@@ -38,6 +38,7 @@ DB_PASSWORD=<strong-database-password>
 DB_NAME=<hostinger-mysql-database>
 SUPER_ADMIN_PASSWORD=<strong-bootstrap-password-at-least-12-characters>
 SUPER_ADMIN_USERNAME=<unique-production-super-admin-email>
+SESSION_SECRET=<long-random-secret>
 CLINIC_ADMIN_PASSWORD=<strong-seed-password-at-least-12-characters>
 DOCTOR_PASSWORD=<strong-seed-password-at-least-12-characters>
 STAFF_PASSWORD=<strong-seed-password-at-least-12-characters>
@@ -48,7 +49,6 @@ STAFF_PASSWORD=<strong-seed-password-at-least-12-characters>
 Optional variables:
 ```
 DEBUG_MODE=false
-SESSION_SECRET=<long-random-secret>
 SESSION_MAX_AGE=28800
 TRUST_PROXY=true
 ```
