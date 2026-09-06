@@ -266,7 +266,8 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
             rel="noopener noreferrer"
             className="font-bold text-teal-300 transition hover:text-teal-200"
           >
-            YBGP - Your Business Growth Partner &rarr;
+            <span className="block text-[10px] font-semibold text-slate-300">Looking to Grow Your Business?</span>
+            <span className="block">YBGP &mdash; Your Business Growth Partner &rarr;</span>
           </a>
         </div>
       </footer>

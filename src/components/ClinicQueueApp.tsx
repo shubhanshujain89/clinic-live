@@ -169,8 +169,8 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
   }
 
   return (
-    <div className="app-shell min-h-screen text-slate-100 flex flex-col selection:bg-teal-500 selection:text-slate-950">
-      <div className="relative z-10 flex min-h-screen flex-col">
+    <div className="app-shell h-screen overflow-hidden text-slate-100 flex flex-col selection:bg-teal-500 selection:text-slate-950">
+      <div className="relative z-10 flex h-full min-h-0 flex-col">
         <div className="fixed inset-x-0 top-0 z-50 border-b border-slate-700/50 bg-slate-950/90 backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
             <div className="flex min-w-0 items-center gap-3">
@@ -218,7 +218,7 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
           </div>
         </div>
 
-        <main className="flex-1 max-w-7xl w-full mx-auto p-4 pt-24 sm:p-6 sm:pt-24 lg:p-8 lg:pt-24">
+        <main className="min-h-0 flex-1 max-w-7xl w-full mx-auto overflow-y-auto p-4 pt-24 sm:p-6 sm:pt-24 lg:p-8 lg:pt-24">
           {/* Doctor View */}
           {currentRole === 'DOCTOR' && (
             <DoctorView

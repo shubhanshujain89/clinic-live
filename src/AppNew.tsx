@@ -314,6 +314,7 @@ export default function App() {
   const isAdminArea = currentPage === 'site-admin' || currentPage === 'clinic-admin' || currentPage === 'doctor-management';
   const showPublicHeader = !userSession && !isAdminArea;
   const isTvDisplay = currentPage === 'clinic-queue' && new URLSearchParams(window.location.search).get('view') === 'tv';
+  const isClinicQueue = currentPage === 'clinic-queue';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white flex flex-col">
@@ -506,7 +507,7 @@ export default function App() {
         </div>
       )}
 
-      {!isTvDisplay && <footer className="border-t border-slate-700/60 bg-slate-950/80">
+      {!isTvDisplay && !isClinicQueue && <footer className="border-t border-slate-700/60 bg-slate-950/80">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-4 text-center text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400 sm:flex-row sm:text-left sm:px-6 lg:px-8">
           <span>{settings.siteName}</span>
           <span className="text-slate-500">{content.footerText}</span>
@@ -517,7 +518,7 @@ export default function App() {
             className="text-center normal-case tracking-normal text-teal-300 transition hover:text-teal-200 sm:text-right"
           >
             <span className="block text-[10px] font-semibold text-slate-300">Looking to Grow Your Business?</span>
-            <span className="block text-xs font-bold">YBGP - Your Business Growth Partner &rarr;</span>
+            <span className="block text-xs font-bold">YBGP &mdash; Your Business Growth Partner &rarr;</span>
           </a>
         </div>
       </footer>}
