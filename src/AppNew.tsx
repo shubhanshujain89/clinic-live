@@ -120,6 +120,17 @@ export default function App() {
     setCurrentPage(nextPage);
   }, [userSession]);
 
+  useEffect(() => {
+    if (!userSession || currentPage !== 'site-admin' || userSession.role === 'SUPER_ADMIN') return;
+    if (userSession.role === 'CLINIC_ADMIN') {
+      setCurrentPage('clinic-admin');
+    } else if (userSession.role === 'DOCTOR' || userSession.role === 'STAFF') {
+      setCurrentPage('clinic-queue');
+    } else {
+      setCurrentPage('landing');
+    }
+  }, [currentPage, userSession]);
+
   // Sync UI with browser back/forward navigation
   useEffect(() => {
     const handlePopState = () => {
@@ -255,7 +266,7 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ userId: userSession.userId, defaultPassword: profileForm.password }),
+        body: JSON.stringify({ userId: userSession.userId, newPassword: profileForm.password }),
       }).catch(() => {});
     }
     setProfileOpen(false);
@@ -402,6 +413,15 @@ export default function App() {
             onLogout={handleLogout}
             onManageDoctors={handleManageDoctors}
             mode="site-admin"
+          />
+        )}
+
+        {currentPage === 'site-admin' && userSession && userSession.role !== 'SUPER_ADMIN' && (
+          <ClinicAdminDashboard
+            adminId={userSession.userId}
+            onLogout={handleLogout}
+            onManageDoctors={handleManageDoctors}
+            mode="clinic-admin"
           />
         )}
 

@@ -115,14 +115,23 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
           reason: bookingData.symptoms,
         }),
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || 'Unable to book appointment.');
+      const responseText = await response.text();
+      let payload: { trackingId?: string; error?: string } = {};
+      if (responseText.trim()) {
+        try {
+          payload = JSON.parse(responseText) as typeof payload;
+        } catch {
+          throw new Error(`Booking service returned an invalid response (${response.status}).`);
+        }
+      }
+      if (!response.ok) throw new Error(payload.error || `Unable to book appointment (${response.status}).`);
+      if (!payload.trackingId) throw new Error('Booking service returned no tracking ID.');
 
       setBookingId(payload.trackingId);
       setStep('confirm');
     } catch (error) {
       console.error('Error booking appointment:', error);
-      alert('Failed to book appointment. Please try again.');
+      alert(error instanceof Error ? error.message : 'Failed to book appointment. Please try again.');
     }
   };
 
