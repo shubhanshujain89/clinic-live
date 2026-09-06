@@ -71,10 +71,20 @@ export async function runMigrations(): Promise<void> {
        WHERE subscription_started_at IS NULL OR subscription_expires_at IS NULL`
     );
   };
+  const ensureClinicTimezone = async () => {
+    try {
+      await executeQuery(`ALTER TABLE clinics ADD COLUMN timezone VARCHAR(64) NOT NULL DEFAULT 'Asia/Kolkata'`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes('Duplicate column') && !message.includes('already exists')) throw error;
+    }
+    await executeQuery(`UPDATE clinics SET timezone = 'Asia/Kolkata' WHERE timezone IS NULL OR timezone = ''`);
+    await executeQuery(`INSERT IGNORE INTO schema_migrations (version) VALUES (?)`, ['clinic-timezone-20260907']);
+  };
   if (baseline.length > 0) {
     await ensureSubscriptionColumns();
-    console.log('✅ Database migrations already applied');
-    return;
+    await ensureClinicTimezone();
+    console.log('✅ Database baseline found; checking schema statements and migrations');
   }
   
   const statements = splitSqlStatements(SCHEMA_SQL);
@@ -103,6 +113,7 @@ export async function runMigrations(): Promise<void> {
   }
 
   await ensureSubscriptionColumns();
+  await ensureClinicTimezone();
 
   await executeQuery(`ALTER TABLE tokens MODIFY token_type ENUM('ONLINE', 'WALK_IN', 'VIP', 'EMERGENCY') DEFAULT 'ONLINE'`);
   await executeQuery(`UPDATE tokens SET token_type = 'EMERGENCY' WHERE token_type = 'VIP'`);

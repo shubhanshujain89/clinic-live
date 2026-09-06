@@ -10,9 +10,6 @@ import { hashPassword, verifyPassword } from './db/password.js';
 
 export { hashPassword, verifyPassword };
 
-// Default password can be overridden via DEFAULT_USER_PASSWORD env for production deployments
-export const DEFAULT_USER_PASSWORD = process.env.DEFAULT_USER_PASSWORD || 'Clinic@123';
-
 // User authentication
 export const findUserByEmail = async (email: string) => {
   const user = await repositories.staffUsers.findByEmail(email);

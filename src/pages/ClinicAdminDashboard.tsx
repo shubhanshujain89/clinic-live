@@ -26,16 +26,13 @@ const HOURS_OPTIONS = [
 const PACK_OPTIONS = [
   { value: 'TRIAL', label: 'Trial Pack', validityDays: 30, price: '₹0' },
   { value: 'BASIC', label: 'Basic Pack', validityDays: 30, price: '₹1,499/mo' },
-  { value: 'STANDARD', label: 'Standard Pack', validityDays: 30, price: '₹2,999/mo' },
-  { value: 'PREMIUM', label: 'Premium Pack', validityDays: 30, price: '₹4,999/mo' },
-  { value: 'ENTERPRISE', label: 'Enterprise Pack', validityDays: 30, price: 'Custom' },
 ] as const;
 
 const getPackMeta = (plan?: FeaturePlan) => PACK_OPTIONS.find((pack) => pack.value === plan) ?? PACK_OPTIONS[0];
 
 const getPackPrice = (plan: FeaturePlan): number => {
   const meta = getPackMeta(plan);
-  if (!meta || meta.price === 'Custom') return 0;
+  if (!meta) return 0;
   // Extract all digits (handles "₹1,499/mo", "₹4,999/mo", "₹0") without
   // accidentally stripping letters from strings.
   const numericPrice = meta.price.replace(/[^\d]/g, '');

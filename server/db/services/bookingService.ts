@@ -9,6 +9,7 @@ import type mysql from 'mysql2/promise';
 import type { Session } from '../repositories/sessions.js';
 import crypto from 'crypto';
 import { assertActiveClinicPlan } from './planService.js';
+import { getClinicBusinessDate } from './clinicTime.js';
 
 export interface BookingInput {
   clinicId: string;
@@ -41,15 +42,13 @@ export class BookingService {
   private async getOrCreateSession(
     connection: mysql.PoolConnection,
     clinicId: string,
-    today: Date
+    todayDate: string
   ): Promise<Session> {
-    const todayStr = today.toISOString().split('T')[0];
-
     const [existingRows] = await connection.execute(
       `SELECT * FROM \`sessions\`
        WHERE clinic_id = ? AND status = 'ACTIVE' AND date = ?
        LIMIT 1 FOR UPDATE`,
-      [clinicId, todayStr]
+      [clinicId, todayDate]
     );
     const existing = (existingRows as any[])[0];
     if (existing) return existing;
@@ -62,7 +61,7 @@ export class BookingService {
         `INSERT INTO \`sessions\` (id, clinic_id, date, status, total_tokens_issued, rolling_avg_minutes, completed_count, total_revenue)
          VALUES (?, ?, ?, 'ACTIVE', 0, 8, 0, 0)
          ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`,
-        [sessionId, clinicId, todayStr]
+        [sessionId, clinicId, todayDate]
       );
     } catch (error: any) {
       const message = error?.message || String(error);
@@ -70,7 +69,7 @@ export class BookingService {
         const [retryRows] = await connection.execute(
           `SELECT * FROM \`sessions\`
            WHERE clinic_id = ? AND status = 'ACTIVE' AND date = ? LIMIT 1`,
-          [clinicId, todayStr]
+          [clinicId, todayDate]
         );
         const retry = (retryRows as any[])[0];
         if (retry) return retry;
@@ -110,10 +109,11 @@ export class BookingService {
     }
 
     const today = new Date();
+    const businessDate = getClinicBusinessDate(today, clinic.timezone);
 
     // Create patient, token, session (if needed), and appointment in a transaction
     return executeTransaction(async (connection) => {
-      const session = await this.getOrCreateSession(connection, input.clinicId, today);
+      const session = await this.getOrCreateSession(connection, input.clinicId, businessDate);
 
       // Generate tracking ID
       const trackingId = crypto.randomBytes(9).toString('base64url');
@@ -123,12 +123,11 @@ export class BookingService {
 
       // Serialize bookings for this clinic before calculating MAX + 1.
       await connection.execute('SELECT id FROM `clinics` WHERE id = ? FOR UPDATE', [input.clinicId]);
-      const dateStr = today.toISOString().split('T')[0];
       const [seqResult] = await connection.execute(
         `SELECT COALESCE(MAX(sequence_number), 0) as max_sequence
          FROM \`tokens\`
-         WHERE clinic_id = ? AND session_id = ? AND doctor_id = ? AND DATE(created_at) = ?`,
-        [input.clinicId, session.id, input.doctorId, dateStr]
+         WHERE clinic_id = ? AND session_id = ? AND doctor_id = ?`,
+        [input.clinicId, session.id, input.doctorId]
       );
       const sequenceNumber = (seqResult as any[])[0]?.max_sequence + 1 || 1;
       const tokenNumber = `A-${String(sequenceNumber).padStart(3, '0')}`;
@@ -200,20 +199,20 @@ export class BookingService {
     }
 
     const today = new Date();
+    const businessDate = getClinicBusinessDate(today, clinic.timezone);
 
     return executeTransaction(async (connection) => {
-      const session = await this.getOrCreateSession(connection, input.clinicId, today);
+      const session = await this.getOrCreateSession(connection, input.clinicId, businessDate);
       const trackingId = crypto.randomBytes(9).toString('base64url');
       const patientId = crypto.randomUUID();
       const tokenId = crypto.randomUUID();
       const now = new Date();
       await connection.execute('SELECT id FROM `clinics` WHERE id = ? FOR UPDATE', [input.clinicId]);
-      const dateStr = today.toISOString().split('T')[0];
       const [seqResult] = await connection.execute(
         `SELECT COALESCE(MAX(sequence_number), 0) as max_sequence
          FROM \`tokens\`
-         WHERE clinic_id = ? AND session_id = ? AND doctor_id = ? AND DATE(created_at) = ?`,
-        [input.clinicId, session.id, input.doctorId, dateStr]
+         WHERE clinic_id = ? AND session_id = ? AND doctor_id = ?`,
+        [input.clinicId, session.id, input.doctorId]
       );
       const sequenceNumber = (seqResult as any[])[0]?.max_sequence + 1 || 1;
       

@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS clinics (
     whatsapp_notifications_enabled TINYINT(1) DEFAULT 0,
     has_payment_gateway TINYINT(1) DEFAULT 0,
     clinic_upi_id VARCHAR(100),
+    timezone VARCHAR(64) NOT NULL DEFAULT 'Asia/Kolkata',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     

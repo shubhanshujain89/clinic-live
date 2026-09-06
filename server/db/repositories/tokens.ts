@@ -201,15 +201,14 @@ export class TokenRepository extends BaseRepository<Token> {
    * Uses a transaction to ensure atomicity for concurrent bookings
    */
   async getNextTokenSequence(clinicId: string, sessionId: string, doctorId: string, date: Date): Promise<number> {
-    const dateStr = date.toISOString().split('T')[0];
-    
     const sql = `
       SELECT COALESCE(MAX(sequence_number), 0) as max_sequence
       FROM \`tokens\`
-      WHERE clinic_id = ? AND session_id = ? AND doctor_id = ? AND DATE(created_at) = ?
+      WHERE clinic_id = ? AND session_id = ? AND doctor_id = ?
     `;
     
-    const result = await executeQueryOne<{ max_sequence: number }>(sql, [clinicId, sessionId, doctorId, dateStr]);
+    void date;
+    const result = await executeQueryOne<{ max_sequence: number }>(sql, [clinicId, sessionId, doctorId]);
     return (result?.max_sequence || 0) + 1;
   }
 
@@ -219,14 +218,12 @@ export class TokenRepository extends BaseRepository<Token> {
    */
   async createWithSequence(data: Omit<Token, 'id' | 'createdAt' | 'tokenNumber' | 'sequenceNumber'>): Promise<Token> {
     return executeTransaction(async (connection) => {
-      const dateStr = new Date().toISOString().split('T')[0];
-      
       // Get next sequence number atomically
       const [seqResult] = await connection.execute(
         `SELECT COALESCE(MAX(sequence_number), 0) as max_sequence
          FROM \`tokens\`
-         WHERE clinic_id = ? AND session_id = ? AND doctor_id = ? AND DATE(created_at) = ?`,
-        [data.clinicId, data.sessionId, data.doctorId, dateStr]
+         WHERE clinic_id = ? AND session_id = ? AND doctor_id = ?`,
+        [data.clinicId, data.sessionId, data.doctorId]
       );
       const sequenceNumber = (seqResult as any[])[0]?.max_sequence + 1 || 1;
       
@@ -297,14 +294,6 @@ export class TokenRepository extends BaseRepository<Token> {
         [nextToken.id]
       );
 
-      // Keep the clinic display in sync with the called token
-      await connection.execute(
-        `UPDATE \`clinics\`
-         SET current_running_token = ?, current_running_token_id = ?
-         WHERE id = ?`,
-        [nextToken.token_number, nextToken.id, nextToken.clinic_id]
-      );
-
       return this.mapRowToEntity(nextToken);
     });
   }
@@ -335,6 +324,35 @@ export class TokenRepository extends BaseRepository<Token> {
       total: number;
     }>(sql, [doctorId, sessionId]);
     
+    return {
+      waiting: result?.waiting || 0,
+      serving: result?.serving || 0,
+      completed: result?.completed || 0,
+      total: result?.total || 0,
+    };
+  }
+
+  async getClinicQueueStats(clinicId: string, sessionId: string): Promise<{
+    waiting: number;
+    serving: number;
+    completed: number;
+    total: number;
+  }> {
+    const sql = `
+      SELECT
+        SUM(CASE WHEN status IN ('WAITING', 'CALLED') THEN 1 ELSE 0 END) as waiting,
+        SUM(CASE WHEN status IN ('IN_CONSULTATION', 'SERVING') THEN 1 ELSE 0 END) as serving,
+        SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) as completed,
+        COUNT(*) as total
+      FROM \`tokens\`
+      WHERE clinic_id = ? AND session_id = ?
+    `;
+    const result = await executeQueryOne<{
+      waiting: number;
+      serving: number;
+      completed: number;
+      total: number;
+    }>(sql, [clinicId, sessionId]);
     return {
       waiting: result?.waiting || 0,
       serving: result?.serving || 0,

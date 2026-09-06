@@ -6,13 +6,14 @@ import { executeQueryOne } from './server/db/connection.js';
 import { repositories } from './server/db/repositories/index.js';
 import { services } from './server/db/services/index.js';
 import { getClinicPlanSnapshot, getPlanLimits } from './server/db/services/planService.js';
+import { getClinicBusinessDate } from './server/db/services/clinicTime.js';
 
 const app = express();
 app.set('trust proxy', process.env.TRUST_PROXY === 'true' ? 1 : false);
 
 const PORT = Number(process.env.BACKEND_PORT || process.env.PORT || 4000);
 const SESSION_TTL_SECONDS = Number(process.env.SESSION_MAX_AGE || 8 * 60 * 60);
-const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'clinicflow-development-session-secret');
+const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === 'development' ? 'clinicflow-development-session-secret' : '');
 
 const databaseReady = getDatabase();
 const rateLimitTableReady = databaseReady.then(async () => {
@@ -92,12 +93,13 @@ const cookieValue = (req: express.Request, name: string) => {
 
 const createSessionToken = (context: AuthContext) => {
   if (!SESSION_SECRET) throw new Error('SESSION_SECRET must be configured in production.');
-  const payload = Buffer.from(JSON.stringify({ ...context, exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS })).toString('base64url');
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const payload = Buffer.from(JSON.stringify({ ...context, iat: issuedAt, exp: issuedAt + SESSION_TTL_SECONDS })).toString('base64url');
   const signature = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
   return `${payload}.${signature}`;
 };
 
-const authContext = (req: express.Request) => {
+const authContext = async (req: express.Request) => {
   const token = cookieValue(req, 'clinicflow_session');
   if (!token || !SESSION_SECRET) return undefined;
   const [payload, signature] = token.split('.');
@@ -105,9 +107,14 @@ const authContext = (req: express.Request) => {
   const expectedSignature = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
   if (!secureEqual(signature, expectedSignature)) return undefined;
   try {
-    const session = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as AuthContext & { exp?: number };
+    const session = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as AuthContext & { exp?: number; iat?: number };
     if (!session.exp || session.exp <= Math.floor(Date.now() / 1000)) return undefined;
+    if (!session.iat || session.iat > Math.floor(Date.now() / 1000)) return undefined;
     if (!session.userId || !session.role || !session.email) return undefined;
+    if (session.userId !== 'super-admin') {
+      const account = await repositories.staffUsers.findById(session.userId);
+      if (!account || account.updatedAt.getTime() > session.iat * 1000) return undefined;
+    }
     return session;
   } catch {
     return undefined;
@@ -247,8 +254,8 @@ const sanitizeDatabaseRecord = (table: string, record: Record<string, any>) => {
   return safeRecord;
 };
 
-const requireDatabaseAccess = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const context = authContext(req);
+const requireDatabaseAccess = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const context = await authContext(req);
   const requestedPath = String(req.query.path || req.body?.path || '');
   if (!context) {
     res.status(401).json({ error: 'Authentication required.' });
@@ -383,7 +390,7 @@ app.get('/api/clinics/:clinicId/doctors', async (req, res) => {
 
 app.get('/api/staff/queue/:clinicId', async (req, res) => {
   try {
-    const context = authContext(req);
+    const context = await authContext(req);
     const requestedClinicId = String(req.params.clinicId || '');
     if (!context || (context.role !== 'SUPER_ADMIN' && context.clinicId !== requestedClinicId)) {
       res.status(403).json({ error: 'Clinic access denied.' });
@@ -401,7 +408,7 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
       return;
     }
 
-    const todaySession = await repositories.sessions.findByClinicAndDate(requestedClinicId, new Date());
+    const todaySession = await repositories.sessions.findByClinicAndDate(requestedClinicId, getClinicBusinessDate(new Date(), clinic.timezone));
     const session = todaySession?.status === 'ACTIVE' ? todaySession : null;
     const doctors = await repositories.doctors.findByClinicId(requestedClinicId);
     const activeDoctors = doctors.filter((doctor) => doctor.status === 'active');
@@ -431,8 +438,6 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
         delayReason: clinic.delayReason || '',
         avgConsultationMinutes: clinic.avgConsultationMinutes || 0,
         consultationFee: clinic.consultationFee || 0,
-        currentRunningToken: clinic.currentRunningToken || '',
-        currentRunningTokenId: clinic.currentRunningTokenId || '',
         activeSessionId: clinic.activeSessionId || session?.id || '',
         totalPatientsToday: clinic.totalPatientsToday || 0,
         revenueToday: clinicRevenue,
@@ -503,7 +508,7 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
 
 app.post('/api/staff/queue/:tokenId/call', async (req, res) => {
   try {
-    const context = authContext(req);
+    const context = await authContext(req);
     if (!context || !context.clinicId) {
       res.status(401).json({ error: 'Authentication required.' });
       return;
@@ -526,7 +531,7 @@ app.post('/api/staff/queue/:tokenId/call', async (req, res) => {
 
 app.post('/api/staff/queue/:tokenId/start', async (req, res) => {
   try {
-    const context = authContext(req);
+    const context = await authContext(req);
     if (!context || !context.clinicId) {
       res.status(401).json({ error: 'Authentication required.' });
       return;
@@ -549,7 +554,7 @@ app.post('/api/staff/queue/:tokenId/start', async (req, res) => {
 
 app.post('/api/staff/queue/:tokenId/complete', async (req, res) => {
   try {
-    const context = authContext(req);
+    const context = await authContext(req);
     if (!context || !context.clinicId) {
       res.status(401).json({ error: 'Authentication required.' });
       return;
@@ -572,7 +577,7 @@ app.post('/api/staff/queue/:tokenId/complete', async (req, res) => {
 });
 
 const queueMutationContext = async (req: express.Request, res: express.Response) => {
-  const context = authContext(req);
+  const context = await authContext(req);
   if (!context || !context.clinicId || !['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'STAFF'].includes(context.role)) {
     res.status(403).json({ error: 'Queue access denied.' });
     return null;
@@ -628,7 +633,7 @@ app.post('/api/staff/queue/:tokenId/emergency', async (req, res) => {
 
 app.patch('/api/staff/clinic/:clinicId/status', async (req, res) => {
   try {
-    const context = authContext(req);
+    const context = await authContext(req);
     const clinicId = String(req.params.clinicId || '');
     if (!context || !context.clinicId || (context.role !== 'SUPER_ADMIN' && context.clinicId !== clinicId) || !['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'STAFF'].includes(context.role)) {
       res.status(403).json({ error: 'Clinic status access denied.' });
@@ -655,7 +660,7 @@ app.patch('/api/staff/clinic/:clinicId/status', async (req, res) => {
 
 app.patch('/api/staff/clinic/:clinicId/delay', async (req, res) => {
   try {
-    const context = authContext(req);
+    const context = await authContext(req);
     const clinicId = String(req.params.clinicId || '');
     if (!context || !context.clinicId || (context.role !== 'SUPER_ADMIN' && context.clinicId !== clinicId) || !['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'STAFF'].includes(context.role)) {
       res.status(403).json({ error: 'Clinic delay access denied.' });
@@ -677,7 +682,7 @@ app.patch('/api/staff/clinic/:clinicId/delay', async (req, res) => {
 
 app.delete('/api/staff/queue/:tokenId/cancel', async (req, res) => {
   try {
-    const context = authContext(req);
+    const context = await authContext(req);
     if (!context || !context.clinicId || context.role !== 'DOCTOR') {
       res.status(403).json({ error: 'Only the doctor can cancel a consultation.' });
       return;
@@ -747,10 +752,14 @@ app.post('/api/patient/book', async (req, res) => {
 
 app.post('/api/staff/queue/:clinicId/walk-in', async (req, res) => {
   try {
-    const context = authContext(req);
+    const context = await authContext(req);
     const clinicId = String(req.params.clinicId || '');
     if (!context || !context.clinicId || (context.role !== 'SUPER_ADMIN' && context.clinicId !== clinicId)) {
       res.status(403).json({ error: 'Clinic access denied.' });
+      return;
+    }
+    if (context.role === 'DOCTOR' && context.doctorId !== String(req.body?.doctorId || '')) {
+      res.status(403).json({ error: 'Doctors can only issue tokens for their own queue.' });
       return;
     }
     if (!await requireActivePlan(res, clinicId, context.role)) return;
@@ -832,8 +841,6 @@ app.post('/api/auth/login', async (req, res) => {
     const normalizedPassword = String(password);
     const normalizedRole = String(requestedRole).toUpperCase();
     
-    if (process.env.DEBUG_MODE === 'true') console.log(`[LOGIN] Attempt: email=${normalizedEmail}, role=${normalizedRole}`);
-
     const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || '';
     const superAdminUsername = process.env.SUPER_ADMIN_USERNAME || 'superadmin@clinic.local';
 
@@ -857,7 +864,6 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (!context && normalizedEmail.toLowerCase() === superAdminUsername.trim().toLowerCase() && superAdminPassword && secureEqual(normalizedPassword, superAdminPassword)) {
       context = { userId: 'super-admin', role: 'SUPER_ADMIN', clinicId: null, doctorId: null, email: superAdminUsername };
-      if (process.env.DEBUG_MODE === 'true') console.log('[LOGIN] Super admin bootstrap authenticated');
     }
 
     if (!context) {
@@ -918,7 +924,7 @@ app.post('/api/auth/logout', (req, res) => {
 });
 
 app.get('/api/audit', async (req, res) => {
-  const context = authContext(req);
+  const context = await authContext(req);
   if (!context || !['SUPER_ADMIN', 'CLINIC_ADMIN'].includes(context.role)) {
     res.status(401).json({ error: 'Authentication required.' });
     return;
@@ -947,7 +953,7 @@ app.get('/api/audit', async (req, res) => {
 });
 
 app.post('/api/audit', async (req, res) => {
-  const context = authContext(req);
+  const context = await authContext(req);
   if (!context || !['SUPER_ADMIN', 'CLINIC_ADMIN'].includes(context.role)) {
     res.status(401).json({ error: 'Authentication required.' });
     return;
@@ -973,7 +979,7 @@ app.post('/api/audit', async (req, res) => {
 });
 
 app.get('/api/clinic-access', async (req, res) => {
-  const context = authContext(req);
+  const context = await authContext(req);
   if (!context || !['SUPER_ADMIN', 'CLINIC_ADMIN'].includes(context.role)) {
     res.status(401).json({ error: 'Authentication required.' });
     return;
@@ -994,7 +1000,7 @@ app.get('/api/clinic-access', async (req, res) => {
 });
 
 app.post('/api/clinic-access', async (req, res) => {
-  const context = authContext(req);
+  const context = await authContext(req);
   const clinicId = String(req.body?.clinicId || '').trim();
   const status = String(req.body?.status || '').trim();
   if (!context || !['SUPER_ADMIN', 'CLINIC_ADMIN'].includes(context.role)) {
@@ -1031,7 +1037,7 @@ app.post('/api/clinic-access', async (req, res) => {
 
 app.post('/api/users/reset-password', async (req, res) => {
   try {
-    const context = authContext(req);
+    const context = await authContext(req);
     const userId = String(req.body?.userId || '').trim();
     const newPassword = String(req.body?.newPassword || '');
 
@@ -1064,8 +1070,8 @@ app.post('/api/users/reset-password', async (req, res) => {
   }
 });
 
-app.get('/api/auth/me', (req, res) => {
-  const context = authContext(req);
+app.get('/api/auth/me', async (req, res) => {
+  const context = await authContext(req);
   if (!context) {
     res.status(401).json({ error: 'Authentication required.' });
     return;
@@ -1293,7 +1299,7 @@ app.post('/api/whatsapp/send-template', (_req, res) => {
 
 app.get('/api/queue-summary', async (req, res) => {
   try {
-    const context = authContext(req);
+    const context = await authContext(req);
     if (!context || !context.clinicId) {
       res.status(401).json({ error: 'Authentication required.' });
       return;
@@ -1301,7 +1307,7 @@ app.get('/api/queue-summary', async (req, res) => {
     if (!await requireActivePlan(res, context.clinicId, context.role)) return;
     const session = await repositories.sessions.findActiveByClinicId(context.clinicId);
     const stats = session
-      ? await repositories.tokens.getQueueStats('', session.id)
+      ? await repositories.tokens.getClinicQueueStats(context.clinicId, session.id)
       : { waiting: 0, serving: 0, completed: 0, total: 0 };
     const clinic = await repositories.clinics.findById(context.clinicId);
     res.status(200).json({
@@ -1352,7 +1358,7 @@ app.get('/api/site/settings', async (_req, res) => {
 
 app.post('/api/site/settings', async (req, res) => {
   try {
-    const context = authContext(req);
+    const context = await authContext(req);
     if (!context || context.role !== 'SUPER_ADMIN') {
       res.status(401).json({ error: 'Authentication required.' });
       return;
@@ -1398,7 +1404,7 @@ app.get('/api/site/content', async (_req, res) => {
 
 app.post('/api/site/content', async (req, res) => {
   try {
-    const context = authContext(req);
+    const context = await authContext(req);
     if (!context || context.role !== 'SUPER_ADMIN') {
       res.status(401).json({ error: 'Authentication required.' });
       return;

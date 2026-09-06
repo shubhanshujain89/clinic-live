@@ -36,6 +36,7 @@ export interface Clinic {
   whatsappNotificationsEnabled: boolean;
   hasPaymentGateway: boolean;
   clinicUpiId?: string;
+  timezone: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,6 +83,7 @@ export class ClinicRepository extends BaseRepository<Clinic> {
       whatsappNotificationsEnabled: Boolean(row.whatsapp_notifications_enabled),
       hasPaymentGateway: Boolean(row.has_payment_gateway),
       clinicUpiId: row.clinic_upi_id,
+      timezone: row.timezone || 'Asia/Kolkata',
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
     };
@@ -119,6 +121,7 @@ export class ClinicRepository extends BaseRepository<Clinic> {
     if (entity.whatsappNotificationsEnabled !== undefined) columns.whatsapp_notifications_enabled = entity.whatsappNotificationsEnabled ? 1 : 0;
     if (entity.hasPaymentGateway !== undefined) columns.has_payment_gateway = entity.hasPaymentGateway ? 1 : 0;
     if (entity.clinicUpiId !== undefined) columns.clinic_upi_id = entity.clinicUpiId;
+    if (entity.timezone !== undefined) columns.timezone = entity.timezone;
     
     return columns;
   }
@@ -139,13 +142,13 @@ export class ClinicRepository extends BaseRepository<Clinic> {
       SELECT c.* FROM \`clinics\` c
       LEFT JOIN \`settings\` s
         ON s.\`key\` = CONCAT('clinic_access_', c.id) AND s.clinic_id IS NULL
-      WHERE c.\`feature_plan\` IN (?, ?, ?, ?, ?)
+      WHERE c.\`feature_plan\` IN (?, ?)
         AND (c.subscription_status IS NULL OR c.subscription_status <> 'PAUSED')
         AND (c.subscription_expires_at IS NULL OR c.subscription_expires_at > CURRENT_TIMESTAMP)
         AND (s.value IS NULL OR s.value NOT IN ('Denied'))
       ORDER BY c.\`name\` ASC
     `;
-    const rows = await executeQuery(sql, ['TRIAL', 'BASIC', 'STANDARD', 'PREMIUM', 'ENTERPRISE']);
+    const rows = await executeQuery(sql, ['TRIAL', 'BASIC']);
     return rows.map(row => this.mapRowToEntity(row));
   }
 

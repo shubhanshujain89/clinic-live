@@ -47,7 +47,7 @@ export class SessionRepository extends BaseRepository<Session> {
     
     if (entity.id !== undefined) columns.id = entity.id;
     if (entity.clinicId !== undefined) columns.clinic_id = entity.clinicId;
-    if (entity.date !== undefined) columns.date = entity.date instanceof Date ? entity.date.toISOString().split('T')[0] : entity.date;
+    if (entity.date !== undefined) columns.date = entity.date instanceof Date ? entity.date.toISOString().slice(0, 10) : entity.date;
     if (entity.status !== undefined) columns.status = entity.status;
     if (entity.totalTokensIssued !== undefined) columns.total_tokens_issued = entity.totalTokensIssued;
     if (entity.rollingAvgMinutes !== undefined) columns.rolling_avg_minutes = entity.rollingAvgMinutes;
@@ -62,8 +62,8 @@ export class SessionRepository extends BaseRepository<Session> {
   /**
    * Find session by clinic ID and date
    */
-  async findByClinicAndDate(clinicId: string, date: Date): Promise<Session | null> {
-    const dateStr = date.toISOString().split('T')[0];
+  async findByClinicAndDate(clinicId: string, date: Date | string): Promise<Session | null> {
+    const dateStr = typeof date === 'string' ? date : date.toISOString().slice(0, 10);
     return this.findOne({ clinic_id: clinicId, date: dateStr });
   }
 

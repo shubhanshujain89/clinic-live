@@ -120,15 +120,14 @@ export class AppointmentRepository extends BaseRepository<Appointment> {
    * Uses a transaction to ensure atomicity
    */
   async getNextTokenSequence(clinicId: string, sessionId: string, doctorId: string, date: Date): Promise<number> {
-    const dateStr = date.toISOString().split('T')[0];
-    
     const sql = `
       SELECT COALESCE(MAX(token_sequence), 0) as max_sequence
       FROM \`appointments\`
-      WHERE clinic_id = ? AND session_id = ? AND doctor_id = ? AND DATE(created_at) = ?
+      WHERE clinic_id = ? AND session_id = ? AND doctor_id = ?
     `;
     
-    const result = await executeQueryOne<{ max_sequence: number }>(sql, [clinicId, sessionId, doctorId, dateStr]);
+    void date;
+    const result = await executeQueryOne<{ max_sequence: number }>(sql, [clinicId, sessionId, doctorId]);
     return (result?.max_sequence || 0) + 1;
   }
 
@@ -137,13 +136,12 @@ export class AppointmentRepository extends BaseRepository<Appointment> {
    */
   async createWithToken(data: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>): Promise<Appointment> {
     return executeTransaction(async (connection) => {
-      // Get next sequence number
-      const dateStr = new Date().toISOString().split('T')[0];
+      // Get next sequence number within the already-selected session.
       const [seqResult] = await connection.execute(
         `SELECT COALESCE(MAX(token_sequence), 0) as max_sequence
          FROM \`appointments\`
-         WHERE clinic_id = ? AND session_id = ? AND doctor_id = ? AND DATE(created_at) = ?`,
-        [data.clinicId, data.sessionId, data.doctorId, dateStr]
+         WHERE clinic_id = ? AND session_id = ? AND doctor_id = ?`,
+        [data.clinicId, data.sessionId, data.doctorId]
       );
       const sequenceNumber = (seqResult as any[])[0]?.max_sequence + 1 || 1;
       

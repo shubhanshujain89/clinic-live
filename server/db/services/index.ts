@@ -8,6 +8,7 @@ export * from './trackingService.js';
 export * from './queueService.js';
 export * from './retentionService.js';
 export * from './planService.js';
+export * from './clinicTime.js';
 
 import { bookingService } from './bookingService.js';
 import { trackingService } from './trackingService.js';

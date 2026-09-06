@@ -12,25 +12,28 @@ export interface ClinicPlanSnapshot {
   paymentsEnabled: false;
   whatsappEnabled: false;
   patientNotesEnabled: false;
+  supported: boolean;
 }
 
-const PLAN_LIMITS: Record<Clinic['featurePlan'], { maxDoctors: number; maxStaffUsers: number }> = {
+export const LAUNCH_PLANS: Clinic['featurePlan'][] = ['TRIAL', 'BASIC'];
+
+const PLAN_LIMITS: Partial<Record<Clinic['featurePlan'], { maxDoctors: number; maxStaffUsers: number }>> = {
   TRIAL: { maxDoctors: 1, maxStaffUsers: 2 },
   BASIC: { maxDoctors: 3, maxStaffUsers: 10 },
-  STANDARD: { maxDoctors: 10, maxStaffUsers: 25 },
-  PREMIUM: { maxDoctors: 25, maxStaffUsers: 100 },
-  ENTERPRISE: { maxDoctors: 1000, maxStaffUsers: 1000 },
 };
+const DEFAULT_PLAN_LIMITS = { maxDoctors: 1, maxStaffUsers: 2 };
 
 export const getClinicPlanSnapshot = (clinic: Clinic, now = new Date()): ClinicPlanSnapshot => {
   const startedAt = clinic.subscriptionStartedAt || clinic.createdAt;
   const expiresAt = clinic.subscriptionExpiresAt || new Date(startedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
   const status = clinic.subscriptionStatus === 'PAUSED'
     ? 'PAUSED'
-    : expiresAt.getTime() <= now.getTime()
+    : !LAUNCH_PLANS.includes(clinic.featurePlan)
+      ? 'PAUSED'
+      : expiresAt.getTime() <= now.getTime()
       ? 'EXPIRED'
       : 'ACTIVE';
-  const limits = PLAN_LIMITS[clinic.featurePlan] || PLAN_LIMITS.TRIAL;
+  const limits = PLAN_LIMITS[clinic.featurePlan] || DEFAULT_PLAN_LIMITS;
 
   return {
     plan: clinic.featurePlan,
@@ -41,6 +44,7 @@ export const getClinicPlanSnapshot = (clinic: Clinic, now = new Date()): ClinicP
     paymentsEnabled: false,
     whatsappEnabled: false,
     patientNotesEnabled: false,
+    supported: LAUNCH_PLANS.includes(clinic.featurePlan),
   };
 };
 
@@ -52,4 +56,5 @@ export const assertActiveClinicPlan = (clinic: Clinic): ClinicPlanSnapshot => {
   return snapshot;
 };
 
-export const getPlanLimits = (plan: Clinic['featurePlan']) => PLAN_LIMITS[plan] || PLAN_LIMITS.TRIAL;
+export const getPlanLimits = (plan: Clinic['featurePlan']): { maxDoctors: number; maxStaffUsers: number } =>
+  PLAN_LIMITS[plan] || DEFAULT_PLAN_LIMITS;

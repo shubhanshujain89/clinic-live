@@ -5,6 +5,7 @@
 
 import { repositories } from '../repositories/index.js';
 import { executeQuery, executeQueryOne } from '../connection.js';
+import { getClinicBusinessDate } from './clinicTime.js';
 
 export interface TrackingResult {
   clinic: string;
@@ -43,17 +44,20 @@ export class TrackingService {
         c.avg_consultation_minutes,
         t.session_id,
         t.clinic_id,
-        t.doctor_id
+        t.doctor_id,
+        s.date AS session_date,
+        c.timezone
       FROM patients p
       JOIN tokens t ON t.patient_id = p.id
+      JOIN sessions s ON s.id = t.session_id
       JOIN clinics c ON c.id = t.clinic_id
       JOIN doctors d ON d.id = t.doctor_id
       WHERE (p.phone = ? OR p.phone = ? OR p.phone = ?)
-        AND DATE(p.created_at) = CURRENT_DATE()
-      ORDER BY p.created_at DESC LIMIT 1
+      ORDER BY p.created_at DESC LIMIT 20
     `;
 
-    const result = await executeQueryOne<any>(sql, [normalizedPhone, `+91${normalizedPhone}`, `91${normalizedPhone}`]);
+    const candidates = await executeQuery<any>(sql, [normalizedPhone, `+91${normalizedPhone}`, `91${normalizedPhone}`]);
+    const result = candidates.find((candidate) => candidate.session_date === getClinicBusinessDate(new Date(), candidate.timezone));
     if (!result) return null;
 
     // Calculate patients ahead (waiting tokens with lower sequence number)

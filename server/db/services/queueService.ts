@@ -176,13 +176,6 @@ export class QueueService {
       );
       if ((updateResult as any).affectedRows !== 1) return null;
 
-      await connection.execute(
-        `UPDATE \`clinics\`
-         SET current_running_token = ?, current_running_token_id = ?
-         WHERE id = ?`,
-        [token.token_number, token.id, clinicId]
-      );
-
       return {
         id: token.id,
         clinicId: token.clinic_id,
@@ -216,13 +209,6 @@ export class QueueService {
         [tokenId, clinicId, token.session_id]
       );
       if ((updateResult as any).affectedRows !== 1) return null;
-
-      await connection.execute(
-        `UPDATE \`clinics\`
-         SET current_running_token = ?, current_running_token_id = ?
-         WHERE id = ?`,
-        [token.token_number, token.id, clinicId]
-      );
 
       return {
         id: token.id,
@@ -294,9 +280,7 @@ export class QueueService {
       // Do NOT auto-advance the next token to SERVING — the doctor/receptionist
       // explicitly calls the next patient when ready.
       await connection.execute(
-        `UPDATE \`clinics\`
-         SET current_running_token = 'None', current_running_token_id = '', avg_consultation_minutes = ?
-         WHERE id = ?`,
+        `UPDATE \`clinics\` SET avg_consultation_minutes = ? WHERE id = ?`,
         [rollingAverage, clinicId]
       );
 
@@ -379,12 +363,6 @@ export class QueueService {
          WHERE id = ? AND clinic_id = ? AND session_id = ? AND status IN ('CALLED', 'IN_CONSULTATION', 'SERVING')`,
         [tokenId, clinicId, token.session_id]
       );
-      await connection.execute(
-        `UPDATE \`clinics\` SET current_running_token = 'None', current_running_token_id = ''
-         WHERE id = ? AND current_running_token_id = ?`,
-        [clinicId, tokenId]
-      );
-
       return {
         id: token.id,
         clinicId: token.clinic_id,
