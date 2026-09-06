@@ -103,6 +103,14 @@ export interface Clinic {
   qrCodeUrl?: string;
   featurePlan?: FeaturePlan;
   subscriptionPack?: ClinicPack | null;
+  subscriptionStatus?: 'ACTIVE' | 'EXPIRED' | 'PAUSED';
+  subscriptionStartedAt?: string;
+  subscriptionExpiresAt?: string;
+  maxDoctors?: number;
+  maxStaffUsers?: number;
+  paymentsEnabled?: boolean;
+  whatsappEnabled?: boolean;
+  patientNotesEnabled?: boolean;
   whatsappNotificationsEnabled?: boolean;
   hasPaymentGateway?: boolean;
   clinicUpiId?: string;

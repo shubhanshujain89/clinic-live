@@ -30,6 +30,9 @@ export interface Clinic {
   specializations?: string;
   qrCodeUrl?: string;
   featurePlan: 'TRIAL' | 'BASIC' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
+  subscriptionStatus: 'ACTIVE' | 'EXPIRED' | 'PAUSED';
+  subscriptionStartedAt?: Date;
+  subscriptionExpiresAt?: Date;
   whatsappNotificationsEnabled: boolean;
   hasPaymentGateway: boolean;
   clinicUpiId?: string;
@@ -42,6 +45,13 @@ export class ClinicRepository extends BaseRepository<Clinic> {
   protected primaryKey = 'id';
 
   protected mapRowToEntity(row: any): Clinic {
+    const subscriptionExpiresAt = row.subscription_expires_at ? new Date(row.subscription_expires_at) : undefined;
+    const storedSubscriptionStatus = row.subscription_status || 'ACTIVE';
+    const subscriptionStatus = storedSubscriptionStatus === 'PAUSED'
+      ? 'PAUSED'
+      : subscriptionExpiresAt && subscriptionExpiresAt.getTime() <= Date.now()
+        ? 'EXPIRED'
+        : 'ACTIVE';
     return {
       id: row.id,
       name: row.name,
@@ -66,6 +76,9 @@ export class ClinicRepository extends BaseRepository<Clinic> {
       specializations: row.specializations,
       qrCodeUrl: row.qr_code_url,
       featurePlan: row.feature_plan,
+      subscriptionStatus,
+      subscriptionStartedAt: row.subscription_started_at ? new Date(row.subscription_started_at) : undefined,
+      subscriptionExpiresAt,
       whatsappNotificationsEnabled: Boolean(row.whatsapp_notifications_enabled),
       hasPaymentGateway: Boolean(row.has_payment_gateway),
       clinicUpiId: row.clinic_upi_id,
@@ -100,6 +113,9 @@ export class ClinicRepository extends BaseRepository<Clinic> {
     if (entity.specializations !== undefined) columns.specializations = entity.specializations;
     if (entity.qrCodeUrl !== undefined) columns.qr_code_url = entity.qrCodeUrl;
     if (entity.featurePlan !== undefined) columns.feature_plan = entity.featurePlan;
+    if (entity.subscriptionStatus !== undefined) columns.subscription_status = entity.subscriptionStatus;
+    if (entity.subscriptionStartedAt !== undefined) columns.subscription_started_at = entity.subscriptionStartedAt;
+    if (entity.subscriptionExpiresAt !== undefined) columns.subscription_expires_at = entity.subscriptionExpiresAt;
     if (entity.whatsappNotificationsEnabled !== undefined) columns.whatsapp_notifications_enabled = entity.whatsappNotificationsEnabled ? 1 : 0;
     if (entity.hasPaymentGateway !== undefined) columns.has_payment_gateway = entity.hasPaymentGateway ? 1 : 0;
     if (entity.clinicUpiId !== undefined) columns.clinic_upi_id = entity.clinicUpiId;
@@ -124,6 +140,8 @@ export class ClinicRepository extends BaseRepository<Clinic> {
       LEFT JOIN \`settings\` s
         ON s.\`key\` = CONCAT('clinic_access_', c.id) AND s.clinic_id IS NULL
       WHERE c.\`feature_plan\` IN (?, ?, ?, ?, ?)
+        AND (c.subscription_status IS NULL OR c.subscription_status <> 'PAUSED')
+        AND (c.subscription_expires_at IS NULL OR c.subscription_expires_at > CURRENT_TIMESTAMP)
         AND (s.value IS NULL OR s.value NOT IN ('Denied'))
       ORDER BY c.\`name\` ASC
     `;

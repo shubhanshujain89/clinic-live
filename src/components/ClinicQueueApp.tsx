@@ -50,6 +50,7 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedTrackTokenId, setSelectedTrackTokenId] = useState<string>('tok_03');
   const [isSeeding, setIsSeeding] = useState(false);
+  const [queueAccessError, setQueueAccessError] = useState('');
   const normalizedRole = String(role || '').toUpperCase();
   const isStaffRole = normalizedRole === 'STAFF';
 
@@ -104,7 +105,13 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
         });
         const payload = await response.json();
         if (!active) return;
-        if (!response.ok) throw new Error(payload.error || 'Unable to load queue.');
+        if (!response.ok) {
+          setQueueAccessError(payload.error || 'Clinic queue access is unavailable.');
+          setSession(null);
+          setTokens([]);
+          return;
+        }
+        setQueueAccessError('');
         setClinic(payload.clinic as Clinic);
         setSession(payload.session as QueueSession | null);
         setTokens((payload.tokens || []) as TokenItem[]);
@@ -223,6 +230,14 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
         </div>
 
         <main className="min-h-0 flex-1 max-w-7xl w-full mx-auto overflow-y-auto p-4 pt-24 sm:p-6 sm:pt-24 lg:p-8 lg:pt-24">
+          {queueAccessError && (
+            <div className="mx-auto max-w-2xl rounded-2xl border border-amber-500/40 bg-amber-500/10 p-6 text-center">
+              <h2 className="text-xl font-bold text-amber-200">Clinic access restricted</h2>
+              <p className="mt-2 text-sm text-amber-100/80">{queueAccessError} Contact the clinic administrator to renew or activate the subscription.</p>
+            </div>
+          )}
+          {!queueAccessError && (
+          <>
           {/* Doctor View */}
           {currentRole === 'DOCTOR' && (
             <DoctorView
@@ -247,6 +262,7 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
               onPrintTokenSlip={(token) => setTokenToPrint(token)}
             />
           )}
+          </>)}
         </main>
 
         <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-800/80 bg-slate-950/70 px-4 py-2 text-[10px] text-slate-500 sm:px-6 lg:px-8">

@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Clinic, TokenItem } from '../types/queue';
-import { WhatsAppService } from '../lib/whatsappService';
 import { PaymentGatewayPage } from './PaymentGatewayPage';
 
 interface BookingViewProps {
@@ -46,6 +45,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
   const [patientAge, setPatientAge] = useState('34');
   const [patientGender, setPatientGender] = useState<'Male' | 'Female' | 'Other'>('Male');
   const [primaryConcern, setPrimaryConcern] = useState('');
+  const paymentsEnabled = false;
 
   // Primary Payment Mode: 'PAY_NOW' | 'PAY_AT_CLINIC'
   const [paymentMode, setPaymentMode] = useState<'PAY_NOW' | 'PAY_AT_CLINIC'>('PAY_NOW');
@@ -128,16 +128,6 @@ export const BookingView: React.FC<BookingViewProps> = ({
         paymentStatus: 'PAID',
       };
 
-      // Send WhatsApp Utility Confirmation
-      await WhatsAppService.sendWhatsAppNotification(
-        newToken,
-        'TOKEN_ISSUED',
-        clinic.name,
-        clinic.doctorName,
-        clinic.cabinNumber,
-        '15-25 mins'
-      );
-
       // Burst Confetti animation
       try {
         confetti({
@@ -200,16 +190,6 @@ export const BookingView: React.FC<BookingViewProps> = ({
             : undefined,
           triageNotes: isPaidOnline && utrRefNumber.trim() ? `UPI UTR: ${utrRefNumber.trim()}` : undefined,
         };
-
-        // Send WhatsApp Utility Confirmation
-        await WhatsAppService.sendWhatsAppNotification(
-          newToken,
-          'TOKEN_ISSUED',
-          clinic.name,
-          clinic.doctorName,
-          clinic.cabinNumber,
-          '15-25 mins'
-        );
 
         // Burst Confetti animation
         try {
@@ -453,7 +433,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               
               {/* Mode 1: Pay Now */}
-              <div
+              {paymentsEnabled && <div
                 onClick={() => setPaymentMode('PAY_NOW')}
                 className={`p-4 rounded-2xl border cursor-pointer transition-all ${
                   paymentMode === 'PAY_NOW'
@@ -484,7 +464,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
                   </span>
                   <span className="text-slate-400 font-mono">₹{consultationFee + 25}</span>
                 </div>
-              </div>
+              </div>}
 
               {/* Mode 2: Pay at Clinic */}
               <div

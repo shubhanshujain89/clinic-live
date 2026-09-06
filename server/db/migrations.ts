@@ -51,7 +51,28 @@ export async function runMigrations(): Promise<void> {
     'SELECT version FROM schema_migrations WHERE version = ? LIMIT 1',
     ['baseline-20260906']
   );
+  const ensureSubscriptionColumns = async () => {
+    for (const statement of [
+      `ALTER TABLE clinics ADD COLUMN subscription_status ENUM('ACTIVE', 'EXPIRED', 'PAUSED') DEFAULT 'ACTIVE'`,
+      `ALTER TABLE clinics ADD COLUMN subscription_started_at DATETIME NULL`,
+      `ALTER TABLE clinics ADD COLUMN subscription_expires_at DATETIME NULL`,
+    ]) {
+      try {
+        await executeQuery(statement);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!message.includes('Duplicate column') && !message.includes('already exists')) throw error;
+      }
+    }
+    await executeQuery(
+      `UPDATE clinics
+       SET subscription_started_at = COALESCE(subscription_started_at, created_at),
+           subscription_expires_at = COALESCE(subscription_expires_at, DATE_ADD(COALESCE(subscription_started_at, created_at), INTERVAL 30 DAY))
+       WHERE subscription_started_at IS NULL OR subscription_expires_at IS NULL`
+    );
+  };
   if (baseline.length > 0) {
+    await ensureSubscriptionColumns();
     console.log('✅ Database migrations already applied');
     return;
   }
@@ -80,6 +101,8 @@ export async function runMigrations(): Promise<void> {
       }
     }
   }
+
+  await ensureSubscriptionColumns();
 
   await executeQuery(`ALTER TABLE tokens MODIFY token_type ENUM('ONLINE', 'WALK_IN', 'VIP', 'EMERGENCY') DEFAULT 'ONLINE'`);
   await executeQuery(`UPDATE tokens SET token_type = 'EMERGENCY' WHERE token_type = 'VIP'`);

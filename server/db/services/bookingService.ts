@@ -8,6 +8,7 @@ import { executeTransaction } from '../connection.js';
 import type mysql from 'mysql2/promise';
 import type { Session } from '../repositories/sessions.js';
 import crypto from 'crypto';
+import { assertActiveClinicPlan } from './planService.js';
 
 export interface BookingInput {
   clinicId: string;
@@ -100,6 +101,7 @@ export class BookingService {
     if (!clinic) {
       throw new Error('Clinic not found');
     }
+    assertActiveClinicPlan(clinic);
 
     // Validate doctor exists and is active
     const doctor = await repositories.doctors.findById(input.doctorId);

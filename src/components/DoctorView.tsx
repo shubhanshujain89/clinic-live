@@ -28,7 +28,6 @@ import { Clinic, TokenItem, QueueSession } from '../types/queue';
 import { db, doc, updateDoc, collection, setDoc } from '../lib/firebase';
 import type { User } from '../lib/firebase';
 import { soundManager } from '../lib/audio';
-import { WhatsAppService } from '../lib/whatsappService';
 import { getDoctorQueueAction } from './doctorQueueLogic';
 
 interface DoctorViewProps {

@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { Clinic, TokenItem } from '../types/queue';
 import { soundManager } from '../lib/audio';
-import { WhatsAppService } from '../lib/whatsappService';
 import { PhoneInput } from './PhoneInput';
 
 interface AddPatientModalProps {
@@ -106,17 +105,6 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
         soundManager.playEmergencyChime();
       } else {
         soundManager.playChime();
-      }
-
-      if (clinic.featurePlan !== 'BASIC') {
-        await WhatsAppService.sendWhatsAppNotification(
-          newToken,
-          'TOKEN_ISSUED',
-          clinic.name,
-          clinic.doctorName,
-          clinic.cabinNumber,
-          '10-15 mins'
-        );
       }
 
       onAdded(newToken);

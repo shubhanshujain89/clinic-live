@@ -80,6 +80,11 @@ interface Clinic {
   specializations: string[];
   operatingHours: string;
   featurePlan?: FeaturePlan;
+  subscriptionStatus?: 'ACTIVE' | 'EXPIRED' | 'PAUSED';
+  subscriptionStartedAt?: string;
+  subscriptionExpiresAt?: string;
+  maxDoctors?: number;
+  maxStaffUsers?: number;
   subscriptionPack?: {
     id: string;
     plan: FeaturePlan;
@@ -246,6 +251,11 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
             specializations: Array.isArray(item.specializations) ? item.specializations : (typeof item.specializations === 'string' ? item.specializations.split(',').map((part: string) => part.trim()).filter(Boolean) : (typeof item.specialty === 'string' && item.specialty ? [item.specialty] : [])),
             operatingHours: item.operatingHours || item.operating_hours || HOURS_OPTIONS[0],
             featurePlan,
+            subscriptionStatus: item.subscriptionStatus || item.subscription_status || packRecord.status,
+            subscriptionStartedAt: item.subscriptionStartedAt || item.subscription_started_at || packRecord.startDate,
+            subscriptionExpiresAt: item.subscriptionExpiresAt || item.subscription_expires_at || packRecord.expiryDate,
+            maxDoctors: Number(item.maxDoctors || item.max_doctors || (featurePlan === 'TRIAL' ? 1 : featurePlan === 'BASIC' ? 3 : 10)),
+            maxStaffUsers: Number(item.maxStaffUsers || item.max_staff_users || (featurePlan === 'TRIAL' ? 2 : featurePlan === 'BASIC' ? 10 : 25)),
             subscriptionPack: packRecord,
             logo: item.logo || '',
             createdAt: item.createdAt || item.created_at || new Date().toISOString(),
@@ -420,6 +430,11 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
           specializations: Array.isArray(item.specializations) ? item.specializations : (typeof item.specializations === 'string' ? item.specializations.split(',').map((part: string) => part.trim()).filter(Boolean) : (typeof item.specialty === 'string' && item.specialty ? [item.specialty] : [])),
           operatingHours: item.operatingHours || item.operating_hours || HOURS_OPTIONS[0],
           featurePlan,
+          subscriptionStatus: item.subscriptionStatus || item.subscription_status || packRecord.status,
+          subscriptionStartedAt: item.subscriptionStartedAt || item.subscription_started_at || packRecord.startDate,
+          subscriptionExpiresAt: item.subscriptionExpiresAt || item.subscription_expires_at || packRecord.expiryDate,
+          maxDoctors: Number(item.maxDoctors || item.max_doctors || (featurePlan === 'TRIAL' ? 1 : featurePlan === 'BASIC' ? 3 : 10)),
+          maxStaffUsers: Number(item.maxStaffUsers || item.max_staff_users || (featurePlan === 'TRIAL' ? 2 : featurePlan === 'BASIC' ? 10 : 25)),
           subscriptionPack: packRecord,
           logo: item.logo || '',
           createdAt: item.createdAt || item.created_at || new Date().toISOString(),
@@ -741,13 +756,17 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
       const clinicPlan = formData.featurePlan as FeaturePlan;
       const hasBillingRecord = editingClinic ? payments.some((payment) => payment.clinicId === editingClinic.id || payment.clinicName.toLowerCase() === editingClinic.name.toLowerCase()) : false;
-      const subscriptionPack = buildClinicPack(clinicPlan, new Date().toISOString(), hasBillingRecord ? 'ACTIVE' : 'PAUSED');
+      const subscriptionStartedAt = editingClinic?.subscriptionStartedAt || new Date().toISOString();
+      const subscriptionPack = buildClinicPack(clinicPlan, subscriptionStartedAt, clinicPlan === 'TRIAL' || hasBillingRecord ? 'ACTIVE' : 'PAUSED');
       const clinicPayload = {
         name: formData.name.trim(),
         address: formData.address.trim(),
         phone: formData.phone.trim(),
         email: formData.email.trim(),
         featurePlan: clinicPlan,
+        subscriptionStatus: clinicPlan === 'TRIAL' || hasBillingRecord ? 'ACTIVE' : 'PAUSED',
+        subscriptionStartedAt,
+        subscriptionExpiresAt: subscriptionPack.expiryDate,
         subscriptionPack,
         specializations: formData.specializations.split(',').map(s => s.trim()).filter(Boolean),
         operatingHours: formData.operatingHours,
@@ -823,6 +842,9 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         await updateDoc(doc(db, 'clinics', matchedClinic.id), {
           featurePlan: paymentForm.pack,
           subscriptionPack: updatedPack,
+          subscriptionStatus: paymentForm.status === 'PAID' ? 'ACTIVE' : 'PAUSED',
+          subscriptionStartedAt: startDate,
+          subscriptionExpiresAt: expiryDate,
           updatedAt: new Date().toISOString(),
           currentPackName: paymentForm.pack,
         });
@@ -1529,8 +1551,8 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                         <p className="text-sm text-slate-400">{clinic.address}</p>
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${clinicHasBilling(clinic) ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}`}>
-                          {clinicHasBilling(clinic) ? 'Active' : 'On hold'}
+                        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${clinic.subscriptionStatus === 'ACTIVE' ? 'bg-emerald-500/15 text-emerald-300' : clinic.subscriptionStatus === 'EXPIRED' ? 'bg-rose-500/15 text-rose-300' : 'bg-amber-500/15 text-amber-300'}`}>
+                          {clinic.subscriptionStatus || 'PAUSED'}
                         </span>
                         <div className="flex gap-2">
                         <button onClick={() => handleEditClinic(clinic)} className="rounded-lg bg-blue-500/15 p-2 text-blue-300"><Edit className="h-4 w-4" /></button>
@@ -1540,6 +1562,11 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                     </div>
 
                     <div className="space-y-2 text-sm text-slate-300">
+                      <p className="font-semibold text-teal-300">{clinic.featurePlan || 'TRIAL'} plan</p>
+                      <p className="text-xs text-slate-400">Expires {clinic.subscriptionExpiresAt ? new Date(clinic.subscriptionExpiresAt).toLocaleDateString('en-IN') : 'not set'}</p>
+                      {(clinic.subscriptionStatus === 'EXPIRED' || clinic.subscriptionStatus === 'PAUSED') && (
+                        <p className="text-xs font-semibold text-amber-300">Access restricted. Renew or activate this plan to resume clinic operations.</p>
+                      )}
                       <p>{clinic.phone}</p>
                       <p>{clinic.email}</p>
                       <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-emerald-400" /> {clinic.operatingHours}</p>

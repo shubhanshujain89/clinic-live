@@ -5,6 +5,7 @@ import { getDatabase, readDoc, listQuery, writeDoc, updateDoc, deleteDoc, findUs
 import { executeQueryOne } from './server/db/connection.js';
 import { repositories } from './server/db/repositories/index.js';
 import { services } from './server/db/services/index.js';
+import { getClinicPlanSnapshot, getPlanLimits } from './server/db/services/planService.js';
 
 const app = express();
 app.set('trust proxy', process.env.TRUST_PROXY === 'true' ? 1 : false);
@@ -122,6 +123,51 @@ const getClinicAccessStatus = async (clinicId: string | null, clinicName?: strin
   if (!resolvedClinicId) return 'Granted';
   const record = await repositories.settings.findOne({ key: `clinic_access_${resolvedClinicId}`, clinic_id: null });
   return record?.value || 'Granted';
+};
+
+const requireActivePlan = async (res: express.Response, clinicId: string, role?: AuthContext['role']) => {
+  const clinic = await repositories.clinics.findById(clinicId);
+  if (!clinic) {
+    res.status(404).json({ error: 'Clinic not found.' });
+    return null;
+  }
+  const plan = getClinicPlanSnapshot(clinic);
+  if (role !== 'SUPER_ADMIN' && plan.status !== 'ACTIVE') {
+    res.status(403).json({ error: `Clinic subscription is ${plan.status.toLowerCase()}. Please renew the ${plan.plan} plan.`, plan });
+    return null;
+  }
+  return { clinic, plan };
+};
+
+const isPlanGatedRead = (table: string) => ['doctors', 'patients', 'sessions', 'appointments', 'tokens', 'queue_events', 'doctor_status', 'whatsapp_logs'].includes(table);
+
+const enforcePlanWrite = async (
+  context: AuthContext | undefined,
+  table: string,
+  value: Record<string, any>,
+  current: Record<string, any> | null,
+) => {
+  if (!context || context.role === 'SUPER_ADMIN') return;
+  const clinicId = table === 'clinics'
+    ? String(current?.id || value.id || '')
+    : String(value.clinicId || value.clinic_id || current?.clinicId || current?.clinic_id || '');
+  if (!clinicId) return;
+  const clinic = await repositories.clinics.findById(clinicId);
+  if (!clinic) throw new Error('Clinic not found.');
+  const plan = getClinicPlanSnapshot(clinic);
+  if (plan.status !== 'ACTIVE') throw new Error(`Clinic subscription is ${plan.status.toLowerCase()}. Please renew the ${plan.plan} plan.`);
+  if (table === 'whatsapp_logs' || table === 'payments') throw new Error(`${table === 'payments' ? 'Payments' : 'WhatsApp notifications'} are not enabled for the current launch plans.`);
+  if (!current && table === 'doctors') {
+    const limits = getPlanLimits(plan.plan);
+    const doctors = await repositories.doctors.findByClinicId(clinicId);
+    if (doctors.length >= limits.maxDoctors) throw new Error(`${plan.plan} plan allows up to ${limits.maxDoctors} doctor${limits.maxDoctors === 1 ? '' : 's'}.`);
+  }
+  if (!current && table === 'staff_users') {
+    const limits = getPlanLimits(plan.plan);
+    const users = await repositories.staffUsers.findByClinicId(clinicId);
+    const clinicUsers = users.filter((user) => user.role !== 'SUPER_ADMIN');
+    if (clinicUsers.length >= limits.maxStaffUsers) throw new Error(`${plan.plan} plan allows up to ${limits.maxStaffUsers} clinic users.`);
+  }
 };
 const serverTableMap: Record<string, string> = {
   clinics: 'clinics', doctors: 'doctors', users: 'staff_users', staff_users: 'staff_users', staff: 'staff_users',
@@ -339,6 +385,11 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
       res.status(404).json({ error: 'Clinic not found.' });
       return;
     }
+    const plan = getClinicPlanSnapshot(clinic);
+    if (context.role !== 'SUPER_ADMIN' && plan.status !== 'ACTIVE') {
+      res.status(403).json({ error: `Clinic subscription is ${plan.status.toLowerCase()}.`, plan });
+      return;
+    }
 
     const todaySession = await repositories.sessions.findByClinicAndDate(requestedClinicId, new Date());
     const session = todaySession?.status === 'ACTIVE' ? todaySession : null;
@@ -376,6 +427,14 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
         totalPatientsToday: clinic.totalPatientsToday || 0,
         revenueToday: clinicRevenue,
         featurePlan: clinic.featurePlan,
+        subscriptionStatus: plan.status,
+        subscriptionStartedAt: plan.startedAt.toISOString(),
+        subscriptionExpiresAt: plan.expiresAt.toISOString(),
+        maxDoctors: plan.maxDoctors,
+        maxStaffUsers: plan.maxStaffUsers,
+        paymentsEnabled: plan.paymentsEnabled,
+        whatsappEnabled: plan.whatsappEnabled,
+        patientNotesEnabled: plan.patientNotesEnabled,
         whatsappNotificationsEnabled: clinic.whatsappNotificationsEnabled,
         hasPaymentGateway: clinic.hasPaymentGateway,
         clinicUpiId: clinic.clinicUpiId || '',
@@ -439,6 +498,7 @@ app.post('/api/staff/queue/:tokenId/call', async (req, res) => {
       res.status(401).json({ error: 'Authentication required.' });
       return;
     }
+    if (!await requireActivePlan(res, context.clinicId, context.role)) return;
     const token = await services.queue.callTokenForClinic(
       String(req.params.tokenId || ''),
       context.clinicId,
@@ -461,6 +521,7 @@ app.post('/api/staff/queue/:tokenId/start', async (req, res) => {
       res.status(401).json({ error: 'Authentication required.' });
       return;
     }
+    if (!await requireActivePlan(res, context.clinicId, context.role)) return;
     const token = await services.queue.startTokenForClinic(
       String(req.params.tokenId || ''),
       context.clinicId,
@@ -483,6 +544,7 @@ app.post('/api/staff/queue/:tokenId/complete', async (req, res) => {
       res.status(401).json({ error: 'Authentication required.' });
       return;
     }
+    if (!await requireActivePlan(res, context.clinicId, context.role)) return;
     const token = await services.queue.completeTokenForClinic(
       String(req.params.tokenId || ''),
       context.clinicId,
@@ -499,18 +561,19 @@ app.post('/api/staff/queue/:tokenId/complete', async (req, res) => {
   }
 });
 
-const queueMutationContext = (req: express.Request, res: express.Response) => {
+const queueMutationContext = async (req: express.Request, res: express.Response) => {
   const context = authContext(req);
   if (!context || !context.clinicId || !['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'STAFF'].includes(context.role)) {
     res.status(403).json({ error: 'Queue access denied.' });
     return null;
   }
+  if (!await requireActivePlan(res, context.clinicId, context.role)) return null;
   return context;
 };
 
 app.post('/api/staff/queue/:tokenId/hold', async (req, res) => {
   try {
-    const context = queueMutationContext(req, res);
+    const context = await queueMutationContext(req, res);
     if (!context) return;
     const token = await services.queue.holdTokenForClinic(String(req.params.tokenId || ''), context.clinicId!, context.role === 'DOCTOR' ? context.doctorId || undefined : undefined);
     if (!token) {
@@ -525,7 +588,7 @@ app.post('/api/staff/queue/:tokenId/hold', async (req, res) => {
 
 app.post('/api/staff/queue/:tokenId/resume', async (req, res) => {
   try {
-    const context = queueMutationContext(req, res);
+    const context = await queueMutationContext(req, res);
     if (!context) return;
     const token = await services.queue.resumeTokenForClinic(String(req.params.tokenId || ''), context.clinicId!, context.role === 'DOCTOR' ? context.doctorId || undefined : undefined);
     if (!token) {
@@ -540,7 +603,7 @@ app.post('/api/staff/queue/:tokenId/resume', async (req, res) => {
 
 app.post('/api/staff/queue/:tokenId/emergency', async (req, res) => {
   try {
-    const context = queueMutationContext(req, res);
+    const context = await queueMutationContext(req, res);
     if (!context) return;
     const token = await services.queue.promoteEmergencyForClinic(String(req.params.tokenId || ''), context.clinicId!, context.role === 'DOCTOR' ? context.doctorId || undefined : undefined);
     if (!token) {
@@ -561,6 +624,7 @@ app.patch('/api/staff/clinic/:clinicId/status', async (req, res) => {
       res.status(403).json({ error: 'Clinic status access denied.' });
       return;
     }
+    if (!await requireActivePlan(res, clinicId, context.role)) return;
     const status = String(req.body?.status || '').toUpperCase();
     if (!['IN', 'OUT'].includes(status)) {
       res.status(400).json({ error: 'Status must be IN or OUT.' });
@@ -587,6 +651,7 @@ app.patch('/api/staff/clinic/:clinicId/delay', async (req, res) => {
       res.status(403).json({ error: 'Clinic delay access denied.' });
       return;
     }
+    if (!await requireActivePlan(res, clinicId, context.role)) return;
     const delayMinutes = Number(req.body?.delayMinutes);
     const delayReason = String(req.body?.delayReason || '').trim();
     if (!Number.isInteger(delayMinutes) || delayMinutes < 0 || delayMinutes > 240 || delayReason.length > 500) {
@@ -607,6 +672,7 @@ app.delete('/api/staff/queue/:tokenId/cancel', async (req, res) => {
       res.status(403).json({ error: 'Only the doctor can cancel a consultation.' });
       return;
     }
+    if (!await requireActivePlan(res, context.clinicId, context.role)) return;
     const token = await services.queue.cancelTokenForClinic(
       String(req.params.tokenId || ''),
       context.clinicId,
@@ -677,6 +743,7 @@ app.post('/api/staff/queue/:clinicId/walk-in', async (req, res) => {
       res.status(403).json({ error: 'Clinic access denied.' });
       return;
     }
+    if (!await requireActivePlan(res, clinicId, context.role)) return;
 
     const { doctorId, patientName, phone, age, reason, tokenType } = req.body || {};
     const normalizedPatientName = String(patientName || '').trim();
@@ -1035,6 +1102,9 @@ app.get('/api/db/doc', async (req, res) => {
       res.status(403).json({ error: 'Access denied.' });
       return;
     }
+    const table = tableForPath(documentPath);
+    const recordClinicId = table === 'clinics' ? docResult.id : (docResult.clinicId || docResult.clinic_id);
+    if (context && isPlanGatedRead(table) && recordClinicId && !await requireActivePlan(res, recordClinicId, context.role)) return;
     res.status(200).json({ exists: true, data: sanitizeDatabaseRecord(tableForPath(documentPath), docResult) });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to load document.' });
@@ -1057,6 +1127,7 @@ app.post('/api/db/doc', async (req, res) => {
       return;
     }
     const safeValue = context ? prepareDatabaseMutation(context, table, value || {}) : value || {};
+    await enforcePlanWrite(context, table, safeValue, null);
     if (context && context.role !== 'SUPER_ADMIN' && !canAccessRecord(context, safeValue, table)) {
       res.status(403).json({ error: 'Access denied.' });
       return;
@@ -1094,6 +1165,7 @@ app.post('/api/db/doc/update', async (req, res) => {
       return;
     }
     const safeValue = context ? prepareDatabaseMutation(context, table, value || {}, current) : value || {};
+    await enforcePlanWrite(context, table, safeValue, current);
     if (context && (!current || !canAccessRecord(context, { ...current, ...safeValue }, table))) {
       res.status(403).json({ error: 'Access denied.' });
       return;
@@ -1115,11 +1187,13 @@ app.post('/api/db/doc/delete', async (req, res) => {
 
     const context = (req as express.Request & { auth?: AuthContext }).auth;
     const current = await readDoc(documentPath);
-    if (context && !canMutateGenericRecord(context, tableForPath(documentPath))) {
+    const table = tableForPath(documentPath);
+    if (context && !canMutateGenericRecord(context, table)) {
       res.status(403).json({ error: 'This role cannot modify records through the generic data API.' });
       return;
     }
-    if (context && (!current || !canAccessRecord(context, current, tableForPath(documentPath)))) {
+    await enforcePlanWrite(context, table, current || {}, current);
+    if (context && (!current || !canAccessRecord(context, current, table))) {
       res.status(403).json({ error: 'Access denied.' });
       return;
     }
@@ -1141,6 +1215,7 @@ app.post('/api/db/query', async (req, res) => {
     const docs = await listQuery(collectionPath, clauses || []);
     const context = (req as express.Request & { auth?: AuthContext }).auth;
     const table = tableForPath(collectionPath);
+    if (context && isPlanGatedRead(table) && context.clinicId && !await requireActivePlan(res, context.clinicId, context.role)) return;
     const visibleDocs = (context ? docs.filter((item: Record<string, any>) => canAccessRecord(context, item, table)) : docs)
       .map((item: Record<string, any>) => sanitizeDatabaseRecord(table, item));
     res.status(200).json({ docs: visibleDocs });

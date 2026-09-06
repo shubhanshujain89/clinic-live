@@ -27,7 +27,6 @@ import {
 import { Clinic, TokenItem, QueueSession } from '../types/queue';
 import { db, doc, updateDoc } from '../lib/firebase';
 import { soundManager } from '../lib/audio';
-import { WhatsAppService } from '../lib/whatsappService';
 
 interface ReceptionistViewProps {
   clinic: Clinic;
@@ -207,28 +206,8 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'Unable to call next token.');
 
-      // Sound announcement & Meta WhatsApp message
+      // Sound announcement
       soundManager.announceToken(nextToken.tokenNumber, nextToken.patientName, clinic.cabinNumber);
-      await WhatsAppService.sendWhatsAppNotification(
-        nextToken,
-        'TOKEN_CALLED_NOW',
-        clinic.name,
-        clinic.doctorName,
-        clinic.cabinNumber
-      );
-
-      // Notify the subsequent patient
-      if (waitingTokens.length > 1) {
-        const nextInLine = waitingTokens[1];
-        await WhatsAppService.sendWhatsAppNotification(
-          nextInLine,
-          'QUEUE_APPROACHING',
-          clinic.name,
-          clinic.doctorName,
-          clinic.cabinNumber,
-          '1'
-        );
-      }
 
       showToast(`Called Token #${nextToken.tokenNumber} (${nextToken.patientName}) to Cabin!`);
     } catch (err) {
@@ -252,14 +231,6 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || 'Unable to hold token.');
-
-      await WhatsAppService.sendWhatsAppNotification(
-        activeToken,
-        'TOKEN_HOLD_ALERT',
-        clinic.name,
-        clinic.doctorName,
-        clinic.cabinNumber
-      );
 
       // Now call next immediately if available
       if (waitingTokens.length > 0) {
@@ -322,14 +293,6 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
       if (!response.ok) throw new Error(payload.error || 'Unable to call token.');
 
       soundManager.announceToken(token.tokenNumber, token.patientName, clinic.cabinNumber);
-      await WhatsAppService.sendWhatsAppNotification(
-        token,
-        'TOKEN_CALLED_NOW',
-        clinic.name,
-        clinic.doctorName,
-        clinic.cabinNumber
-      );
-
       showToast(`Directly calling Token #${token.tokenNumber} to Cabin!`);
     } catch (err) {
       console.error('Error direct calling token:', err);
@@ -338,23 +301,8 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
 
   // Send Manual WhatsApp Alert
   const handleSendWhatsAppAlert = async (token: TokenItem) => {
-    if (isBasicPlan) {
-      showToast('WhatsApp alerts are not included in the Basic plan.');
-      return;
-    }
-    try {
-      await WhatsAppService.sendWhatsAppNotification(
-        token,
-        'QUEUE_APPROACHING',
-        clinic.name,
-        clinic.doctorName,
-        clinic.cabinNumber,
-        '2'
-      );
-      showToast(`WhatsApp reminder dispatched to ${token.patientPhone}`);
-    } catch (err) {
-      console.error('Error sending WhatsApp alert:', err);
-    }
+    void token;
+    showToast('WhatsApp notifications are not available in the current launch plans.');
   };
 
   if (isBasicPlan) {
