@@ -89,9 +89,11 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
           </div>
           <div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
-              {clinic.name}
+              ClinicFlow Pro
             </h1>
             <div className="flex items-center space-x-3 mt-1 text-sm sm:text-base text-slate-400">
+              <span className="text-slate-300 font-semibold">{clinic.name}</span>
+              <span>•</span>
               <span className="text-teal-300 font-bold">{clinic.doctorName}</span>
               <span>•</span>
               <span className="text-slate-300 font-semibold">{clinic.cabinNumber}</span>

@@ -485,7 +485,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left 7 Columns: Active Patient In Cabin & Clinical Prescription Notes */}
-        <div className="lg:col-span-12 space-y-6">
+        <div className="lg:col-span-12 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.85fr)]">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center space-x-2">
