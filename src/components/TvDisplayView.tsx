@@ -6,11 +6,9 @@ import {
   Volume2,
   VolumeX,
   Activity,
-  QrCode,
   Clock,
   Stethoscope,
-  Sparkles,
-  ArrowRight
+  Smartphone
 } from 'lucide-react';
 import { Clinic, TokenItem, QueueSession } from '../types/queue';
 import { soundManager } from '../lib/audio';
@@ -29,6 +27,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
+  const [lastUpdated, setLastUpdated] = useState(new Date());
   const prevTokenRef = useRef<string | null>(null);
 
   const activeToken = tokens.find(t => (
@@ -50,6 +49,10 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    setLastUpdated(new Date());
+  }, [tokens, clinic.doctorStatus]);
 
   // Voice Announcement on token change
   useEffect(() => {
@@ -229,16 +232,15 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
         <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-slate-700/80 bg-slate-900/90 p-4 lg:col-span-12 xl:col-span-2 xl:flex-col xl:items-center xl:justify-center xl:text-center">
           <div>
             <span className="block text-xs font-black uppercase tracking-wider text-teal-400">
-              Track on your phone
+              Patient help
             </span>
             <p className="mt-1 text-xs text-slate-400">
-              Scan to follow your turn.
+              Keep your token ready. Reception can help you track your turn.
             </p>
           </div>
 
-          {/* SVG Stylized QR Code */}
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-lg xl:mt-4">
-            <QrCode className="h-full w-full text-slate-950" />
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-teal-500/30 bg-teal-500/10 text-teal-300 xl:mt-4">
+            <Smartphone className="h-8 w-8" />
           </div>
         </div>
       </main>
@@ -247,15 +249,23 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
       <footer className="flex flex-col items-center justify-between gap-2 border-t border-slate-800/80 pt-3 text-[11px] font-medium text-slate-400 sm:flex-row sm:text-xs">
         <div className="flex items-center space-x-2">
           <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
-          <span>Live queue · Updates automatically</span>
+          <span>Live queue · Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
-        <div>
+        <div className="text-center sm:text-right">
           <span>Estimated Pacing: ~{clinic.avgConsultationMinutes || 8.5} mins/patient</span>
           {clinic.delayMinutes > 0 && (
             <span className="text-amber-400 font-bold ml-2">
               (⚠️ Delay Broadcast: +{clinic.delayMinutes} mins)
             </span>
           )}
+          <a
+            href="https://ybgp.in"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-2 font-bold text-teal-300 transition hover:text-teal-200"
+          >
+            YBGP - Your Business Growth Partner &rarr;
+          </a>
         </div>
       </footer>
     </div>
