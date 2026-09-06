@@ -13,7 +13,6 @@ import {
   TrendingUp,
   UserCheck,
   ShieldCheck,
-  Power,
   Sparkles,
   Phone,
   Calendar,
@@ -26,12 +25,13 @@ import {
   Save,
   X
 } from 'lucide-react';
-import { Clinic, TokenItem, QueueSession, DoctorStatus } from '../types/queue';
+import { Clinic, TokenItem, QueueSession } from '../types/queue';
 import { db, doc, updateDoc, collection, setDoc } from '../lib/firebase';
 import type { User } from '../lib/firebase';
 import { soundManager } from '../lib/audio';
 import { WhatsAppService } from '../lib/whatsappService';
 import { getDoctorQueueAction } from './doctorQueueLogic';
+import { LiveOperationsCard } from './LiveOperationsCard';
 
 interface DoctorViewProps {
   clinic: Clinic;
@@ -213,19 +213,6 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
     }
   }, [activeToken?.id]);
 
-  // Toggle Doctor Status IN / OUT
-  const handleToggleDoctorStatus = async () => {
-    const newStatus: DoctorStatus = clinic.doctorStatus === 'IN' ? 'OUT' : 'IN';
-    try {
-      await updateDoc(doc(db, 'clinics', clinic.id), {
-        doctorStatus: newStatus,
-      });
-      soundManager.playChime();
-    } catch (err) {
-      console.error('Error toggling doctor status:', err);
-    }
-  };
-
   // Complete consultation and advance queue
   const handleCompleteConsultation = async () => {
     if (!activeToken && !nextToken) return;
@@ -356,6 +343,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   if (isBasicPlan) {
     return (
       <div className="space-y-6 max-w-5xl mx-auto pb-12">
+        <LiveOperationsCard tokens={tokens} onSelectToken={openEditModal} />
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -398,64 +386,24 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      
-      {/* Top Banner / Doctor Profile Header */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl relative overflow-hidden">
-        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-        
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 relative z-10">
-          <div className="flex items-start sm:items-center space-x-4">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-tr from-teal-500 to-emerald-400 p-0.5 shadow-lg shadow-teal-500/20 flex-shrink-0">
-              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                <Stethoscope className="w-8 h-8 text-teal-400" />
-              </div>
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-                  {clinic.doctorName}
-                </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-500/15 text-teal-300 border border-teal-500/30">
-                  Super Admin
-                </span>
-              </div>
-              <p className="text-sm text-slate-400 mt-0.5">{clinic.specialty}</p>
-              <p className="text-xs text-slate-500 font-mono mt-1">{clinic.cabinNumber}</p>
-            </div>
-          </div>
-
-          {/* Doctor Status Toggle Switch */}
-          <div className="flex flex-wrap items-center gap-3 bg-slate-950/80 p-2 sm:p-3 rounded-xl border border-slate-800 self-start lg:self-auto">
-            <div className="text-left sm:text-right pr-2">
-              <div className="text-xs font-medium text-slate-400">Doctor Presence Status</div>
-              <div className={`text-sm font-bold flex items-center gap-1.5 ${clinic.doctorStatus === 'IN' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                <span className={`w-2 h-2 rounded-full ${clinic.doctorStatus === 'IN' ? 'bg-emerald-400 animate-ping' : 'bg-rose-400'}`} />
-                {clinic.doctorStatus === 'IN' ? 'AVAILABLE IN CABIN' : 'DOCTOR STEPPED OUT'}
-              </div>
-            </div>
-
-            <button
-              onClick={handleToggleDoctorStatus}
-              className={`relative inline-flex h-10 w-20 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
-                clinic.doctorStatus === 'IN' ? 'bg-emerald-600' : 'bg-rose-900/60'
-              }`}
-            >
-              <span className="sr-only">Toggle doctor status</span>
-              <span
-                className={`inline-block h-8 w-8 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out flex items-center justify-center ${
-                  clinic.doctorStatus === 'IN' ? 'translate-x-11 text-emerald-600' : 'translate-x-1 text-rose-500'
-                }`}
-              >
-                <Power className="w-4 h-4" />
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
-
+      <LiveOperationsCard tokens={tokens} onSelectToken={openEditModal} />
       {/* Metrics Row */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-        
+
+        {/* Doctor Profile */}
+        <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-teal-400 ring-1 ring-teal-400/40">
+              <Stethoscope className="h-7 w-7" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="truncate text-sm font-bold text-white">{clinic.doctorName || 'Doctor'}</h2>
+              <p className="truncate text-xs text-slate-400">{clinic.specialty || 'General Practice'}</p>
+              <p className="mt-1 truncate text-[11px] font-mono text-slate-500">{clinic.cabinNumber || 'Cabin'}</p>
+            </div>
+          </div>
+        </div>
+
         {/* Metric 1: Total Patients Today */}
         <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 sm:p-5 shadow-lg">
           <div className="flex items-center justify-between">
@@ -534,25 +482,6 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
           </div>
         </div>
 
-        {/* Metric 5: Rolling Consultation Speed */}
-        <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 sm:p-5 shadow-lg">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Avg Consultation</span>
-            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400">
-              <Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl sm:text-3xl font-black text-white">
-              {clinic.avgConsultationMinutes || 8.5}
-              <span className="text-sm font-normal text-slate-400 ml-1">mins</span>
-            </span>
-            <span className="text-xs text-purple-400 font-medium">5-patient avg</span>
-          </div>
-          <div className="mt-2 text-xs text-slate-500">
-            Pacing: Optimum tempo
-          </div>
-        </div>
       </div>
 
       {/* Main Consultation Desk Grid */}

@@ -6,10 +6,13 @@ import {
   UserRole
 } from '../types/queue';
 import {
+  db,
   auth,
+  doc,
   signInWithPopup,
   googleProvider,
   onAuthStateChanged,
+  updateDoc,
   User
 } from '../lib/firebase';
 import {
@@ -137,6 +140,15 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
     window.open(tvUrl.toString(), '_blank', 'noopener,noreferrer');
   };
 
+  const handleToggleDoctorStatus = async () => {
+    const newStatus = clinic.doctorStatus === 'IN' ? 'OUT' : 'IN';
+    try {
+      await updateDoc(doc(db, 'clinics', clinic.id), { doctorStatus: newStatus });
+    } catch (error) {
+      console.error('Error toggling doctor status:', error);
+    }
+  };
+
   const handleSeedData = async () => {
     setIsSeeding(true);
     await resetClinicDatabase();
@@ -174,6 +186,20 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
               </div>
             </div>
             <div className="flex items-center gap-4">
+              {currentRole === 'DOCTOR' && (
+                <button
+                  onClick={handleToggleDoctorStatus}
+                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                    clinic.doctorStatus === 'IN'
+                      ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/20'
+                      : 'border-rose-400/40 bg-rose-400/10 text-rose-200 hover:bg-rose-400/20'
+                  }`}
+                  title="Toggle doctor presence status"
+                >
+                  <span className={`h-2 w-2 rounded-full ${clinic.doctorStatus === 'IN' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                  <span>{clinic.doctorStatus === 'IN' ? 'Doctor IN' : 'Doctor OUT'}</span>
+                </button>
+              )}
               <button
                 onClick={handleOpenTvDisplay}
                 className="flex items-center gap-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-semibold text-amber-200 transition hover:bg-amber-400/20"
@@ -194,36 +220,6 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
         </div>
 
         <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-          {currentRole === 'RECEPTIONIST' && (
-            <div className="premium-hero mb-6 rounded-[30px] border border-slate-700/70 bg-slate-900/60 p-4 shadow-[0_20px_60px_rgba(15,23,42,0.45)] backdrop-blur-xl sm:p-6">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                <div className="max-w-2xl min-w-0">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-teal-500/40 bg-teal-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-teal-300">
-                    <span className="h-2 w-2 rounded-full bg-teal-400 animate-pulse" />
-                    ClinicFlow Pro
-                  </div>
-                  <h1 className="hero-heading mt-4 text-2xl font-black tracking-[-0.05em] text-white sm:text-3xl lg:text-4xl">
-                    {currentRole === 'DOCTOR' && 'Clinic Command Center'}
-                    {currentRole === 'RECEPTIONIST' && 'Reception Operations Desk'}
-                  </h1>
-                  <p className="mt-3 max-w-xl text-sm text-slate-300 sm:text-base">
-                    Real-time queue intelligence, patient visibility, and care delivery workflows designed for efficiency.
-                  </p>
-                </div>
-                <div className="hero-metrics grid grid-cols-2 gap-3 text-sm text-slate-300 sm:grid-cols-3">
-                  <div className="mini-stat rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2">
-                    <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Doctor</div>
-                    <div className="mt-1 font-semibold text-white">{clinic.doctorName}</div>
-                  </div>
-                  <div className="mini-stat rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2">
-                    <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Queue</div>
-                    <div className="mt-1 font-semibold text-white">{tokens.filter(t => t.status === 'WAITING').length}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Doctor View */}
           {currentRole === 'DOCTOR' && (
             <DoctorView
