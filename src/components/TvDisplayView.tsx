@@ -155,7 +155,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
       <main className="tv-display-main my-4 grid min-h-0 flex-1 grid-cols-1 items-stretch gap-5 lg:grid-cols-12 lg:gap-6">
         
         {/* Now Serving Card */}
-        <div className="relative flex min-h-[18rem] flex-col justify-center overflow-hidden rounded-[2rem] border-2 border-teal-400/50 bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950/50 p-6 text-center shadow-2xl sm:min-h-[24rem] sm:p-10 lg:col-span-6 lg:min-h-0 lg:p-12 xl:col-span-5">
+        <div className="relative flex min-h-0 flex-col justify-center overflow-hidden rounded-[2rem] border-2 border-teal-400/50 bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950/50 p-5 text-center shadow-2xl sm:p-8 lg:col-span-6 lg:p-10 xl:col-span-5">
           <div className="absolute top-0 right-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
           {/* Serving Pill */}
@@ -165,7 +165,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
           </div>
 
           {/* Massive Number */}
-          <div className="my-2 text-[6rem] font-black leading-none tracking-tighter text-white drop-shadow-[0_15px_30px_rgba(20,184,166,0.3)] sm:text-[9rem] lg:text-[12rem]">
+          <div className="my-2 text-[clamp(4rem,11vw,10rem)] font-black leading-none tracking-tighter text-white drop-shadow-[0_15px_30px_rgba(20,184,166,0.3)]">
             {activeToken ? activeToken.tokenNumber : '---'}
           </div>
 
@@ -181,10 +181,10 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
         </div>
 
         {/* Next Patients Card */}
-        <div className="lg:col-span-6 xl:col-span-5">
+        <div className="h-full lg:col-span-6 xl:col-span-5">
           
           {/* Upcoming Tokens Box */}
-          <div className="rounded-[2rem] border border-slate-700/80 bg-slate-900/90 p-4 shadow-xl sm:p-6">
+          <div className="flex h-full flex-col rounded-[2rem] border border-slate-700/80 bg-slate-900/90 p-4 shadow-xl sm:p-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <span className="text-sm sm:text-base font-black uppercase tracking-wider text-slate-300">
                 NEXT PATIENTS
@@ -194,7 +194,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
               </span>
             </div>
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 flex flex-1 flex-col justify-center space-y-3">
               {waitingTokens.length > 0 ? (
                 waitingTokens.slice(0, 4).map((tok, idx) => (
                   <div
