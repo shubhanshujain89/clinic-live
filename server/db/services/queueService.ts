@@ -56,6 +56,13 @@ export interface CompletedTokenResult {
   nextTokenNumber?: string;
 }
 
+export interface CancelledTokenResult {
+  id: string;
+  tokenNumber: string;
+  patientName: string;
+  status: 'CANCELLED';
+}
+
 export class QueueService {
   /**
    * Get all tokens for a doctor/session with details
@@ -291,6 +298,51 @@ export class QueueService {
         completedAt: new Date(),
         consultationDurationSeconds,
         nextTokenNumber: nextToken?.token_number,
+      };
+    });
+  }
+
+  async cancelTokenForClinic(
+    tokenId: string,
+    clinicId: string,
+    doctorId?: string,
+  ): Promise<CancelledTokenResult | null> {
+    return executeTransaction(async (connection) => {
+      const [tokenRows] = await connection.execute(
+        `SELECT t.id, t.token_number, t.patient_name, t.doctor_id, t.status, t.session_id
+         FROM \`tokens\` t
+         JOIN \`sessions\` s ON s.id = t.session_id
+         WHERE t.id = ? AND t.clinic_id = ? AND s.clinic_id = ? AND s.status = 'ACTIVE'
+         FOR UPDATE`,
+        [tokenId, clinicId, clinicId]
+      );
+      const token = (tokenRows as any[])[0];
+      if (
+        !token ||
+        (doctorId && token.doctor_id !== doctorId) ||
+        !['WAITING', 'HOLD'].includes(token.status)
+      ) return null;
+
+      const [updateResult] = await connection.execute(
+        `UPDATE \`tokens\`
+         SET status = 'CANCELLED'
+         WHERE id = ? AND clinic_id = ? AND session_id = ? AND status IN ('WAITING', 'HOLD')`,
+        [tokenId, clinicId, token.session_id]
+      );
+      if ((updateResult as any).affectedRows !== 1) return null;
+
+      await repositories.queueEvents.logEvent({
+        clinicId,
+        tokenId: token.id,
+        eventType: 'TOKEN_CANCELLED',
+        details: { tokenNumber: token.token_number, reason: 'PATIENT_NOT_PRESENT' },
+      });
+
+      return {
+        id: token.id,
+        tokenNumber: token.token_number,
+        patientName: token.patient_name,
+        status: 'CANCELLED',
       };
     });
   }

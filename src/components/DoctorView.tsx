@@ -8,7 +8,6 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  FileText,
   ChevronRight,
   TrendingUp,
   UserCheck,
@@ -17,13 +16,13 @@ import {
   Phone,
   Calendar,
   Eye,
-  Check,
   Volume2,
   Edit3,
   Scale,
   Thermometer,
   Save,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import { Clinic, TokenItem, QueueSession } from '../types/queue';
 import { db, doc, updateDoc, collection, setDoc } from '../lib/firebase';
@@ -48,10 +47,11 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   onGoogleSignIn,
 }) => {
   const isBasicPlan = clinic.featurePlan === 'BASIC';
-  const [doctorRxNotes, setDoctorRxNotes] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isPatientListOpen, setIsPatientListOpen] = useState(false);
+  const [isDeletingPatient, setIsDeletingPatient] = useState(false);
 
   // Doctor editing patient details state
   const [editingToken, setEditingToken] = useState<TokenItem | null>(null);
@@ -74,6 +74,27 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleDeleteConsultation = async (token: TokenItem) => {
+    if (!['WAITING', 'HOLD'].includes(token.status)) return;
+    if (!window.confirm(`Delete the consultation for ${token.patientName}?`)) return;
+
+    setIsDeletingPatient(true);
+    try {
+      const response = await fetch(`/api/staff/queue/${encodeURIComponent(token.id)}/cancel`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Unable to delete consultation.');
+      showToast(`Deleted consultation for ${token.patientName}.`);
+    } catch (error) {
+      console.error('Error deleting consultation:', error);
+      showToast('Unable to delete consultation. Please retry.');
+    } finally {
+      setIsDeletingPatient(false);
+    }
   };
 
   const openEditModal = (token: TokenItem) => {
@@ -180,9 +201,12 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
       }, 0) / waitingTokens.length).toFixed(1))
     : 0;
 
-  const totalPatientsToday = tokens.length;
+  const currentPatients = tokens.filter(t => t.status !== 'CANCELLED' && t.status !== 'NO_SHOW');
+  const totalPatientsToday = currentPatients.length;
   const tokenRevenue = tokens.reduce((total, token) => (
-    token.paymentStatus === 'PAID' ? total + Number(token.amountPaid || 0) : total
+    token.paymentStatus === 'PAID' && token.status !== 'CANCELLED' && token.status !== 'NO_SHOW'
+      ? total + Number(token.amountPaid || 0) - (token.paymentMode === 'PAY_NOW' ? 25 : 0)
+      : total
   ), 0);
   const totalRevenue = Number.isFinite(Number(clinic.revenueToday))
     ? Number(clinic.revenueToday)
@@ -204,13 +228,6 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, [activeToken]);
-
-  // Set prescription notes when active token changes
-  useEffect(() => {
-    if (activeToken) {
-      setDoctorRxNotes(activeToken.doctorNotes || '');
-    }
-  }, [activeToken?.id]);
 
   // Complete consultation and advance queue
   const handleCompleteConsultation = async () => {
@@ -234,7 +251,6 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ doctorNotes: doctorRxNotes }),
         });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || 'Unable to complete consultation.');
@@ -255,25 +271,9 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
         showToast('Consultation completed successfully.');
       }
 
-      setDoctorRxNotes('');
     } catch (err) {
       console.error('Failed to advance consultation queue:', err);
       showToast('Failed to advance queue. Please check the connection and try again.');
-    } finally {
-      setIsSavingNotes(false);
-    }
-  };
-
-  // Quick save prescription notes
-  const handleSaveNotes = async () => {
-    if (!activeToken) return;
-    setIsSavingNotes(true);
-    try {
-      await updateDoc(doc(db, 'tokens', activeToken.id), {
-        doctorNotes: doctorRxNotes,
-      });
-    } catch (err) {
-      console.error('Error saving notes:', err);
     } finally {
       setIsSavingNotes(false);
     }
@@ -402,7 +402,12 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
         </div>
 
         {/* Metric 1: Total Patients Today */}
-        <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 sm:p-5 shadow-lg">
+        <button
+          type="button"
+          onClick={() => setIsPatientListOpen(true)}
+          className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 text-left shadow-lg transition hover:border-blue-400/40 hover:bg-slate-800/80 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          title="View all patient details"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Patients</span>
             <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
@@ -420,7 +425,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
             <span>•</span>
             <span>{holdTokens.length} on hold</span>
           </div>
-        </div>
+        </button>
 
         {/* Metric 2: Current Running Token */}
         <div className="bg-gradient-to-br from-teal-950/40 to-slate-900 border border-teal-500/30 rounded-2xl p-4 sm:p-5 shadow-lg relative overflow-hidden">
@@ -541,31 +546,6 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                   </div>
                 </div>
 
-                {/* Doctor Prescription & Clinical Notes Box */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-teal-400" />
-                      Doctor's Clinical Notes / Rx Advice
-                    </label>
-                    <button
-                      onClick={handleSaveNotes}
-                      disabled={isSavingNotes}
-                      className="text-xs text-teal-400 hover:text-teal-300 flex items-center gap-1 font-medium"
-                    >
-                      <Check className="w-3 h-3" />
-                      <span>{isSavingNotes ? 'Saving...' : 'Save Draft'}</span>
-                    </button>
-                  </div>
-                  <textarea
-                    rows={4}
-                    value={doctorRxNotes}
-                    onChange={(e) => setDoctorRxNotes(e.target.value)}
-                    placeholder="Enter diagnosis, prescribed medicines, lab test orders, or follow-up dates..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono resize-none placeholder-slate-600"
-                  />
-                </div>
-
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <button
@@ -658,6 +638,64 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
 
         
       </div>
+
+      {isPatientListOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-blue-300">Today&apos;s queue</p>
+                <h2 className="mt-1 text-xl font-bold text-white">All patient details</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPatientListOpen(false)}
+                className="rounded-lg bg-slate-800 p-2 text-slate-400 transition hover:text-white"
+                aria-label="Close patient list"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 overflow-y-auto p-5">
+              {currentPatients.length > 0 ? currentPatients.map((token) => {
+                const canDelete = token.status === 'WAITING' || token.status === 'HOLD';
+                return (
+                  <div key={token.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold text-white">{token.patientName}</span>
+                        <span className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-400">
+                          {token.status.replaceAll('_', ' ')}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-400">
+                        #{token.tokenNumber} · {token.patientPhone}
+                        {token.patientAge ? ` · ${token.patientAge} years` : ''}
+                        {token.patientGender ? ` · ${token.patientGender}` : ''}
+                      </p>
+                    </div>
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteConsultation(token)}
+                        disabled={isDeletingPatient}
+                        className="flex shrink-0 items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-2 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/20 disabled:opacity-50"
+                        title="Delete consultation if patient did not arrive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                );
+              }) : (
+                <p className="py-8 text-center text-sm text-slate-400">No active patient records for today.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Doctor Full Patient & Symptoms Editor Modal */}
       {editingToken && (

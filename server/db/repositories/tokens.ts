@@ -153,7 +153,7 @@ export class TokenRepository extends BaseRepository<Token> {
          CASE WHEN payment_mode = 'PAY_NOW' THEN GREATEST(amount_paid - 25, 0) ELSE amount_paid END
          ELSE 0 END), 0) AS total
        FROM \`tokens\`
-       WHERE clinic_id = ? AND session_id = ?`,
+        WHERE clinic_id = ? AND session_id = ? AND status NOT IN ('CANCELLED', 'NO_SHOW')`,
       [clinicId, sessionId]
     );
     return Number(row?.total || 0);

@@ -470,6 +470,28 @@ app.post('/api/staff/queue/:tokenId/complete', async (req, res) => {
   }
 });
 
+app.delete('/api/staff/queue/:tokenId/cancel', async (req, res) => {
+  try {
+    const context = authContext(req);
+    if (!context || !context.clinicId || context.role !== 'DOCTOR') {
+      res.status(403).json({ error: 'Only the doctor can cancel a consultation.' });
+      return;
+    }
+    const token = await services.queue.cancelTokenForClinic(
+      String(req.params.tokenId || ''),
+      context.clinicId,
+      context.doctorId || undefined
+    );
+    if (!token) {
+      res.status(409).json({ error: 'Only waiting or held patients can be cancelled.' });
+      return;
+    }
+    res.status(200).json(token);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to cancel consultation.' });
+  }
+});
+
 app.post('/api/patient/book', async (req, res) => {
   try {
     const clientIp = req.ip || req.socket.remoteAddress || 'unknown';

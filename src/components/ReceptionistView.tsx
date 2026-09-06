@@ -144,7 +144,9 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const activeToken = tokens.find(t => t.status === 'SERVING');
+  const activeToken = tokens.find(t => (
+    t.status === 'CALLED' || t.status === 'SERVING' || t.status === 'IN_CONSULTATION'
+  ));
   const waitingTokens = tokens.filter(t => t.status === 'WAITING').sort((a, b) => {
     const pA = a.priority ?? 10;
     const pB = b.priority ?? 10;
@@ -493,6 +495,41 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
         </div>
       </div>
 
+      {/* Patient currently in the cabin */}
+      <div className="rounded-xl border border-teal-500/30 bg-teal-950/20 p-4 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-teal-300">In cabin now</p>
+            {activeToken ? (
+              <>
+                <h2 className="mt-1 text-lg font-bold text-white">{activeToken.patientName}</h2>
+                <p className="mt-1 text-xs text-slate-400">
+                  {activeToken.patientPhone}
+                  {activeToken.patientAge ? ` · ${activeToken.patientAge} years` : ''}
+                  {activeToken.patientGender ? ` · ${activeToken.patientGender}` : ''}
+                </p>
+              </>
+            ) : (
+              <h2 className="mt-1 text-lg font-semibold text-slate-300">No patient in cabin</h2>
+            )}
+          </div>
+          {activeToken && (
+            <div className="flex items-center gap-3">
+              <span className="rounded-lg border border-teal-500/40 bg-teal-500/10 px-3 py-2 text-center">
+                <span className="block text-[10px] uppercase tracking-wider text-teal-300">Token</span>
+                <span className="block text-xl font-black text-white">{activeToken.tokenNumber}</span>
+              </span>
+              <button
+                onClick={() => onViewTokenDetails(activeToken)}
+                className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-teal-400/50 hover:text-white"
+              >
+                View details
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Main control bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         
@@ -500,7 +537,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
         <button
           onClick={handleCallNextToken}
           disabled={isAdvancing || waitingTokens.length === 0}
-          className="col-span-2 sm:col-span-1 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold p-3 rounded-lg flex flex-col items-center justify-center text-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="col-span-2 min-h-20 sm:col-span-1 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold p-3.5 rounded-lg flex flex-col items-center justify-center text-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Play className="w-5 h-5 mb-1 text-slate-950" />
           <span className="text-xs font-bold">Call next</span>
@@ -512,7 +549,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
         {/* Button 2: Add Walk-In Patient */}
         <button
           onClick={onOpenAddWalkIn}
-          className="bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-semibold p-3 rounded-lg flex flex-col items-center justify-center text-center transition-colors"
+          className="min-h-20 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-semibold p-3.5 rounded-lg flex flex-col items-center justify-center text-center transition-colors"
         >
           <UserPlus className="w-5 h-5 mb-1 text-teal-400" />
           <span className="text-xs sm:text-sm">Add patient</span>
@@ -523,7 +560,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
         <button
           onClick={handleHoldActiveToken}
           disabled={!activeToken}
-          className="bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-semibold p-3 rounded-lg flex flex-col items-center justify-center text-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="min-h-20 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-semibold p-3.5 rounded-lg flex flex-col items-center justify-center text-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Pause className="w-5 h-5 mb-1 text-amber-400" />
           <span className="text-xs sm:text-sm">Hold patient</span>
@@ -533,7 +570,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
         {/* Button 4: Delay Broadcast */}
         <button
           onClick={onOpenDelayBroadcast}
-          className="bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-semibold p-3 rounded-lg flex flex-col items-center justify-center text-center transition-colors"
+          className="min-h-20 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-semibold p-3.5 rounded-lg flex flex-col items-center justify-center text-center transition-colors"
         >
           <Clock className="w-5 h-5 mb-1 text-slate-300" />
           <span className="text-xs sm:text-sm">Set delay</span>
