@@ -30,7 +30,6 @@ import { Clinic, TokenItem, QueueSession, DoctorStatus } from '../types/queue';
 import { db, doc, updateDoc } from '../lib/firebase';
 import { soundManager } from '../lib/audio';
 import { WhatsAppService } from '../lib/whatsappService';
-import { LiveOperationsCard } from './LiveOperationsCard';
 
 interface ReceptionistViewProps {
   clinic: Clinic;
@@ -379,7 +378,6 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
   if (isBasicPlan) {
     return (
       <div className="space-y-6 max-w-5xl mx-auto pb-12">
-        <LiveOperationsCard tokens={tokens} onSelectToken={onViewTokenDetails} />
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -452,8 +450,6 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
           <span>{toastMessage}</span>
         </div>
       )}
-
-      <LiveOperationsCard tokens={tokens} onSelectToken={onViewTokenDetails} />
 
       {/* Reception Queue Header Bar */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5">

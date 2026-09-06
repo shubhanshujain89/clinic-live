@@ -31,7 +31,6 @@ import type { User } from '../lib/firebase';
 import { soundManager } from '../lib/audio';
 import { WhatsAppService } from '../lib/whatsappService';
 import { getDoctorQueueAction } from './doctorQueueLogic';
-import { LiveOperationsCard } from './LiveOperationsCard';
 
 interface DoctorViewProps {
   clinic: Clinic;
@@ -343,7 +342,6 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   if (isBasicPlan) {
     return (
       <div className="space-y-6 max-w-5xl mx-auto pb-12">
-        <LiveOperationsCard tokens={tokens} onSelectToken={openEditModal} />
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -386,7 +384,6 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      <LiveOperationsCard tokens={tokens} onSelectToken={openEditModal} />
       {/* Metrics Row */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
 
