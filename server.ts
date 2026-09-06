@@ -154,7 +154,7 @@ const canAccessRecord = (context: AuthContext, record: Record<string, any>, tabl
 const canMutateGenericRecord = (context: AuthContext, table: string) => {
   if (context.role === 'SUPER_ADMIN') return true;
   if (context.role !== 'CLINIC_ADMIN') return false;
-  return !['sessions', 'queue_events', 'doctor_status'].includes(table);
+  return !['clinics', 'sessions', 'queue_events', 'doctor_status'].includes(table);
 };
 
 const prepareDatabaseMutation = (

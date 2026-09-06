@@ -1497,17 +1497,19 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2 text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none"
                 />
               </div>
-              <button
-                onClick={() => {
-                  setEditingClinic(null);
-                  setFormData({ name: '', address: '', phone: '+91 ', email: '', specializations: '', operatingHours: HOURS_OPTIONS[0], featurePlan: 'TRIAL', logo: '', qrCodeUrl: '' });
-                  setShowAddModal(true);
-                }}
-                className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-lg font-semibold hover:shadow-lg hover:shadow-emerald-500/50 flex items-center gap-2 transition"
-              >
-                <Plus className="w-5 h-5" />
-                Add Clinic
-              </button>
+              {isSiteAdmin && (
+                <button
+                  onClick={() => {
+                    setEditingClinic(null);
+                    setFormData({ name: '', address: '', phone: '+91 ', email: '', specializations: '', operatingHours: HOURS_OPTIONS[0], featurePlan: 'TRIAL', logo: '', qrCodeUrl: '' });
+                    setShowAddModal(true);
+                  }}
+                  className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-lg font-semibold hover:shadow-lg hover:shadow-emerald-500/50 flex items-center gap-2 transition"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add Clinic
+                </button>
+              )}
             </div>
 
             {loading ? (
