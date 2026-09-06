@@ -740,7 +740,7 @@ app.post('/api/auth/login', async (req, res) => {
     let accountClinicName = '';
     
     // Check super admin credentials
-    if (normalizedEmail === superAdminUsername && superAdminPassword && secureEqual(normalizedPassword, superAdminPassword)) {
+    if (normalizedEmail.toLowerCase() === superAdminUsername.trim().toLowerCase() && superAdminPassword && secureEqual(normalizedPassword, superAdminPassword)) {
       context = { userId: 'super-admin', role: 'SUPER_ADMIN', clinicId: null, doctorId: null, email: superAdminUsername };
       if (process.env.DEBUG_MODE === 'true') console.log('[LOGIN] Super admin authenticated');
     } else {
