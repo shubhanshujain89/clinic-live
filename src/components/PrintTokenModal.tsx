@@ -44,11 +44,6 @@ export const PrintTokenModal: React.FC<PrintTokenModalProps> = ({
             <div className="text-4xl font-black tracking-tight text-slate-950 mt-1">
               {token.tokenNumber}
             </div>
-            {token.isVip && (
-              <span className="text-[9px] font-bold bg-slate-900 text-white px-2 py-0.5 rounded mt-1 inline-block">
-                PRIORITY OVERRIDE
-              </span>
-            )}
           </div>
 
           <div className="border-t-2 border-b-2 border-dashed border-slate-300 py-2 text-[11px] text-left space-y-1">

@@ -2,15 +2,13 @@ import React, { useState } from 'react';
 import { 
   UserPlus, 
   IndianRupee, 
-  ShieldAlert, 
-  Sparkles, 
+  ShieldAlert,
   X,
   Scale,
   Thermometer,
-  Activity,
-  FileText
+  Activity
 } from 'lucide-react';
-import { Clinic, TokenItem, TokenType } from '../types/queue';
+import { Clinic, TokenItem } from '../types/queue';
 import { db, doc, setDoc } from '../lib/firebase';
 import { soundManager } from '../lib/audio';
 import { WhatsAppService } from '../lib/whatsappService';
@@ -31,21 +29,18 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
   const [patientPhone, setPatientPhone] = useState('');
   const [patientAge, setPatientAge] = useState('42');
   const [patientGender, setPatientGender] = useState<'Male' | 'Female' | 'Other'>('Male');
-  const [tokenType, setTokenType] = useState<TokenType>('WALK_IN');
-  const [isVip, setIsVip] = useState(false);
+  const [isEmergency, setIsEmergency] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'UPI' | 'CARD'>('CASH');
-  const [symptoms, setSymptoms] = useState('');
   
   // Optional Vitals & Reception Notes (with predefined units)
   const [weight, setWeight] = useState('');
   const [temperature, setTemperature] = useState('');
   const [bpSystolic, setBpSystolic] = useState('');
   const [bpDiastolic, setBpDiastolic] = useState('');
-  const [receptionNotes, setReceptionNotes] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const consultationFee = isVip ? 1000 : clinic.consultationFee || 750;
+  const consultationFee = clinic.consultationFee || 750;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +50,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
     try {
       const tokenId = 'tok_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
       const randSeq = Math.floor(Math.random() * 80) + 120;
-      const tokenNumber = isVip ? `VIP-${randSeq}` : `W-${randSeq}`;
+      const tokenNumber = isEmergency ? `E-${randSeq}` : `W-${randSeq}`;
 
       const formattedWeight = weight.trim() ? `${weight.trim()} kg` : undefined;
       const formattedTemp = temperature.trim() ? `${temperature.trim()} °F` : undefined;
@@ -76,11 +71,10 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
         patientPhone: patientPhone.trim(),
         patientAge: Number(patientAge) || 35,
         patientGender,
-        tokenType: isVip ? 'VIP' : tokenType,
+        tokenType: isEmergency ? 'EMERGENCY' : 'WALK_IN',
         status: 'WAITING',
-        isVip,
         isHold: false,
-        priority: isVip ? 1 : 10,
+        priority: isEmergency ? 1 : 10,
         amountPaid: consultationFee,
         paymentMethod,
         paymentStatus: 'PAID',
@@ -88,19 +82,16 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
         weight: formattedWeight,
         temperature: formattedTemp,
         bloodPressure: formattedBp,
-        triageNotes: receptionNotes.trim() || undefined,
         preConsultationNotes: {
-          symptoms: symptoms.trim() || 'General Consultation / Walk-in',
+          symptoms: 'General Consultation / Walk-in',
           duration: '1 day',
-          severity: isVip ? 'Severe' : 'Mild',
-          painScale: isVip ? 8 : 3,
+          severity: isEmergency ? 'Critical' : 'Mild',
+          painScale: isEmergency ? 9 : 3,
           weight: formattedWeight,
           temperature: formattedTemp,
           feverTemp: formattedTemp,
           bloodPressure: formattedBp,
           bpReading: formattedBp,
-          receptionNotes: receptionNotes.trim() || undefined,
-          triageNotes: receptionNotes.trim() || undefined,
           submittedAt: new Date().toISOString(),
           lastEditedBy: 'RECEPTIONIST',
         },
@@ -108,7 +99,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
 
       await setDoc(doc(db, 'tokens', tokenId), newToken);
 
-      if (isVip) {
+      if (isEmergency) {
         soundManager.playEmergencyChime();
       } else {
         soundManager.playChime();
@@ -136,7 +127,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-5 my-8">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full max-h-[calc(100vh-2rem)] overflow-y-auto p-4 sm:p-6 shadow-2xl space-y-5 my-2">
         
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div className="flex items-center space-x-2">
@@ -300,54 +291,18 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
             </div>
           </div>
 
-          {/* Optional Receptionist Triage Note */}
-          <div>
-            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-1 flex items-center justify-between">
-              <span className="flex items-center gap-1">
-                <FileText className="w-3.5 h-3.5 text-teal-400" />
-                Reception / Triage Note (Optional)
-              </span>
-              <span className="text-[10px] text-slate-500 font-normal">Internal triage memo</span>
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Patient feeling faint, prefers wheel-chair or seat near fan"
-              value={receptionNotes}
-              onChange={(e) => setReceptionNotes(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:ring-2 focus:ring-teal-500 focus:outline-none placeholder-slate-600"
-            />
-          </div>
-
-          {/* Symptoms */}
-          <div>
-            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-1">
-              Chief Complaint / Reason for Visit
-            </label>
-            <textarea
-              rows={2}
-              placeholder="E.g., Fever, acute cough, wound dressing, sugar checkup..."
-              value={symptoms}
-              onChange={(e) => setSymptoms(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:ring-2 focus:ring-teal-500 focus:outline-none resize-none placeholder-slate-600"
-            />
-          </div>
-
-          {/* VIP / Emergency Override Toggle */}
           <div className="bg-rose-950/20 border border-rose-500/30 rounded-2xl p-3 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <ShieldAlert className="w-4 h-4 text-rose-400" />
               <div>
-                <span className="text-xs font-bold text-white block">VIP / Emergency Priority</span>
-                <span className="text-[10px] text-slate-400">Pushes directly to #1 position in line</span>
+                <span className="text-xs font-bold text-white block">Emergency Priority</span>
+                <span className="text-[10px] text-slate-400">Moves the patient to the front of the queue</span>
               </div>
             </div>
             <input
               type="checkbox"
-              checked={isVip}
-              onChange={(e) => {
-                setIsVip(e.target.checked);
-                if (e.target.checked) setTokenType('VIP');
-              }}
+              checked={isEmergency}
+              onChange={(e) => setIsEmergency(e.target.checked)}
               className="w-5 h-5 rounded bg-slate-950 border-rose-500 text-rose-500 focus:ring-0 cursor-pointer"
             />
           </div>

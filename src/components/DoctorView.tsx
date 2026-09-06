@@ -574,9 +574,9 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                   <div>
                     <div className="flex items-center space-x-2">
                       <span className="text-xl font-bold text-white">{activeToken.patientName}</span>
-                      {activeToken.isVip && (
+                      {activeToken.isEmergency && (
                         <span className="px-2 py-0.5 rounded text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
-                          VIP / Emergency
+                          EMERGENCY
                         </span>
                       )}
                       <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700">
@@ -789,9 +789,9 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                     </div>
 
                     <div className="flex items-center space-x-2">
-                      {tok.isVip && (
+                      {tok.isEmergency && (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                          VIP
+                          EMERGENCY
                         </span>
                       )}
                       {tok.preConsultationNotes && (

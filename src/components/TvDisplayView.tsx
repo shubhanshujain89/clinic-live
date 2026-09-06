@@ -216,11 +216,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
                     </div>
 
                     <div className="text-right">
-                      <span className={`font-mono text-xl font-black px-3 py-1 rounded-xl border ${
-                        tok.isVip
-                          ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                          : 'bg-teal-950/40 text-teal-300 border-teal-500/30'
-                      }`}>
+                      <span className="font-mono text-xl font-black px-3 py-1 rounded-xl border bg-teal-950/40 text-teal-300 border-teal-500/30">
                         {tok.tokenNumber}
                       </span>
                     </div>

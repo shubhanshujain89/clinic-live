@@ -14,7 +14,7 @@ export interface ClinicPack {
 
 export type DoctorStatus = 'IN' | 'OUT';
 
-export type TokenType = 'ONLINE' | 'WALK_IN' | 'VIP';
+export type TokenType = 'ONLINE' | 'WALK_IN' | 'EMERGENCY';
 
 export type TokenStatus = 'WAITING' | 'CALLED' | 'IN_CONSULTATION' | 'SERVING' | 'COMPLETED' | 'HOLD' | 'NO_SHOW' | 'CANCELLED';
 
@@ -47,7 +47,7 @@ export interface TokenItem {
   id: string;
   clinicId: string;
   sessionId: string;
-  tokenNumber: string; // e.g. "A-101", "W-102", "VIP-01"
+  tokenNumber: string; // e.g. "A-101", "W-102", "E-01"
   sequenceNumber: number;
   patientId?: string;
   patientName: string;
@@ -56,7 +56,7 @@ export interface TokenItem {
   patientGender?: 'Male' | 'Female' | 'Other';
   tokenType: TokenType;
   status: TokenStatus;
-  isVip?: boolean;
+  isEmergency?: boolean;
   isHold?: boolean;
   priority?: number; // Lower number = higher priority
   amountPaid: number;
@@ -156,7 +156,7 @@ export interface QueueMetrics {
   totalCompleted: number;
   totalHold: number;
   totalNoShow: number;
-  totalVip: number;
+  totalEmergency: number;
   totalOnline: number;
   totalWalkIn: number;
   rollingAvgMinutes: number;
