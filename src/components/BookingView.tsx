@@ -44,7 +44,6 @@ export const BookingView: React.FC<BookingViewProps> = ({
   const [patientPhone, setPatientPhone] = useState('');
   const [patientAge, setPatientAge] = useState('34');
   const [patientGender, setPatientGender] = useState<'Male' | 'Female' | 'Other'>('Male');
-  const [primaryConcern, setPrimaryConcern] = useState('');
   const paymentsEnabled = false;
 
   // Primary Payment Mode: 'PAY_NOW' | 'PAY_AT_CLINIC'
@@ -86,7 +85,6 @@ export const BookingView: React.FC<BookingViewProps> = ({
         patientName: patientName.trim(),
         phone: patientPhone.trim(),
         age: Number(patientAge) || undefined,
-        reason: primaryConcern.trim() || undefined,
       }),
     });
     const payload = await response.json().catch(() => ({}));
@@ -178,16 +176,6 @@ export const BookingView: React.FC<BookingViewProps> = ({
           paymentMethod: isPaidOnline ? 'QR_BARCODE' : 'PAY_AT_CLINIC',
           paymentStatus: isPaidOnline ? 'PAID' : 'PAY_AT_CLINIC',
           createdAt: new Date().toISOString(),
-          preConsultationNotes: primaryConcern.trim()
-            ? {
-                symptoms: primaryConcern.trim(),
-                duration: '1-2 days',
-                severity: 'Mild',
-                painScale: 3,
-                submittedAt: new Date().toISOString(),
-                lastEditedBy: 'PATIENT',
-              }
-            : undefined,
           triageNotes: isPaidOnline && utrRefNumber.trim() ? `UPI UTR: ${utrRefNumber.trim()}` : undefined,
         };
 
@@ -255,7 +243,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
               Appointment Token Issued!
             </h2>
             <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-md mx-auto">
-              Real-time token updates & WhatsApp confirmation have been dispatched to{' '}
+              Your token confirmation has been generated for{' '}
               <span className="text-teal-300 font-semibold">{confirmedToken.patientPhone}</span>.
             </p>
           </div>
@@ -366,7 +354,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
 
               <div>
                 <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-1.5">
-                  WhatsApp Phone Number <span className="text-rose-400">*</span>
+                  Mobile Number <span className="text-rose-400">*</span>
                 </label>
                 <PhoneInput value={patientPhone} onChange={setPatientPhone} className="rounded-xl border-slate-800 bg-slate-950 text-xs text-slate-200" />
               </div>
@@ -400,18 +388,6 @@ export const BookingView: React.FC<BookingViewProps> = ({
               </div>
             </div>
 
-            <div>
-              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-1.5">
-                Primary Health Concern (Optional Symptoms Pre-Note)
-              </label>
-              <textarea
-                rows={2}
-                placeholder="Briefly state your symptoms (e.g. routine checkup, seasonal flu, fever, back pain)..."
-                value={primaryConcern}
-                onChange={(e) => setPrimaryConcern(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:ring-2 focus:ring-teal-500 focus:outline-none placeholder-slate-600 resize-none"
-              />
-            </div>
           </div>
 
           {/* Step 2: Payment Mode Selection (Pay Now vs Pay at Clinic) */}
@@ -773,7 +749,6 @@ export const BookingView: React.FC<BookingViewProps> = ({
           patientPhone={patientPhone}
           patientAge={patientAge}
           patientGender={patientGender}
-          primaryConcern={primaryConcern}
           amount={totalAmount}
           consultationFee={consultationFee}
           platformFee={platformFee}

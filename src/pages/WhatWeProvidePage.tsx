@@ -22,7 +22,7 @@ export const WhatWeProvidePage: React.FC<Props> = ({ onNavigate }) => {
     {
       icon: Heart,
       title: 'Patient Care Focus',
-      desc: 'WhatsApp notifications, appointment tracking, and streamlined symptom intake.'
+      desc: 'Live queue status, appointment tracking, and streamlined booking.'
     },
     {
       icon: Shield,
@@ -32,7 +32,7 @@ export const WhatWeProvidePage: React.FC<Props> = ({ onNavigate }) => {
     {
       icon: Phone,
       title: 'Multi-channel Communication',
-      desc: 'Automated WhatsApp, SMS, and in-app alerts keep everyone informed.'
+      desc: 'In-app queue alerts keep everyone informed.'
     },
     {
       icon: CheckCircle2,

@@ -45,7 +45,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
     {
       icon: Heart,
       title: 'Patient-first experience',
-      text: 'Give patients clarity, faster movement, and confidence with live wait updates and WhatsApp alerts.',
+      text: 'Give patients clarity, faster movement, and confidence with live wait updates.',
       tone: 'cyan',
     },
     {
@@ -295,7 +295,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
               {[
                 'No patient app downloads required',
                 'Real-time queue sync across reception, doctor, and waiting area',
-                'Instant WhatsApp updates when it is time to enter the clinic',
+                'Clear queue updates when it is time to enter the clinic',
                 'Multi-doctor support and live operational insights',
               ].map((item) => (
                 <div key={item} className="flex items-start gap-3 rounded-2xl border border-slate-700/50 bg-slate-900/50 p-3 text-slate-200">

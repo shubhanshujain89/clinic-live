@@ -32,7 +32,6 @@ interface PaymentGatewayPageProps {
   patientPhone: string;
   patientAge?: string;
   patientGender?: 'Male' | 'Female' | 'Other';
-  primaryConcern?: string;
   amount: number;
   consultationFee: number;
   platformFee: number;
@@ -285,7 +284,7 @@ export const PaymentGatewayPage: React.FC<PaymentGatewayPageProps> = ({
               Transaction ID: <span className="font-mono text-teal-300">{txId}</span>
             </p>
             <p className="text-xs text-slate-300">
-              Generating your live queue token and dispatching WhatsApp confirmation...
+              Generating your live queue token...
             </p>
           </div>
         ) : (

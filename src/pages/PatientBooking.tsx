@@ -46,7 +46,6 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
     patientName: '',
     phone: '',
     age: '',
-    symptoms: '',
   });
 
   useEffect(() => {
@@ -140,7 +139,6 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
           patientName: bookingData.patientName,
           phone: bookingData.phone,
           age: bookingData.age ? Number(bookingData.age) : undefined,
-          reason: bookingData.symptoms,
         }),
       });
       const responseText = await response.text();
@@ -177,7 +175,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
           <h1 className="text-3xl font-bold mb-2">Book Your Appointment</h1>
           <p className="text-slate-400">Quick and easy appointment scheduling</p>
         </div>
-        <div className="flex items-center justify-between mb-12">
+        <div className="flex items-center justify-between gap-1 mb-12">
           {['clinic', 'doctor', 'booking', 'confirm'].map((s, i) => (
             <React.Fragment key={s}>
               <div className={`flex flex-col items-center ${['clinic', 'doctor', 'booking', 'confirm'].indexOf(step) >= i ? 'opacity-100' : 'opacity-50'}`}>
@@ -195,7 +193,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
                   {s === 'confirm' && 'Confirmation'}
                 </span>
               </div>
-              {i < 3 && <div className={`flex-1 h-1 mx-4 ${['clinic', 'doctor', 'booking', 'confirm'].indexOf(step) > i ? 'bg-emerald-500' : 'bg-slate-700'}`} />}
+              {i < 3 && <div className={`flex-1 min-w-0 h-1 mx-0 mt-6 ${['clinic', 'doctor', 'booking', 'confirm'].indexOf(step) > i ? 'bg-emerald-500' : 'bg-slate-700'}`} />}
             </React.Fragment>
           ))}
         </div>
@@ -365,17 +363,6 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold mb-2">Short reason for visit (optional)</label>
-                <textarea
-                  value={bookingData.symptoms}
-                  onChange={(e) => setBookingData({ ...bookingData, symptoms: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none resize-none"
-                  rows={3}
-                  maxLength={240}
-                  placeholder="Brief reason for your visit"
-                />
-              </div>
             </div>
 
             <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">

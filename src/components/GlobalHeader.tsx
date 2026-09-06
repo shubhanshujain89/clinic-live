@@ -34,16 +34,16 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
         <div className="flex items-center justify-between gap-4">
           <button
             onClick={() => onNavigate('landing')}
-            className="flex items-center gap-3 group shrink-0"
+            className="flex min-w-0 items-center gap-3 group"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/40">
               <Heart className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition-transform" />
             </div>
-            <div className="text-left">
+            <div className="min-w-0 text-left">
               <h1 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">
                 {settings.siteName}
               </h1>
-              <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">{settings.siteTagline}</p>
+              <p className="truncate text-[10px] uppercase tracking-[0.18em] text-slate-400">{settings.siteTagline}</p>
             </div>
           </button>
 

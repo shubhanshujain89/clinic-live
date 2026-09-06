@@ -12,13 +12,13 @@ export const BenefitsPage: React.FC<Props> = ({ onNavigate }) => {
     'Streamline operations with smart queue orchestration',
     'Manage multi-clinic workflows from one unified dashboard',
     'Track performance with real-time analytics and reports',
-    'Reduce no-shows with automated WhatsApp reminders'
+    'Reduce no-shows with clear queue status updates'
   ];
 
   const patients = [
     'Book appointments anytime without login friction',
     'Receive transparent queue updates and accurate wait-time estimates',
-    'Get instant appointment status notifications through WhatsApp',
+    'Get instant appointment status notifications through the queue',
     'Reduce unnecessary travel time and improve clinic experience'
   ];
 
