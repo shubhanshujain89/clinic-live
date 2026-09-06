@@ -10,6 +10,10 @@ test('site admin route is allowed for super admins', () => {
   assert.equal(resolveAppPageForRoute('/site/admin', 'SUPER_ADMIN'), 'site-admin');
 });
 
+test('site admin route opens the dedicated admin login when unauthenticated', () => {
+  assert.equal(resolveAppPageForRoute('/site/admin', null), 'site-admin');
+});
+
 test('staff queue route stays outside the admin route', () => {
   assert.equal(resolveAppPageForRoute('/site/queue', 'STAFF'), 'clinic-queue');
   assert.equal(resolveAppPageForRoute('/site/queue', 'DOCTOR'), 'clinic-queue');

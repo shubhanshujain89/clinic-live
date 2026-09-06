@@ -30,7 +30,7 @@ export const resolveAppPageForRoute = (path: string, userRole?: string | null): 
     if (normalizedRole === 'SUPER_ADMIN') return 'site-admin';
     if (normalizedRole === 'CLINIC_ADMIN') return 'clinic-admin';
     if (normalizedRole === 'DOCTOR' || normalizedRole === 'STAFF') return 'clinic-queue';
-    return 'login';
+    return 'site-admin';
   }
 
   if (path === '/site/queue') {
@@ -87,8 +87,10 @@ export default function App() {
         const path = window.location.pathname;
         const isPublicPage = isPublicRoute(path);
         if (path === '/site/admin' || path === '/site/queue') {
-          setCurrentPage('login');
-          window.history.replaceState({}, '', '/site/login');
+          setCurrentPage(path === '/site/admin' ? 'site-admin' : 'login');
+          if (path === '/site/queue') {
+            window.history.replaceState({}, '', '/site/login');
+          }
         } else if (path === '/site/login' || path === '/login' || isPublicPage) {
           setCurrentPage(resolveAppPageForRoute(path, null));
         } else {
