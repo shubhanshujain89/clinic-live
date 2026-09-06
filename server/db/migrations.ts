@@ -83,8 +83,11 @@ export async function runMigrations(): Promise<void> {
 export async function runSeedData(): Promise<void> {
   console.log('🌱 Running seed data insertion...');
   const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD?.trim();
-  if (!superAdminPassword || superAdminPassword.length < 12) {
-    throw new Error('SUPER_ADMIN_PASSWORD must be configured with at least 12 characters before seeding.');
+  const adminPassword = process.env.CLINIC_ADMIN_PASSWORD?.trim();
+  const doctorPassword = process.env.DOCTOR_PASSWORD?.trim();
+  const staffPassword = process.env.STAFF_PASSWORD?.trim();
+  if ([superAdminPassword, adminPassword, doctorPassword, staffPassword].some((password) => !password || password.length < 12)) {
+    throw new Error('SUPER_ADMIN_PASSWORD, CLINIC_ADMIN_PASSWORD, DOCTOR_PASSWORD, and STAFF_PASSWORD must each be configured with at least 12 characters before seeding.');
   }
   
   const statements = splitSqlStatements(SEED_DATA_SQL);
@@ -95,10 +98,10 @@ export async function runSeedData(): Promise<void> {
 
     if (executableStatement.includes('INSERT IGNORE INTO staff_users')) {
       executableStatement = executableStatement
-        .replace('__SUPER_ADMIN_PASSWORD_HASH__', hashPassword(superAdminPassword))
-        .replace('__ADMIN_PASSWORD_HASH__', hashPassword('admin'))
-        .replace('__DOCTOR_PASSWORD_HASH__', hashPassword('doctor'))
-        .replace('__STAFF_PASSWORD_HASH__', hashPassword('staff'));
+        .replace('__SUPER_ADMIN_PASSWORD_HASH__', hashPassword(superAdminPassword!))
+        .replace('__ADMIN_PASSWORD_HASH__', hashPassword(adminPassword!))
+        .replace('__DOCTOR_PASSWORD_HASH__', hashPassword(doctorPassword!))
+        .replace('__STAFF_PASSWORD_HASH__', hashPassword(staffPassword!));
     }
     
     try {
@@ -107,8 +110,9 @@ export async function runSeedData(): Promise<void> {
 
       if (executableStatement.includes('INSERT IGNORE INTO staff_users')) {
         for (const account of [
-          { email: 'admin@clinic.local', password: 'admin' },
-          { email: 'staff@clinic.local', password: 'staff' },
+          { email: 'admin@clinic.local', password: adminPassword! },
+          { email: 'doctor@clinic.local', password: doctorPassword! },
+          { email: 'staff@clinic.local', password: staffPassword! },
         ]) {
           await executeQuery(
             'UPDATE `staff_users` SET password_hash = ? WHERE email = ?',

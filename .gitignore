@@ -1,11 +1,11 @@
 # Dependencies
 node_modules/
-package-lock.json
 bun.lock
 
 # Build outputs
 dist/
 build/
+*.js.map
 *.js
 *.jsx
 !server.ts

@@ -25,6 +25,7 @@ export const findUserByEmail = async (email: string) => {
     passwordHash: user.passwordHash,
     role: user.role,
     displayName: user.displayName,
+    status: user.status,
     clinicName: user.clinicName,
     accessStatus: user.accessStatus,
   };

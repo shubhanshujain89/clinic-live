@@ -5,7 +5,7 @@ A premium clinic queue and token management platform for doctors, reception team
 ## Quick Start - Local Development
 
 ### Prerequisites
-- Node.js 16+ 
+- Node.js 18+ (Node.js 20 LTS recommended)
 - npm or yarn
 
 ### Installation
@@ -16,7 +16,7 @@ git clone <repo-url>
 cd clinicflow-pro
 
 # Install dependencies
-npm install
+npm ci
 
 # Create .env file from example
 cp .env.example .env
@@ -34,27 +34,9 @@ npm run dev:server
 
 Visit `http://localhost:3000` in your browser.
 
-### Default Test Credentials
+### Seed Credentials
 
-Seed data requires `SUPER_ADMIN_PASSWORD` to be set to a strong password (at least 12 characters). Do not use a shared production password.
-
-```
-Email: superadmin@clinic.local
-Password: value configured in SUPER_ADMIN_PASSWORD
-Role: Super Administrator
-
-Email: admin@clinic.local
-Password: admin (development seed only)
-Role: Clinic Administrator
-
-Email: doctor@clinic.local
-Password: doctor
-Role: Doctor
-
-Email: staff@clinic.local
-Password: staff
-Role: Staff
-```
+Seeding requires unique passwords of at least 12 characters for `SUPER_ADMIN_PASSWORD`, `CLINIC_ADMIN_PASSWORD`, `DOCTOR_PASSWORD`, and `STAFF_PASSWORD`. Credentials are never stored in this repository.
 
 ## Production Build
 
@@ -76,6 +58,8 @@ npm run lint      # Verify code
 npm run build     # Create production build
 ```
 
+
+Database seeding requires unique passwords of at least 12 characters for `SUPER_ADMIN_PASSWORD`, `CLINIC_ADMIN_PASSWORD`, `DOCTOR_PASSWORD`, and `STAFF_PASSWORD`. Credentials are never stored in this repository.
 ### 2. Push to GitHub
 
 ```bash
@@ -107,7 +91,7 @@ git push origin main
    - **IMPORTANT**: Change default admin password before deploying
 
 3. **Build & Deploy**
-   - Set build command: `npm install && npm run build`
+   - Set build command: `npm ci && npm run build`
    - Set start command: `npm run start`
    - Enable automatic deployments on git push
 
@@ -138,13 +122,13 @@ clinicflow-pro/
 │   ├── lib/              # Utilities and services
 │   └── types/            # TypeScript types
 ├── server/               # Express backend
-│   └── db.ts            # SQLite database layer
+│   └── db/               # MySQL schema, migrations, repositories, and services
 ├── server.ts            # Express server entry point
 ├── index.html           # HTML template
 ├── vite.config.ts       # Vite configuration
 ├── tsconfig.json        # TypeScript configuration
 ├── package.json         # Dependencies
-└── data/                # SQLite database (generated)
+└── dist-server/         # Generated production server output
 ```
 
 ## Key Features
@@ -180,7 +164,7 @@ clinicflow-pro/
 
 - **Frontend**: React 19, TypeScript, Tailwind CSS, Vite
 - **Backend**: Express.js, Node.js
-- **Database**: SQLite (sql.js)
+- **Database**: MySQL 8+
 - **UI Components**: Lucide React icons
 - **Build Tool**: Vite 6.2.3
 - **Package Manager**: npm
@@ -192,19 +176,28 @@ See `.env.example` for complete configuration. Key variables:
 - `NODE_ENV` - Set to `production` for deployment
 - `PORT` - Server port (default: 3000)
 - `BACKEND_PORT` - API port (default: 4000)
-- `SUPER_ADMIN_PASSWORD` - Change this in production!
-- `DATABASE_PATH` - SQLite database file location
+- `SUPER_ADMIN_USERNAME` - Super-admin login email
+- `SUPER_ADMIN_PASSWORD` - Strong bootstrap password
+- `CLINIC_ADMIN_PASSWORD`, `DOCTOR_PASSWORD`, `STAFF_PASSWORD` - Seed account passwords
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` - MySQL connection settings
 
 ## Security Notes
 
 ⚠️ **IMPORTANT**: Before going live:
 
-1. Change default admin password in `.env`
+1. Change all seeded account passwords in the deployment environment
 2. Enable HTTPS on Hostinger
 3. Set `NODE_ENV=production`
 4. Disable debug mode (`DEBUG_MODE=false`)
 5. Use strong session secrets
-6. Regularly backup database file
+6. Regularly back up the MySQL database
+
+## Production Notes
+
+- The current session store is process-local. Deploy as a single application instance until sessions are moved to shared MySQL or Redis storage.
+- Run `npm run db:migrate` and `npm run db:seed` as a release step before the first start.
+- `npm run db:reset` and `npm run db:drop` are destructive commands and must never run against production data.
+- `npm test`, `npm run lint`, and `npm run build` are the required pre-deploy checks.
 
 ## Support & Issues
 

@@ -1,33 +1,12 @@
 import express from 'express';
 import path from 'path';
 import crypto from 'crypto';
-import net from 'net';
 import { getDatabase, readDoc, listQuery, writeDoc, updateDoc, deleteDoc, findUserByEmail, verifyPassword, createPublicBooking, getPublicTracking, resetUserPassword, extractTableName } from './server/db.js';
 import { repositories } from './server/db/repositories/index.js';
 import { services } from './server/db/services/index.js';
 
 const app = express();
-
-const getAvailablePort = async (preferredPort: number): Promise<number> => {
-  return new Promise((resolve, reject) => {
-    const tryPort = (port: number) => {
-      const tester = net.createServer();
-      tester.once('error', (error: NodeJS.ErrnoException) => {
-        if (error.code === 'EADDRINUSE') {
-          tryPort(port + 1);
-          return;
-        }
-        reject(error);
-      });
-      tester.once('listening', () => {
-        tester.close(() => resolve(port));
-      });
-      tester.listen(port, '0.0.0.0');
-    };
-
-    tryPort(preferredPort);
-  });
-};
+app.set('trust proxy', 1);
 
 const PORT = Number(process.env.BACKEND_PORT || process.env.PORT || 4000);
 
@@ -68,6 +47,14 @@ setInterval(() => {
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 30;
+
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
 
 function checkRateLimit(key: string, max = RATE_LIMIT_MAX): boolean {
   const now = Date.now();
@@ -131,6 +118,7 @@ const secureEqual = (left: string, right: string) => {
 
 const canAccessRecord = (context: AuthContext, record: Record<string, any>, table: string) => {
   if (context.role === 'SUPER_ADMIN') return true;
+  if (context.role === 'DOCTOR' && !['doctors', 'tokens', 'appointments', 'queue_events', 'doctor_status'].includes(table)) return false;
   const recordClinicId = table === 'clinics' ? record.id : (record.clinicId || record.clinic_id);
   if (!recordClinicId) return false;
   if (recordClinicId && recordClinicId !== context.clinicId) return false;
@@ -139,6 +127,12 @@ const canAccessRecord = (context: AuthContext, record: Record<string, any>, tabl
   }
   if (context.role === 'DOCTOR' && record.doctorId && record.doctorId !== context.doctorId) return false;
   return recordClinicId === context.clinicId;
+};
+
+const canMutateGenericRecord = (context: AuthContext, table: string) => {
+  if (context.role === 'SUPER_ADMIN') return true;
+  if (context.role !== 'CLINIC_ADMIN') return false;
+  return !['sessions', 'queue_events', 'doctor_status'].includes(table);
 };
 
 const prepareDatabaseMutation = (
@@ -587,6 +581,7 @@ app.post('/api/staff/queue/:clinicId/walk-in', async (req, res) => {
 
 app.get('/api/patient/track/:trackingId', async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 'no-store');
     const trackingId = String(req.params.trackingId || '');
     if (!/^[A-Za-z0-9_-]{12}$/.test(trackingId)) {
       res.status(404).json({ error: 'Tracking record not found.' });
@@ -603,26 +598,6 @@ app.get('/api/patient/track/:trackingId', async (req, res) => {
     });
   } catch (error) {
     res.status(503).json({ error: 'Connection temporarily unavailable.' });
-  }
-});
-
-app.get('/api/patient/track-by-phone', async (req, res) => {
-  try {
-    const phone = String(req.query.phone || '').trim();
-    const clinicId = String(req.query.clinicId || '').trim() || undefined;
-    const doctorId = String(req.query.doctorId || '').trim() || undefined;
-    if (!phone || phone.length > 30) {
-      res.status(400).json({ error: 'A valid mobile number is required.' });
-      return;
-    }
-    const tracking = await services.tracking.getPublicTrackingByPhone(phone, clinicId, doctorId);
-    if (!tracking) {
-      res.status(404).json({ error: 'No booking found for this mobile number today.' });
-      return;
-    }
-    res.status(200).json(tracking);
-  } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to load tracking.' });
   }
 });
 
@@ -726,10 +701,11 @@ app.post('/api/auth/login', async (req, res) => {
     if (process.env.DEBUG_MODE === 'true') console.log(`[LOGIN] Attempt: email=${normalizedEmail}, role=${normalizedRole}`);
 
     const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || '';
-    const superAdminUsername = process.env.SUPER_ADMIN_USERNAME || 'admin';
+    const superAdminUsername = process.env.SUPER_ADMIN_USERNAME || 'superadmin@clinic.local';
 
     let context: AuthContext | null = null;
     let accountAccessStatus = 'Granted';
+    let accountStatus = 'Active';
     let accountClinicName = '';
     
     // Check super admin credentials
@@ -742,6 +718,7 @@ app.post('/api/auth/login', async (req, res) => {
       
       if (account && verifyPassword(normalizedPassword, account.passwordHash)) {
         accountAccessStatus = account.accessStatus || 'Granted';
+        accountStatus = String(account.status || 'Active');
         accountClinicName = account.clinicName || '';
         const role = String(account.role || 'CLINIC_ADMIN').toUpperCase() as AuthContext['role'];
         if (['CLINIC_ADMIN', 'DOCTOR', 'STAFF', 'SUPER_ADMIN'].includes(role)) {
@@ -756,6 +733,10 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     if (context.role !== 'SUPER_ADMIN') {
+      if (!['active', 'enabled', 'granted'].includes(accountStatus.toLowerCase())) {
+        res.status(403).json({ error: 'Account is not active.' });
+        return;
+      }
       const clinicAccessStatus = await getClinicAccessStatus(context.clinicId, accountClinicName);
       if (['Hold', 'Denied'].includes(clinicAccessStatus) || ['Pending', 'Revoked'].includes(accountAccessStatus)) {
         res.status(403).json({ error: clinicAccessStatus === 'Denied' || accountAccessStatus === 'Revoked' ? 'Access denied.' : 'Clinic access is on hold.' });
@@ -1018,6 +999,10 @@ app.post('/api/db/doc', async (req, res) => {
 
     const context = (req as express.Request & { auth?: AuthContext }).auth;
     const table = tableForPath(documentPath);
+    if (context && !canMutateGenericRecord(context, table)) {
+      res.status(403).json({ error: 'This role cannot modify records through the generic data API.' });
+      return;
+    }
     const safeValue = context ? prepareDatabaseMutation(context, table, value || {}) : value || {};
     if (context && context.role !== 'SUPER_ADMIN' && !canAccessRecord(context, safeValue, table)) {
       res.status(403).json({ error: 'Access denied.' });
@@ -1051,6 +1036,10 @@ app.post('/api/db/doc/update', async (req, res) => {
     const context = (req as express.Request & { auth?: AuthContext }).auth;
     const current = await readDoc(documentPath);
     const table = tableForPath(documentPath);
+    if (context && !canMutateGenericRecord(context, table)) {
+      res.status(403).json({ error: 'This role cannot modify records through the generic data API.' });
+      return;
+    }
     const safeValue = context ? prepareDatabaseMutation(context, table, value || {}, current) : value || {};
     if (context && (!current || !canAccessRecord(context, { ...current, ...safeValue }, table))) {
       res.status(403).json({ error: 'Access denied.' });
@@ -1073,6 +1062,10 @@ app.post('/api/db/doc/delete', async (req, res) => {
 
     const context = (req as express.Request & { auth?: AuthContext }).auth;
     const current = await readDoc(documentPath);
+    if (context && !canMutateGenericRecord(context, tableForPath(documentPath))) {
+      res.status(403).json({ error: 'This role cannot modify records through the generic data API.' });
+      return;
+    }
     if (context && (!current || !canAccessRecord(context, current, tableForPath(documentPath)))) {
       res.status(403).json({ error: 'Access denied.' });
       return;
@@ -1188,12 +1181,18 @@ app.get('/api/queue-summary', async (req, res) => {
 // Site Settings API
 app.get('/api/site/settings', async (_req, res) => {
   try {
+    const publicSettingKeys = new Set([
+      'siteName', 'siteTagline', 'contactEmail', 'contactPhone', 'whatsappNumber',
+      'supportAddress', 'facebookUrl', 'instagramUrl', 'linkedinUrl', 'xUrl',
+      'youtubeUrl', 'freeTrialFormUrl', 'salesFormUrl', 'heroTitle', 'heroSubtitle',
+      'whatsappEnabled', 'clinicAccessLabel',
+    ]);
     const settings = await repositories.settings.findGlobal();
     const latestByKey = new Map<string, { value: string | null; updatedAt: Date }>();
 
     settings.forEach((setting) => {
       const key = normalizeSettingKey(setting.key || '');
-      if (!key) return;
+      if (!key || !publicSettingKeys.has(key)) return;
       const updatedAt = setting.updatedAt || new Date(0);
       const current = latestByKey.get(key);
       if (!current || updatedAt.getTime() > current.updatedAt.getTime()) {
@@ -1215,7 +1214,7 @@ app.get('/api/site/settings', async (_req, res) => {
 app.post('/api/site/settings', async (req, res) => {
   try {
     const context = authContext(req);
-    if (!context || !['SUPER_ADMIN', 'CLINIC_ADMIN'].includes(context.role)) {
+    if (!context || context.role !== 'SUPER_ADMIN') {
       res.status(401).json({ error: 'Authentication required.' });
       return;
     }
@@ -1261,7 +1260,7 @@ app.get('/api/site/content', async (_req, res) => {
 app.post('/api/site/content', async (req, res) => {
   try {
     const context = authContext(req);
-    if (!context || !['SUPER_ADMIN', 'CLINIC_ADMIN'].includes(context.role)) {
+    if (!context || context.role !== 'SUPER_ADMIN') {
       res.status(401).json({ error: 'Authentication required.' });
       return;
     }
@@ -1305,9 +1304,8 @@ app.use((err: any, _req: any, res: any, _next: any) => {
 });
 
 const startServer = async () => {
-  const availablePort = await getAvailablePort(PORT);
-  app.listen(availablePort, '0.0.0.0', () => {
-    console.log(`ClinicFlow Pro backend listening on port ${availablePort}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`ClinicFlow Pro backend listening on port ${PORT}`);
   });
 };
 

@@ -119,7 +119,8 @@ export class BookingService {
       const tokenId = crypto.randomUUID();
       const now = new Date();
 
-      // Get next token sequence atomically
+      // Serialize bookings for this clinic before calculating MAX + 1.
+      await connection.execute('SELECT id FROM `clinics` WHERE id = ? FOR UPDATE', [input.clinicId]);
       const dateStr = today.toISOString().split('T')[0];
       const [seqResult] = await connection.execute(
         `SELECT COALESCE(MAX(sequence_number), 0) as max_sequence
@@ -204,6 +205,7 @@ export class BookingService {
       const patientId = crypto.randomUUID();
       const tokenId = crypto.randomUUID();
       const now = new Date();
+      await connection.execute('SELECT id FROM `clinics` WHERE id = ? FOR UPDATE', [input.clinicId]);
       const dateStr = today.toISOString().split('T')[0];
       const [seqResult] = await connection.execute(
         `SELECT COALESCE(MAX(sequence_number), 0) as max_sequence

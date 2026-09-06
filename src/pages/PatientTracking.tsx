@@ -20,12 +20,8 @@ interface PatientTrackingProps {
 export const PatientTracking: React.FC<PatientTrackingProps> = ({ trackingId, onBack }) => {
   const [tracking, setTracking] = useState<TrackingData | null>(null);
   const [unavailable, setUnavailable] = useState(false);
-  const [phone, setPhone] = useState('');
+  const [lookupId, setLookupId] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const params = new URLSearchParams(window.location.search);
-  const clinicId = params.get('clinicId') || '';
-  const doctorId = params.get('doctorId') || '';
-
   useEffect(() => {
     if (!trackingId) return;
     let disposed = false;
@@ -54,16 +50,14 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ trackingId, on
     };
   }, [trackingId]);
 
-  const findBookingByPhone = async (event: React.FormEvent) => {
+  const findBooking = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!phone.trim()) return;
+    const normalizedId = lookupId.trim();
+    if (!normalizedId) return;
     setIsSearching(true);
     setUnavailable(false);
     try {
-      const query = new URLSearchParams({ phone: phone.trim() });
-      if (clinicId) query.set('clinicId', clinicId);
-      if (doctorId) query.set('doctorId', doctorId);
-      const response = await fetch(`/api/patient/track-by-phone?${query.toString()}`, { cache: 'no-store' });
+      const response = await fetch(`/api/patient/track/${encodeURIComponent(normalizedId)}`, { cache: 'no-store' });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'No booking found for this mobile number today.');
       setTracking(data as TrackingData);
@@ -85,16 +79,16 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ trackingId, on
           </div>
         )}
         {!trackingId && !tracking && (
-          <form onSubmit={findBookingByPhone} className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4">
+          <form onSubmit={findBooking} className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4">
             <div>
               <h1 className="text-2xl font-bold">Track your booking</h1>
-              <p className="mt-1 text-sm text-slate-400">Enter the mobile number used for today&apos;s booking.</p>
+              <p className="mt-1 text-sm text-slate-400">Enter the tracking ID from your booking confirmation.</p>
             </div>
             <input
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              placeholder="Mobile number"
-              inputMode="tel"
+              value={lookupId}
+              onChange={(event) => setLookupId(event.target.value)}
+              placeholder="Tracking ID"
+              autoComplete="off"
               className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white placeholder-slate-500 focus:border-teal-400 focus:outline-none"
             />
             <button

@@ -5,8 +5,8 @@
 **ClinicFlow Pro** is a clinic queue and token management platform built with React 19, Express.js, TypeScript, and MySQL.
 
 - **Repository**: GitHub (Ready for deployment)
-- **Status**: ✅ Production Ready
-- **Node Version**: 16+ required
+- **Status**: Single-instance deployment ready after environment and database setup
+- **Node Version**: 18+ required (20 LTS recommended)
 - **Build Status**: ✅ Passing (TypeScript strict mode)
 
 ---
@@ -29,13 +29,17 @@ Go to **Hosting → Environment Variables** and set:
 
 ```
 NODE_ENV=production
-PORT=<auto-assigned by Hostinger>
+PORT=<Hostinger-provided application port>
+BACKEND_PORT=<same port as PORT for the unified server>
 DB_HOST=<hostinger-mysql-host>
 DB_PORT=3306
 DB_USER=<hostinger-mysql-user>
 DB_PASSWORD=<strong-database-password>
 DB_NAME=<hostinger-mysql-database>
 SUPER_ADMIN_PASSWORD=<strong-bootstrap-password-at-least-12-characters>
+CLINIC_ADMIN_PASSWORD=<strong-seed-password-at-least-12-characters>
+DOCTOR_PASSWORD=<strong-seed-password-at-least-12-characters>
+STAFF_PASSWORD=<strong-seed-password-at-least-12-characters>
 ```
 
 ⚠️ **CRITICAL**: Change `SUPER_ADMIN_PASSWORD` to a strong, unique password before deploying!
@@ -54,7 +58,7 @@ Set in Hostinger deployment settings:
 
 **Build Command:**
 ```bash
-npm install && npm run build
+npm ci && npm run build
 ```
 
 **Start Command:**
@@ -62,7 +66,7 @@ npm install && npm run build
 npm run start
 ```
 
-**Build Directory:** `dist`
+**Build Output:** `dist/` and `dist-server/` (both are required by `npm run start`)
 
 **Root Directory:** `/`
 
@@ -109,7 +113,7 @@ clinicflow-pro/
 │   ├── lib/              # Utilities (Firebase API, auth, etc)
 │   └── types/            # TypeScript type definitions
 ├── server/
-│   └── db.ts             # MySQL database layer
+│   └── db/               # MySQL schema, repositories, and services
 ├── server.ts             # Express server
 ├── vite.config.ts        # Frontend build config
 ├── tsconfig.json         # TypeScript config
@@ -129,7 +133,7 @@ clinicflow-pro/
 ✅ **Patient Booking** - Appointment scheduling system
 ✅ **Payment Tracking** - Billing and subscription management
 ✅ **Responsive UI** - Mobile-friendly design
-✅ **Database Persistence** - SQLite with automatic backup
+✅ **Database Persistence** - MySQL with daily queue-data retention
 
 ---
 
@@ -146,26 +150,25 @@ clinicflow-pro/
 ## 📝 Important Notes
 
 ### Database
-- SQLite database stored at `data/clinicflow.sqlite`
-- Automatically created on first run
-- Persists between deployments on Hostinger
-- **Backup regularly** for production data
+- MySQL is configured with `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME`.
+- Run `npm run db:migrate` before the first deployment.
+- Queue and patient history older than the current day is automatically removed.
+- The current session store is process-local, so use one application instance until shared session storage is implemented.
+- Back up MySQL regularly for production data.
 
-### Default Accounts (Created Automatically)
-When the app starts, these demo accounts are created:
+### Seed Accounts
+When `npm run db:seed` is run, these accounts are created using environment passwords:
 
-| Email | Password | Role |
+| Email | Environment password | Role |
 |-------|----------|------|
-| admin@clinic.local | admin | CLINIC_ADMIN |
-| doctor@clinic.local | doctor | DOCTOR |
-| staff@clinic.local | staff | STAFF |
-| superadmin@clinic.local | admin | SUPER_ADMIN* |
+| admin@clinic.local | `CLINIC_ADMIN_PASSWORD` | CLINIC_ADMIN |
+| doctor@clinic.local | `DOCTOR_PASSWORD` | DOCTOR |
+| staff@clinic.local | `STAFF_PASSWORD` | STAFF |
+| superadmin@clinic.local | `SUPER_ADMIN_PASSWORD` | SUPER_ADMIN |
 
-*Super admin uses `SUPER_ADMIN_PASSWORD` from .env
 
 ### Ports
-- Frontend: 3000 (or auto-assigned by Hostinger)
-- Backend: 4000 (internal, not exposed)
+- Unified server: the exact `PORT` supplied by Hostinger
 - Single unified server running both
 
 ---
@@ -173,7 +176,7 @@ When the app starts, these demo accounts are created:
 ## 🔧 Troubleshooting
 
 ### Build Fails
-- Check Node.js version (must be 16+)
+- Check Node.js version (must be 18+)
 - Verify all dependencies: `npm list`
 - Check Hostinger build logs
 
@@ -184,13 +187,13 @@ When the app starts, these demo accounts are created:
 
 ### Login Issues
 - Verify credentials and environment variables
-- Check if database was initialized (look for `data/clinicflow.sqlite`)
+- Check that MySQL migrations completed successfully
 - Enable `DEBUG_MODE=true` temporarily for logs
 
 ### Database Errors
-- Ensure `DATABASE_PATH` is writable
-- Check available disk space on Hostinger
-- Verify SQLite file permissions
+- Verify MySQL host, credentials, database name, and permissions
+- Run `npm run db:migrate` from the release environment
+- Check available database connections and Hostinger logs
 
 ---
 
@@ -206,4 +209,4 @@ For issues:
 
 **Version**: 1.0.0  
 **Last Updated**: 2026-08-30  
-**Status**: ✅ Production Ready
+**Status**: Single-instance deployment ready; shared sessions are still required for horizontal scaling

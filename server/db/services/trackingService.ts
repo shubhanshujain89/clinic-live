@@ -19,30 +19,6 @@ export interface TrackingResult {
 }
 
 export class TrackingService {
-  async getPublicTrackingByPhone(phone: string, clinicId?: string, doctorId?: string): Promise<TrackingResult | null> {
-    const conditions = ['t.patient_phone = ?', 'DATE(t.created_at) = CURRENT_DATE()'];
-    const params: any[] = [phone];
-    if (clinicId) {
-      conditions.push('t.clinic_id = ?');
-      params.push(clinicId);
-    }
-    if (doctorId) {
-      conditions.push('t.doctor_id = ?');
-      params.push(doctorId);
-    }
-
-    const result = await executeQueryOne<{ tracking_id: string }>(
-      `SELECT p.tracking_id
-       FROM patients p
-       JOIN tokens t ON t.patient_id = p.id
-       WHERE ${conditions.join(' AND ')}
-       ORDER BY t.created_at DESC
-       LIMIT 1`,
-      params
-    );
-    return result ? this.getPublicTracking(result.tracking_id) : null;
-  }
-
   /**
    * Get public tracking information for a patient
    * This endpoint does NOT require authentication

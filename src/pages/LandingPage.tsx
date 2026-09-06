@@ -386,14 +386,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
             </div>
             <div className="flex flex-col items-stretch gap-3 sm:flex-row">
               <button
-                onClick={() => openForm(settings.freeTrialFormUrl, 'Free trial form')}
+                onClick={() => settings.freeTrialFormUrl.trim() ? openForm(settings.freeTrialFormUrl, 'Free trial form') : onNavigate('contact')}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 via-cyan-500 to-sky-500 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-[0_18px_60px_rgba(34,211,238,0.3)] transition hover:-translate-y-1"
               >
                 Start free trial
                 <ArrowRight className="h-4 w-4" />
               </button>
               <button
-                onClick={() => openForm(settings.salesFormUrl, 'Sales form')}
+                onClick={() => settings.salesFormUrl.trim() ? openForm(settings.salesFormUrl, 'Sales form') : onNavigate('contact')}
                 className="inline-flex items-center justify-center rounded-xl border border-slate-600 bg-slate-900/60 px-6 py-3.5 text-sm font-bold text-white transition hover:border-emerald-400/50 hover:bg-emerald-500/8"
               >
                 Talk to sales

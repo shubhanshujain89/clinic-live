@@ -14,6 +14,7 @@
     "build:frontend": "node ./node_modules/vite/bin/vite.js build",
     "build:server": "node ./node_modules/typescript/bin/tsc -p tsconfig.server.json && node -e \"require('fs').copyFileSync('server/package.json','dist-server/package.json')\"",
     "build": "npm run build:frontend && npm run build:server",
+    "test": "node --import tsx --test src/AppNew.routeAccess.test.ts src/components/doctorQueueLogic.test.ts src/pages/clinicAdminDashboardLogic.test.ts server/db/password.test.ts",
     "preview": "node ./node_modules/vite/bin/vite.js preview",
     "start": "node dist-server/server.js",
     "clean": "node -e \"const fs=require('fs');['dist','dist-server','server.js'].forEach((p)=>fs.existsSync(p)&&fs.rmSync(p,{recursive:true,force:true}))\"",
@@ -33,9 +34,13 @@
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "mysql2": "^3.11.0",
+    "qs": "6.16.0",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "vite": "^6.2.3"
+  },
+  "overrides": {
+    "qs": "6.16.0"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",

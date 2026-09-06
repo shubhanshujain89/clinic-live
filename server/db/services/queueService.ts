@@ -151,9 +151,10 @@ export class QueueService {
         `UPDATE \`tokens\`
          SET status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP
          WHERE clinic_id = ? AND session_id = ?
+           AND doctor_id = ?
            AND status IN ('CALLED', 'IN_CONSULTATION', 'SERVING')
            AND id <> ?`,
-        [clinicId, token.session_id, tokenId]
+        [clinicId, token.session_id, token.doctor_id, tokenId]
       );
 
       const [updateResult] = await connection.execute(
