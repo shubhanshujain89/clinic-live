@@ -88,7 +88,7 @@ export default function App() {
         const isPublicPage = isPublicRoute(path);
         if (path === '/site/admin' || path === '/site/queue') {
           setCurrentPage('login');
-          window.history.replaceState({}, '', '/login');
+          window.history.replaceState({}, '', '/site/login');
         } else if (path === '/site/login' || path === '/login' || isPublicPage) {
           setCurrentPage(resolveAppPageForRoute(path, null));
         } else {

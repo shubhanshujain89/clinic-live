@@ -248,7 +248,10 @@ export const signOut = async (_auth?: unknown) => {
 
 export const onAuthStateChanged = (_auth: unknown, callback: (user: User | null) => void) => {
   fetch('/api/auth/me', { credentials: 'include' })
-    .then(async (response) => response.ok ? (await response.json()).user : null)
+    .then(async (response) => {
+      if (!response.ok) return auth.currentUser;
+      return (await response.json()).user;
+    })
     .then((user) => {
       auth.currentUser = user;
       callback(user);
