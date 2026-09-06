@@ -18,6 +18,8 @@ export const auth: { currentUser: User | null } = {
   currentUser: null,
 };
 
+let authRequestVersion = 0;
+
 export const googleProvider = new GoogleAuthProvider();
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -212,6 +214,7 @@ export const signInWithPopup = async (_auth?: unknown, _provider?: unknown): Pro
 export const signInWithEmailAndPassword = async (_auth: unknown, email: string, password: string, role?: string, clinicId?: string) => {
   const normalizedEmail = String(email || '').trim();
   const normalizedPassword = String(password || '');
+  const requestVersion = ++authRequestVersion;
 
   const response = await fetch('/api/auth/login', {
     method: 'POST',
@@ -230,6 +233,9 @@ export const signInWithEmailAndPassword = async (_auth: unknown, email: string, 
   }
   if (!response.ok) throw new Error(payload.error || `Authentication failed (${response.status}).`);
   if (!payload.user) throw new Error('Authentication service returned an incomplete response.');
+  if (requestVersion !== authRequestVersion) {
+    return { user: auth.currentUser || payload.user };
+  }
   const user: User = { ...payload.user, displayName: payload.user.displayName || payload.user.email };
   auth.currentUser = user;
   return { user };
@@ -242,13 +248,16 @@ export const createUserWithEmailAndPassword = async (_auth: unknown, email: stri
 };
 
 export const signOut = async (_auth?: unknown) => {
+  authRequestVersion++;
   await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => undefined);
   auth.currentUser = null;
 };
 
 export const onAuthStateChanged = (_auth: unknown, callback: (user: User | null) => void) => {
+  const requestVersion = authRequestVersion;
   fetch('/api/auth/me', { credentials: 'include' })
     .then(async (response) => {
+      if (requestVersion !== authRequestVersion) return auth.currentUser;
       if (!response.ok) return auth.currentUser;
       return (await response.json()).user;
     })
