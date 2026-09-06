@@ -331,23 +331,13 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
   // Direct Call specific token right now
   const handleDirectCallToken = async (token: TokenItem) => {
     try {
-      if (activeToken && activeToken.id !== token.id) {
-        await updateDoc(doc(db, 'tokens', activeToken.id), {
-          status: 'COMPLETED',
-          completedAt: new Date().toISOString(),
-          consultationDurationSeconds: 450,
-        });
-      }
-
-      await updateDoc(doc(db, 'tokens', token.id), {
-        status: 'SERVING',
-        calledAt: new Date().toISOString(),
+      const response = await fetch(`/api/staff/queue/${encodeURIComponent(token.id)}/call`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
       });
-
-      await updateDoc(doc(db, 'clinics', clinic.id), {
-        currentRunningToken: token.tokenNumber,
-        currentRunningTokenId: token.id,
-      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Unable to call token.');
 
       soundManager.announceToken(token.tokenNumber, token.patientName, clinic.cabinNumber);
       await WhatsAppService.sendWhatsAppNotification(
