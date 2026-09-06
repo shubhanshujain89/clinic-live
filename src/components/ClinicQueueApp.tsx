@@ -118,13 +118,13 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
     };
 
     loadQueue();
-    const pollId = window.setInterval(loadQueue, 5000);
+    const pollId = window.setInterval(loadQueue, currentRole === 'TV_DISPLAY' ? 2000 : 5000);
     return () => {
       active = false;
       abortController.abort();
       window.clearInterval(pollId);
     };
-  }, [clinicId]);
+  }, [clinicId, currentRole]);
 
   const handleGoogleSignIn = async () => {
     try {
@@ -186,7 +186,7 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
               </div>
             </div>
             <div className="flex items-center gap-4">
-              {currentRole === 'DOCTOR' && (
+              {(currentRole === 'DOCTOR' || currentRole === 'RECEPTIONIST') && (
                 <button
                   onClick={handleToggleDoctorStatus}
                   className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${

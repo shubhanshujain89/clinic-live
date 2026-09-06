@@ -33,7 +33,9 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
   const prevTokenRef = useRef<string | null>(null);
 
-  const activeToken = tokens.find(t => t.status === 'SERVING');
+  const activeToken = tokens.find(t => (
+    t.status === 'CALLED' || t.status === 'SERVING' || t.status === 'IN_CONSULTATION'
+  ));
   const waitingTokens = tokens
     .filter(t => t.status === 'WAITING')
     .sort((a, b) => {
@@ -75,24 +77,24 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
   const isDoctorIn = clinic.doctorStatus === 'IN';
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950 text-white flex flex-col justify-between p-6 sm:p-10 lg:p-12 overflow-hidden select-none font-sans">
+    <div className="fixed inset-0 z-50 flex flex-col justify-between overflow-hidden bg-[radial-gradient(circle_at_15%_15%,rgba(20,184,166,0.16),transparent_28%),radial-gradient(circle_at_85%_85%,rgba(59,130,246,0.12),transparent_30%),#020817] p-4 text-white select-none sm:p-7 lg:p-9 font-sans">
       
       {/* Top TV Header Bar */}
-      <header className="flex items-center justify-between border-b border-slate-800/80 pb-6">
+      <header className="flex items-center justify-between border-b border-slate-800/80 pb-4 sm:pb-5">
         
         {/* Clinic Name & Doctor Details */}
-        <div className="flex items-center space-x-5">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-teal-400 to-emerald-400 p-1 shadow-xl shadow-teal-500/20 flex-shrink-0">
-            <div className="w-full h-full bg-slate-950 rounded-[12px] flex items-center justify-center">
-              <Stethoscope className="w-8 h-8 text-teal-400" />
+        <div className="flex min-w-0 items-center space-x-3 sm:space-x-4">
+          <div className="h-12 w-12 shrink-0 rounded-2xl bg-gradient-to-tr from-teal-400 to-emerald-400 p-1 shadow-xl shadow-teal-500/20 sm:h-14 sm:w-14">
+            <div className="flex h-full w-full items-center justify-center rounded-[12px] bg-slate-950">
+              <Stethoscope className="h-6 w-6 text-teal-400 sm:h-7 sm:w-7" />
             </div>
           </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
+          <div className="min-w-0">
+            <h1 className="truncate text-xl font-black tracking-tight text-white sm:text-2xl lg:text-3xl">
               ClinicFlow Pro
             </h1>
-            <div className="flex items-center space-x-3 mt-1 text-sm sm:text-base text-slate-400">
-              <span className="text-slate-300 font-semibold">{clinic.name}</span>
+            <div className="mt-1 flex items-center space-x-2 truncate text-xs text-slate-400 sm:space-x-3 sm:text-sm">
+              <span className="truncate font-semibold text-slate-300">{clinic.name}</span>
               <span>•</span>
               <span className="text-teal-300 font-bold">{clinic.doctorName}</span>
               <span>•</span>
@@ -105,7 +107,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
         <div className="flex items-center space-x-4 sm:space-x-6">
           
           {/* Doctor Status Banner */}
-          <div className={`px-4 sm:px-6 py-2 rounded-2xl border text-sm sm:text-base font-black flex items-center gap-3 shadow-lg ${
+          <div className={`hidden items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-black shadow-lg sm:flex sm:px-4 sm:text-sm ${
             isDoctorIn
               ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
               : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
@@ -158,30 +160,30 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
       </header>
 
       {/* Main Massive Center Display: Currently Serving */}
-      <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 my-auto items-center">
+      <main className="my-4 grid min-h-0 flex-1 grid-cols-1 items-stretch gap-5 lg:grid-cols-12 lg:gap-6">
         
         {/* Massive Center Token (Col Span 8) */}
-        <div className="lg:col-span-8 bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950/40 border-2 border-teal-500/40 rounded-[3rem] p-8 sm:p-12 lg:p-16 text-center shadow-2xl relative overflow-hidden">
+        <div className="relative flex min-h-[18rem] flex-col justify-center overflow-hidden rounded-[2rem] border-2 border-teal-400/50 bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950/50 p-6 text-center shadow-2xl sm:min-h-[24rem] sm:p-10 lg:col-span-8 lg:min-h-0 lg:p-12">
           <div className="absolute top-0 right-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
           {/* Serving Pill */}
-          <div className="inline-flex items-center space-x-2 px-6 py-2 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40 font-mono text-sm sm:text-base font-bold uppercase tracking-widest mb-4">
+          <div className="mx-auto inline-flex items-center space-x-2 rounded-full border border-teal-500/40 bg-teal-500/20 px-4 py-2 font-mono text-xs font-bold uppercase tracking-widest text-teal-300 sm:text-sm">
             <Activity className="w-4 h-4 animate-pulse" />
-            <span>NOW CONSULTING IN CABIN</span>
+            <span>{activeToken ? 'NOW SERVING' : 'NEXT PATIENT SOON'}</span>
           </div>
 
           {/* Massive Number */}
-          <div className="text-[7rem] sm:text-[10rem] lg:text-[13rem] font-black tracking-tighter text-white leading-none my-2 drop-shadow-[0_15px_30px_rgba(20,184,166,0.3)]">
+          <div className="my-2 text-[6rem] font-black leading-none tracking-tighter text-white drop-shadow-[0_15px_30px_rgba(20,184,166,0.3)] sm:text-[9rem] lg:text-[12rem]">
             {activeToken ? activeToken.tokenNumber : '---'}
           </div>
 
           {/* Patient Details */}
-          <div className="space-y-2 mt-4">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-teal-300">
+          <div className="mt-3 space-y-2">
+            <h2 className="text-2xl font-black text-teal-300 sm:text-3xl lg:text-4xl">
               {activeToken ? activeToken.patientName : 'Waiting for next patient'}
             </h2>
-            <p className="text-base sm:text-xl text-slate-400 font-medium">
-              Please proceed inside <span className="text-white font-bold">{clinic.cabinNumber}</span>
+            <p className="text-sm font-medium text-slate-400 sm:text-lg">
+              {activeToken ? <>Please go to <span className="font-bold text-white">{clinic.cabinNumber}</span></> : 'Please watch this screen for your token number'}
             </p>
           </div>
         </div>
@@ -190,10 +192,10 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
         <div className="lg:col-span-4 space-y-6">
           
           {/* Upcoming Tokens Box */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+          <div className="rounded-[2rem] border border-slate-700/80 bg-slate-900/90 p-4 shadow-xl sm:p-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <span className="text-sm sm:text-base font-black uppercase tracking-wider text-slate-300">
-                UPCOMING NEXT
+                NEXT PATIENTS
               </span>
               <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-teal-500/10 text-teal-300 border border-teal-500/20">
                 {waitingTokens.length} in queue
@@ -205,15 +207,15 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
                 waitingTokens.slice(0, 4).map((tok, idx) => (
                   <div
                     key={tok.id}
-                    className="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 flex items-center justify-between shadow"
+                    className="flex items-center justify-between rounded-2xl border border-slate-800/80 bg-slate-950 p-3 shadow sm:p-4"
                   >
                     <div className="flex items-center space-x-3">
                       <span className="w-8 h-8 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 font-bold text-xs flex items-center justify-center">
                         #{idx + 1}
                       </span>
                       <div>
-                        <div className="font-bold text-base text-white">{tok.patientName}</div>
-                        <div className="text-xs text-slate-500">{tok.tokenType}</div>
+                        <div className="font-bold text-sm text-white sm:text-base">{tok.patientName}</div>
+                        <div className="text-xs text-slate-500">Please be ready</div>
                       </div>
                     </div>
 
@@ -233,13 +235,13 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
           </div>
 
           {/* QR Code Tracker for Waiting Room Patients */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-slate-700/80 bg-slate-900/90 p-4">
             <div>
               <span className="text-xs font-black uppercase tracking-wider text-teal-400 block">
                 Track On Your Phone
               </span>
               <p className="text-xs text-slate-400 mt-1">
-                Scan this QR code to view real-time countdown & submit symptoms.
+                Scan to track your turn on your phone.
               </p>
             </div>
             
@@ -252,10 +254,10 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
       </main>
 
       {/* Bottom Signage Footer Ticker */}
-      <footer className="border-t border-slate-800/80 pt-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs sm:text-sm text-slate-400 font-medium">
+      <footer className="flex flex-col items-center justify-between gap-2 border-t border-slate-800/80 pt-3 text-[11px] font-medium text-slate-400 sm:flex-row sm:text-xs">
         <div className="flex items-center space-x-2">
           <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
-          <span>Live Queue Display System • Instant Cloud Synchronization</span>
+          <span>Live queue · Updates automatically</span>
         </div>
         <div>
           <span>Estimated Pacing: ~{clinic.avgConsultationMinutes || 8.5} mins/patient</span>

@@ -13,9 +13,7 @@ import {
   MessageSquare,
   Printer,
   ChevronRight,
-  Power,
   RotateCw,
-  Eye,
   Filter,
   MoreVertical,
   Volume2,
@@ -26,7 +24,7 @@ import {
   X,
   Save
 } from 'lucide-react';
-import { Clinic, TokenItem, QueueSession, DoctorStatus } from '../types/queue';
+import { Clinic, TokenItem, QueueSession } from '../types/queue';
 import { db, doc, updateDoc } from '../lib/firebase';
 import { soundManager } from '../lib/audio';
 import { WhatsAppService } from '../lib/whatsappService';
@@ -189,20 +187,6 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
     }
     return b.sequenceNumber - a.sequenceNumber;
   });
-
-  // Toggle Doctor Status IN / OUT
-  const handleToggleDoctorStatus = async () => {
-    const newStatus: DoctorStatus = clinic.doctorStatus === 'IN' ? 'OUT' : 'IN';
-    try {
-      await updateDoc(doc(db, 'clinics', clinic.id), {
-        doctorStatus: newStatus,
-      });
-      soundManager.playChime();
-      showToast(`Doctor status updated to ${newStatus === 'IN' ? '🟢 IN CABIN' : '🔴 OUT / STEPPED AWAY'}`);
-    } catch (err) {
-      console.error('Error toggling doctor status:', err);
-    }
-  };
 
   // Call Next Token
   const handleCallNextToken = async () => {
@@ -453,48 +437,6 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
         </div>
       )}
 
-      {/* Reception Queue Header Bar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          
-          <div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-lg sm:text-xl font-bold text-white">Reception desk</h1>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              <span className="text-slate-200 font-medium">{clinic.doctorName}</span> · {clinic.cabinNumber}
-              {clinic.delayMinutes > 0 && (
-                <span className="ml-2 text-amber-400 font-bold">
-                  • ⚠️ Running +{clinic.delayMinutes} mins delay
-                </span>
-              )}
-            </p>
-          </div>
-
-          {/* Quick Doctor Status Toggle on Reception Desk */}
-          <div className="flex items-center gap-3 bg-slate-950/60 p-2 rounded-lg border border-slate-800 self-start lg:self-auto">
-            <div className="text-right pr-1 hidden sm:block">
-              <div className="text-[11px] text-slate-400">Doctor Presence</div>
-              <div className={`text-xs font-bold ${clinic.doctorStatus === 'IN' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {clinic.doctorStatus === 'IN' ? 'IN CABIN' : 'AWAY / OUT'}
-              </div>
-            </div>
-
-            <button
-              onClick={handleToggleDoctorStatus}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
-                clinic.doctorStatus === 'IN'
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
-                  : 'bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30'
-              }`}
-            >
-              <Power className="w-3.5 h-3.5" />
-                <span>{clinic.doctorStatus === 'IN' ? 'Doctor in' : 'Doctor out'}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Patient currently in the cabin */}
       <div className="rounded-xl border border-teal-500/30 bg-teal-950/20 p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -580,48 +522,6 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
         </button>
 
       </div>
-
-      {/* Active Serving Banner (If Any) */}
-      {activeToken && (
-        <div className="bg-slate-900 border border-teal-500/30 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center space-x-4">
-            <div className="w-11 h-11 rounded-lg bg-teal-500 flex items-center justify-center text-slate-950 font-bold text-lg flex-shrink-0">
-              {activeToken.tokenNumber}
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-teal-400">Currently Inside Cabin</span>
-              </div>
-              <h3 className="text-lg font-bold text-white mt-0.5">{activeToken.patientName}</h3>
-              <p className="text-xs text-slate-400">{activeToken.patientPhone} • {activeToken.tokenType}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2 self-end sm:self-auto">
-            <button
-              onClick={() => onViewTokenDetails(activeToken)}
-              className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 flex items-center gap-1.5"
-            >
-              <Eye className="w-3.5 h-3.5 text-teal-400" />
-              <span>Intake Notes</span>
-            </button>
-            <button
-              onClick={() => onPrintTokenSlip(activeToken)}
-              className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 flex items-center gap-1.5"
-            >
-              <Printer className="w-3.5 h-3.5 text-teal-400" />
-              <span>Print Slip</span>
-            </button>
-            <button
-              onClick={handleHoldActiveToken}
-              className="px-3 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-xs font-bold text-amber-300 border border-amber-500/30 flex items-center gap-1"
-            >
-              <Pause className="w-3.5 h-3.5" />
-              <span>Hold</span>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Merged Queue Center (Tabs + Table) */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
