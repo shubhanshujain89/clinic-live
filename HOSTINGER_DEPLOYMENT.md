@@ -37,6 +37,7 @@ DB_USER=<hostinger-mysql-user>
 DB_PASSWORD=<strong-database-password>
 DB_NAME=<hostinger-mysql-database>
 SUPER_ADMIN_PASSWORD=<strong-bootstrap-password-at-least-12-characters>
+SUPER_ADMIN_USERNAME=<unique-production-super-admin-email>
 CLINIC_ADMIN_PASSWORD=<strong-seed-password-at-least-12-characters>
 DOCTOR_PASSWORD=<strong-seed-password-at-least-12-characters>
 STAFF_PASSWORD=<strong-seed-password-at-least-12-characters>
@@ -47,13 +48,12 @@ STAFF_PASSWORD=<strong-seed-password-at-least-12-characters>
 Optional variables:
 ```
 DEBUG_MODE=false
-SUPER_ADMIN_USERNAME=superadmin@your-domain.example
 SESSION_SECRET=<long-random-secret>
 SESSION_MAX_AGE=28800
 TRUST_PROXY=true
 ```
 
-`SUPER_ADMIN_USERNAME` must not reuse a clinic account such as `admin@clinic.local`. The seeded clinic administrator remains a `CLINIC_ADMIN`; use a separate super-admin identity such as `superadmin@your-domain.example`.
+`SUPER_ADMIN_USERNAME` must not reuse a clinic account such as `admin@clinic.local`. The seeded clinic administrator remains a `CLINIC_ADMIN`; use a separate production super-admin identity.
 
 ### Step 3: Build Configuration
 
@@ -161,7 +161,7 @@ clinicflow-pro/
 - Back up MySQL regularly for production data.
 
 ### Seed Accounts
-When `npm run db:seed` is run, these accounts are created using environment passwords:
+`npm run db:seed` is restricted to disposable non-production databases. It inserts demo accounts and must not be run against production.
 
 | Email | Environment password | Role |
 |-------|----------|------|

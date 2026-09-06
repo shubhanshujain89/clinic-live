@@ -133,6 +133,9 @@ export async function runMigrations(): Promise<void> {
  * Run seed data insertion
  */
 export async function runSeedData(): Promise<void> {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Refusing to seed production data. Run the seed command only against a disposable non-production database.');
+  }
   console.log('🌱 Running seed data insertion...');
   const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD?.trim();
   const adminPassword = process.env.CLINIC_ADMIN_PASSWORD?.trim();

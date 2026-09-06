@@ -850,7 +850,7 @@ app.post('/api/auth/login', async (req, res) => {
     const normalizedRole = String(requestedRole).toUpperCase();
     
     const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || '';
-    const superAdminUsername = process.env.SUPER_ADMIN_USERNAME || 'superadmin@clinic.local';
+    const superAdminUsername = process.env.SUPER_ADMIN_USERNAME || (process.env.NODE_ENV === 'production' ? '' : 'superadmin@clinic.local');
 
     let context: AuthContext | null = null;
     let accountAccessStatus = 'Granted';
