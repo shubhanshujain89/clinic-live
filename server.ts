@@ -35,6 +35,18 @@ const sessions = new Map<string, AuthContext & { createdAt: number }>();
 
 const databaseReady = getDatabase();
 
+const runQueueRetention = async () => {
+  try {
+    await services.retention.removeExpiredQueueData();
+  } catch (error) {
+    console.error('Queue retention cleanup failed:', error);
+  }
+};
+
+setInterval(() => {
+  void runQueueRetention();
+}, 60 * 60 * 1000);
+
 type AuthContext = {
   userId: string;
   role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'STAFF';
@@ -351,6 +363,7 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
         whatsappNotificationsEnabled: clinic.whatsappNotificationsEnabled,
         hasPaymentGateway: clinic.hasPaymentGateway,
         clinicUpiId: clinic.clinicUpiId || '',
+        qrCodeUrl: clinic.qrCodeUrl || '',
       },
       session: session ? {
         id: session.id,
@@ -590,6 +603,26 @@ app.get('/api/patient/track/:trackingId', async (req, res) => {
     });
   } catch (error) {
     res.status(503).json({ error: 'Connection temporarily unavailable.' });
+  }
+});
+
+app.get('/api/patient/track-by-phone', async (req, res) => {
+  try {
+    const phone = String(req.query.phone || '').trim();
+    const clinicId = String(req.query.clinicId || '').trim() || undefined;
+    const doctorId = String(req.query.doctorId || '').trim() || undefined;
+    if (!phone || phone.length > 30) {
+      res.status(400).json({ error: 'A valid mobile number is required.' });
+      return;
+    }
+    const tracking = await services.tracking.getPublicTrackingByPhone(phone, clinicId, doctorId);
+    if (!tracking) {
+      res.status(404).json({ error: 'No booking found for this mobile number today.' });
+      return;
+    }
+    res.status(200).json(tracking);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to load tracking.' });
   }
 });
 
@@ -1278,7 +1311,10 @@ const startServer = async () => {
   });
 };
 
-databaseReady.then(() => startServer()).catch((error) => {
+databaseReady.then(async () => {
+  await runQueueRetention();
+  startServer();
+}).catch((error) => {
   console.error('Failed to start backend server:', error);
   process.exit(1);
 });

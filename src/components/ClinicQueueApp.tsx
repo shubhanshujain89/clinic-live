@@ -245,6 +245,19 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
           )}
         </main>
 
+        <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-800/80 bg-slate-950/70 px-4 py-2 text-[10px] text-slate-500 sm:px-6 lg:px-8">
+          <span>ClinicFlow Pro · {clinic.name}</span>
+          <a
+            href="https://ybgp.in"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-right text-teal-300 transition hover:text-teal-200"
+          >
+            <span className="block font-semibold text-slate-400">Looking to Grow Your Business?</span>
+            <span className="block font-bold">YBGP &mdash; Your Business Growth Partner &rarr;</span>
+          </a>
+        </footer>
+
         {/* Modals */}
         {isAddPatientOpen && (
           <AddPatientModal

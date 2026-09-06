@@ -49,6 +49,7 @@ export const resolveAppPageForRoute = (path: string, userRole?: string | null): 
   if (path === '/site/login') return 'login';
 
   if (path.startsWith('/track/')) return 'patient-tracking';
+  if (path === '/track') return 'patient-tracking';
   if (path === '/booking') return 'patient-booking';
   if (path === '/login') return 'login';
   if (path === '/what-we-provide') return 'what-we-provide';
@@ -59,7 +60,7 @@ export const resolveAppPageForRoute = (path: string, userRole?: string | null): 
 };
 
 const isPublicRoute = (path: string) => {
-  return path === '/login' || path === '/booking' || path.startsWith('/track/') || path === '/what-we-provide' || path === '/why-choose-us' || path === '/benefits' || path === '/contact';
+  return path === '/login' || path === '/booking' || path === '/track' || path.startsWith('/track/') || path === '/what-we-provide' || path === '/why-choose-us' || path === '/benefits' || path === '/contact';
 };
 
 export default function App() {
@@ -459,8 +460,8 @@ export default function App() {
           <PatientBooking onBack={() => handleNavigate('landing')} />
         )}
 
-        {currentPage === 'patient-tracking' && trackingId && (
-          <PatientTracking trackingId={trackingId} onBack={() => handleNavigate('landing')} />
+        {currentPage === 'patient-tracking' && (
+          <PatientTracking trackingId={trackingId || undefined} onBack={() => handleNavigate('landing')} />
         )}
 
         {/* Clinic Queue App (for doctors and staff) */}

@@ -28,7 +28,12 @@ interface PatientBookingProps {
 }
 
 export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
-  const [step, setStep] = useState<'clinic' | 'doctor' | 'booking' | 'confirm'>('clinic');
+  const bookingParams = new URLSearchParams(window.location.search);
+  const linkedClinicId = bookingParams.get('clinicId') || '';
+  const linkedDoctorId = bookingParams.get('doctorId') || '';
+  const [step, setStep] = useState<'clinic' | 'doctor' | 'booking' | 'confirm'>(
+    linkedClinicId && linkedDoctorId ? 'booking' : 'clinic'
+  );
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +60,32 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
       const response = await fetch('/api/clinics');
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'Unable to load clinics.');
-      setClinics((payload || []) as Clinic[]);
+      const clinicList = (payload || []) as Clinic[];
+      setClinics(clinicList);
+
+      if (linkedClinicId && linkedDoctorId) {
+        const linkedClinic = clinicList.find((clinic) => clinic.id === linkedClinicId);
+        if (linkedClinic) {
+          const doctorsResponse = await fetch(`/api/clinics/${encodeURIComponent(linkedClinic.id)}/doctors`);
+          const doctorsPayload = await doctorsResponse.json();
+          if (doctorsResponse.ok) {
+            const doctorList = (doctorsPayload || []) as Doctor[];
+            const linkedDoctor = doctorList.find((doctor) => doctor.id === linkedDoctorId);
+            setSelectedClinic(linkedClinic);
+            setDoctors(doctorList);
+            if (linkedDoctor) {
+              setSelectedDoctor(linkedDoctor);
+              setStep('booking');
+            } else {
+              setStep('doctor');
+            }
+          } else {
+            setStep('doctor');
+          }
+        } else {
+          setStep('clinic');
+        }
+      }
       setLoading(false);
     } catch (error) {
       console.error('Error fetching clinics:', error);

@@ -8,7 +8,7 @@ import {
   Activity,
   Clock,
   Stethoscope,
-  Smartphone
+  Barcode
 } from 'lucide-react';
 import { Clinic, TokenItem, QueueSession } from '../types/queue';
 import { soundManager } from '../lib/audio';
@@ -230,18 +230,25 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
 
         {/* Phone Tracking Side Card */}
         <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-slate-700/80 bg-slate-900/90 p-4 lg:col-span-12 xl:col-span-2 xl:flex-col xl:items-center xl:justify-center xl:text-center">
+          <a
+            href={`/booking?clinicId=${encodeURIComponent(clinic.id)}&doctorId=${encodeURIComponent(clinic.doctorId || '')}`}
+            className="block"
+            title="Open booking page for this clinic and doctor"
+          >
           <div>
             <span className="block text-xs font-black uppercase tracking-wider text-teal-400">
-              Patient help
+              Scan to track your status
             </span>
-            <p className="mt-1 text-xs text-slate-400">
-              Keep your token ready. Reception can help you track your turn.
-            </p>
           </div>
 
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-teal-500/30 bg-teal-500/10 text-teal-300 xl:mt-4">
-            <Smartphone className="h-8 w-8" />
+          <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-2xl border border-teal-500/30 bg-teal-500/10 text-teal-300 xl:mt-4">
+            {clinic.qrCodeUrl ? (
+              <img src={clinic.qrCodeUrl} alt="Scan to track your status" className="h-full w-full rounded-xl object-contain" />
+            ) : (
+              <Barcode className="h-10 w-16" />
+            )}
           </div>
+          </a>
         </div>
       </main>
 

@@ -90,6 +90,7 @@ interface Clinic {
     expiryDate: string;
   } | null;
   logo?: string;
+  qrCodeUrl?: string;
   createdAt: string;
 }
 
@@ -127,7 +128,8 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     specializations: '',
     operatingHours: HOURS_OPTIONS[0],
     featurePlan: 'TRIAL' as FeaturePlan,
-    logo: ''
+    logo: '',
+    qrCodeUrl: ''
   });
   const [billingTab, setBillingTab] = useState<'overview' | 'add-payment'>('overview');
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
@@ -750,6 +752,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         specializations: formData.specializations.split(',').map(s => s.trim()).filter(Boolean),
         operatingHours: formData.operatingHours,
         logo: formData.logo || '',
+        qrCodeUrl: resolvedMode === 'site-admin' ? formData.qrCodeUrl.trim() : editingClinic?.qrCodeUrl || '',
         updatedAt: new Date().toISOString(),
       };
 
@@ -771,7 +774,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       }
       setShowAddModal(false);
       setEditingClinic(null);
-      setFormData({ name: '', address: '', phone: '+91 ', email: '', specializations: '', operatingHours: HOURS_OPTIONS[0], featurePlan: 'TRIAL', logo: '' });
+      setFormData({ name: '', address: '', phone: '+91 ', email: '', specializations: '', operatingHours: HOURS_OPTIONS[0], featurePlan: 'TRIAL', logo: '', qrCodeUrl: '' });
       fetchClinics();
     } catch (error) {
       console.error('Error saving clinic:', error);
@@ -907,7 +910,8 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       specializations: Array.isArray(clinic.specializations) ? clinic.specializations.join(', ') : (typeof clinic.specializations === 'string' ? clinic.specializations : ''),
       operatingHours: clinic.operatingHours || HOURS_OPTIONS[0],
       featurePlan: clinic.featurePlan || 'TRIAL',
-      logo: clinic.logo || ''
+      logo: clinic.logo || '',
+      qrCodeUrl: clinic.qrCodeUrl || ''
     });
     setShowAddModal(true);
   };
@@ -1496,7 +1500,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
               <button
                 onClick={() => {
                   setEditingClinic(null);
-                  setFormData({ name: '', address: '', phone: '+91 ', email: '', specializations: '', operatingHours: HOURS_OPTIONS[0], featurePlan: 'TRIAL', logo: '' });
+                  setFormData({ name: '', address: '', phone: '+91 ', email: '', specializations: '', operatingHours: HOURS_OPTIONS[0], featurePlan: 'TRIAL', logo: '', qrCodeUrl: '' });
                   setShowAddModal(true);
                 }}
                 className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-lg font-semibold hover:shadow-lg hover:shadow-emerald-500/50 flex items-center gap-2 transition"
@@ -2245,6 +2249,20 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                 )}
               </div>
 
+              {resolvedMode === 'site-admin' && (
+                <div>
+                  <label className="block text-sm font-semibold mb-2">TV Booking Barcode URL</label>
+                  <input
+                    type="url"
+                    value={formData.qrCodeUrl}
+                    onChange={(e) => setFormData({ ...formData, qrCodeUrl: e.target.value })}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                    placeholder="https://... or image data URL"
+                  />
+                  <p className="mt-1 text-xs text-slate-400">Shown on this clinic&apos;s TV display. Leave blank to use the placeholder.</p>
+                </div>
+              )}
+
             </div>
 
             <div className="flex gap-3 mt-8">
@@ -2252,7 +2270,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                 onClick={() => {
                   setShowAddModal(false);
                   setEditingClinic(null);
-                  setFormData({ name: '', address: '', phone: '+91 ', email: '', specializations: '', operatingHours: HOURS_OPTIONS[0], featurePlan: 'TRIAL', logo: '' });
+                  setFormData({ name: '', address: '', phone: '+91 ', email: '', specializations: '', operatingHours: HOURS_OPTIONS[0], featurePlan: 'TRIAL', logo: '', qrCodeUrl: '' });
                 }}
                 className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition"
               >
