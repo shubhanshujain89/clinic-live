@@ -4,6 +4,7 @@ bun.lock
 
 # Build outputs
 dist/
+dist-server/
 build/
 *.js.map
 *.js
