@@ -499,6 +499,107 @@ app.post('/api/staff/queue/:tokenId/complete', async (req, res) => {
   }
 });
 
+const queueMutationContext = (req: express.Request, res: express.Response) => {
+  const context = authContext(req);
+  if (!context || !context.clinicId || !['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'STAFF'].includes(context.role)) {
+    res.status(403).json({ error: 'Queue access denied.' });
+    return null;
+  }
+  return context;
+};
+
+app.post('/api/staff/queue/:tokenId/hold', async (req, res) => {
+  try {
+    const context = queueMutationContext(req, res);
+    if (!context) return;
+    const token = await services.queue.holdTokenForClinic(String(req.params.tokenId || ''), context.clinicId!, context.role === 'DOCTOR' ? context.doctorId || undefined : undefined);
+    if (!token) {
+      res.status(409).json({ error: 'Only an active consultation can be put on hold.' });
+      return;
+    }
+    res.status(200).json(token);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to hold token.' });
+  }
+});
+
+app.post('/api/staff/queue/:tokenId/resume', async (req, res) => {
+  try {
+    const context = queueMutationContext(req, res);
+    if (!context) return;
+    const token = await services.queue.resumeTokenForClinic(String(req.params.tokenId || ''), context.clinicId!, context.role === 'DOCTOR' ? context.doctorId || undefined : undefined);
+    if (!token) {
+      res.status(409).json({ error: 'Only a held token can be resumed.' });
+      return;
+    }
+    res.status(200).json(token);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to resume token.' });
+  }
+});
+
+app.post('/api/staff/queue/:tokenId/emergency', async (req, res) => {
+  try {
+    const context = queueMutationContext(req, res);
+    if (!context) return;
+    const token = await services.queue.promoteEmergencyForClinic(String(req.params.tokenId || ''), context.clinicId!, context.role === 'DOCTOR' ? context.doctorId || undefined : undefined);
+    if (!token) {
+      res.status(409).json({ error: 'Only waiting or held tokens can be made emergency priority.' });
+      return;
+    }
+    res.status(200).json(token);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to set emergency priority.' });
+  }
+});
+
+app.patch('/api/staff/clinic/:clinicId/status', async (req, res) => {
+  try {
+    const context = authContext(req);
+    const clinicId = String(req.params.clinicId || '');
+    if (!context || !context.clinicId || (context.role !== 'SUPER_ADMIN' && context.clinicId !== clinicId) || !['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'STAFF'].includes(context.role)) {
+      res.status(403).json({ error: 'Clinic status access denied.' });
+      return;
+    }
+    const status = String(req.body?.status || '').toUpperCase();
+    if (!['IN', 'OUT'].includes(status)) {
+      res.status(400).json({ error: 'Status must be IN or OUT.' });
+      return;
+    }
+    const doctorId = context.role === 'DOCTOR' ? context.doctorId : String(req.body?.doctorId || '') || (await repositories.doctors.findByClinicId(clinicId))[0]?.id;
+    if (!doctorId || (context.role === 'DOCTOR' && doctorId !== context.doctorId)) {
+      res.status(403).json({ error: 'Doctor status access denied.' });
+      return;
+    }
+    await repositories.doctorStatus.updateStatus(clinicId, doctorId, status as 'IN' | 'OUT');
+    const clinic = await repositories.clinics.updateDoctorStatus(clinicId, status as 'IN' | 'OUT');
+    res.status(200).json({ status, doctorId, clinic });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to update doctor status.' });
+  }
+});
+
+app.patch('/api/staff/clinic/:clinicId/delay', async (req, res) => {
+  try {
+    const context = authContext(req);
+    const clinicId = String(req.params.clinicId || '');
+    if (!context || !context.clinicId || (context.role !== 'SUPER_ADMIN' && context.clinicId !== clinicId) || !['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'STAFF'].includes(context.role)) {
+      res.status(403).json({ error: 'Clinic delay access denied.' });
+      return;
+    }
+    const delayMinutes = Number(req.body?.delayMinutes);
+    const delayReason = String(req.body?.delayReason || '').trim();
+    if (!Number.isInteger(delayMinutes) || delayMinutes < 0 || delayMinutes > 240 || delayReason.length > 500) {
+      res.status(400).json({ error: 'Delay must be a whole number from 0 to 240 minutes.' });
+      return;
+    }
+    const clinic = await repositories.clinics.updateDoctorStatus(clinicId, (await repositories.clinics.findById(clinicId))?.doctorStatus || 'IN', delayMinutes, delayReason);
+    res.status(200).json({ delayMinutes, delayReason, clinic });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to update clinic delay.' });
+  }
+});
+
 app.delete('/api/staff/queue/:tokenId/cancel', async (req, res) => {
   try {
     const context = authContext(req);

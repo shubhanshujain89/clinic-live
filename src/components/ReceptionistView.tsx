@@ -246,10 +246,12 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
       return;
     }
     try {
-      await updateDoc(doc(db, 'tokens', activeToken.id), {
-        status: 'HOLD',
-        isHold: true,
+      const response = await fetch(`/api/staff/queue/${encodeURIComponent(activeToken.id)}/hold`, {
+        method: 'POST',
+        credentials: 'include',
       });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Unable to hold token.');
 
       await WhatsAppService.sendWhatsAppNotification(
         activeToken,
@@ -262,20 +264,13 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
       // Now call next immediately if available
       if (waitingTokens.length > 0) {
         const nextToken = waitingTokens[0];
-        await updateDoc(doc(db, 'tokens', nextToken.id), {
-          status: 'SERVING',
-          calledAt: new Date().toISOString(),
+        const nextResponse = await fetch(`/api/staff/queue/${encodeURIComponent(nextToken.id)}/call`, {
+          method: 'POST',
+          credentials: 'include',
         });
-        await updateDoc(doc(db, 'clinics', clinic.id), {
-          currentRunningToken: nextToken.tokenNumber,
-          currentRunningTokenId: nextToken.id,
-        });
+        const nextPayload = await nextResponse.json().catch(() => ({}));
+        if (!nextResponse.ok) throw new Error(nextPayload.error || 'Unable to call next token.');
         soundManager.announceToken(nextToken.tokenNumber, nextToken.patientName, clinic.cabinNumber);
-      } else {
-        await updateDoc(doc(db, 'clinics', clinic.id), {
-          currentRunningToken: 'None',
-          currentRunningTokenId: '',
-        });
       }
 
       showToast(`Token #${activeToken.tokenNumber} placed ON HOLD. Queue advanced.`);
@@ -287,11 +282,12 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
   // Reactivate Hold Token back to front of waiting list
   const handleReactivateHold = async (token: TokenItem) => {
     try {
-      await updateDoc(doc(db, 'tokens', token.id), {
-        status: 'WAITING',
-        isHold: false,
-        priority: 2, // Placed ahead of normal waiting
+      const response = await fetch(`/api/staff/queue/${encodeURIComponent(token.id)}/resume`, {
+        method: 'POST',
+        credentials: 'include',
       });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Unable to resume token.');
       showToast(`Token #${token.tokenNumber} reactivated at the top of the waiting queue!`);
     } catch (err) {
       console.error('Error reactivating token:', err);
@@ -301,12 +297,12 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
   // Promote a waiting patient only when the case is an emergency.
   const handleEmergencyOverride = async (token: TokenItem) => {
     try {
-      await updateDoc(doc(db, 'tokens', token.id), {
-        isEmergency: true,
-        priority: 1,
-        tokenNumber: token.tokenNumber.startsWith('E-') ? token.tokenNumber : `E-${token.tokenNumber}`,
-        tokenType: 'EMERGENCY',
+      const response = await fetch(`/api/staff/queue/${encodeURIComponent(token.id)}/emergency`, {
+        method: 'POST',
+        credentials: 'include',
       });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Unable to set emergency priority.');
       soundManager.playEmergencyChime();
       showToast(`Emergency priority set for ${token.patientName}.`);
     } catch (err) {

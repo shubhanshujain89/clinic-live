@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { Clock, AlertTriangle, Send, X, CheckCircle2 } from 'lucide-react';
+import { Clock, AlertTriangle, X, CheckCircle2 } from 'lucide-react';
 import { Clinic, TokenItem } from '../types/queue';
-import { db, doc, updateDoc } from '../lib/firebase';
 import { soundManager } from '../lib/audio';
-import { WhatsAppService } from '../lib/whatsappService';
 
 interface DelayBroadcastModalProps {
   clinic: Clinic;
@@ -18,36 +16,23 @@ export const DelayBroadcastModal: React.FC<DelayBroadcastModalProps> = ({
 }) => {
   const [delayMinutes, setDelayMinutes] = useState(clinic.delayMinutes || 30);
   const [reason, setReason] = useState(clinic.delayReason || 'Emergency inpatient case attended by doctor');
-  const [notifyWhatsApp, setNotifyWhatsApp] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
-
-  const waitingTokens = tokens.filter(t => t.status === 'WAITING');
 
   const handleApplyDelay = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsUpdating(true);
     try {
-      await updateDoc(doc(db, 'clinics', clinic.id), {
-        delayMinutes: Number(delayMinutes),
-        delayReason: reason,
+      const response = await fetch(`/api/staff/clinic/${encodeURIComponent(clinic.id)}/delay`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delayMinutes: Number(delayMinutes), delayReason: reason }),
       });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Unable to update clinic delay.');
 
       // Sound chime
       soundManager.playChime();
-
-      // Dispatch delay broadcast WhatsApp notifications to ALL waiting patients
-      if (notifyWhatsApp && delayMinutes > 0) {
-        for (const token of waitingTokens) {
-          await WhatsAppService.sendWhatsAppNotification(
-            token,
-            'DOCTOR_DELAY_ALERT',
-            clinic.name,
-            clinic.doctorName,
-            clinic.cabinNumber,
-            `${delayMinutes} mins`
-          );
-        }
-      }
 
       onClose();
     } catch (err) {
@@ -60,10 +45,14 @@ export const DelayBroadcastModal: React.FC<DelayBroadcastModalProps> = ({
   const handleClearDelay = async () => {
     setIsUpdating(true);
     try {
-      await updateDoc(doc(db, 'clinics', clinic.id), {
-        delayMinutes: 0,
-        delayReason: '',
+      const response = await fetch(`/api/staff/clinic/${encodeURIComponent(clinic.id)}/delay`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delayMinutes: 0, delayReason: '' }),
       });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Unable to clear clinic delay.');
       onClose();
     } catch (err) {
       console.error('Error clearing delay:', err);
@@ -144,19 +133,6 @@ export const DelayBroadcastModal: React.FC<DelayBroadcastModalProps> = ({
               onChange={(e) => setReason(e.target.value)}
               placeholder="E.g., Emergency inpatient surgery, traffic delay, complex procedure..."
               className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:ring-2 focus:ring-purple-500 focus:outline-none resize-none"
-            />
-          </div>
-
-          {/* WhatsApp broadcast toggle */}
-          <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
-            <span className="text-slate-300">
-              Send WhatsApp Alert to {waitingTokens.length} waiting patients
-            </span>
-            <input
-              type="checkbox"
-              checked={notifyWhatsApp}
-              onChange={(e) => setNotifyWhatsApp(e.target.checked)}
-              className="w-4 h-4 rounded text-teal-500"
             />
           </div>
 

@@ -58,7 +58,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
   useEffect(() => {
     if (activeToken && activeToken.tokenNumber !== prevTokenRef.current) {
       if (prevTokenRef.current !== null && soundEnabled) {
-        soundManager.announceToken(activeToken.tokenNumber, activeToken.patientName, clinic.cabinNumber);
+        soundManager.announceToken(activeToken.tokenNumber, undefined, clinic.cabinNumber);
       }
       prevTokenRef.current = activeToken.tokenNumber;
     }
@@ -130,7 +130,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
             onClick={() => {
               setSoundEnabled(!soundEnabled);
               if (!soundEnabled && activeToken) {
-                soundManager.announceToken(activeToken.tokenNumber, activeToken.patientName, clinic.cabinNumber);
+                soundManager.announceToken(activeToken.tokenNumber, undefined, clinic.cabinNumber);
               }
             }}
             title={soundEnabled ? 'Mute Chimes' : 'Enable Chimes'}
@@ -172,7 +172,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
           {/* Patient Details */}
           <div className="mt-3 space-y-2">
             <h2 className="text-2xl font-black text-teal-300 sm:text-3xl lg:text-4xl">
-              {activeToken ? activeToken.patientName : 'Waiting for next patient'}
+              {activeToken ? 'Please proceed' : 'Waiting for next patient'}
             </h2>
             <p className="text-sm font-medium text-slate-400 sm:text-lg">
               {activeToken ? <>Please go to <span className="font-bold text-white">{clinic.cabinNumber}</span></> : 'Please watch this screen for your token number'}
@@ -206,7 +206,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
                         #{idx + 1}
                       </span>
                       <div>
-                        <div className="font-bold text-sm text-white sm:text-base">{tok.patientName}</div>
+                        <div className="font-bold text-sm text-white sm:text-base">Token {tok.tokenNumber}</div>
                         <div className="text-xs text-slate-500">Please be ready</div>
                       </div>
                     </div>

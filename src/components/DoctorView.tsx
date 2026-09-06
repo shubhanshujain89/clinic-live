@@ -296,14 +296,12 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
 
   const handleCallNextToken = async () => {
     if (activeToken || !nextToken) return;
-    await updateDoc(doc(db, 'tokens', nextToken.id), {
-      status: 'SERVING',
-      calledAt: new Date().toISOString(),
+    const response = await fetch(`/api/staff/queue/${encodeURIComponent(nextToken.id)}/call`, {
+      method: 'POST',
+      credentials: 'include',
     });
-    await updateDoc(doc(db, 'clinics', clinic.id), {
-      currentRunningToken: nextToken.tokenNumber,
-      currentRunningTokenId: nextToken.id,
-    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'Unable to call next token.');
   };
 
   const handleStartConsultation = async () => {
@@ -321,8 +319,12 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
 
   const handleHoldConsultation = async () => {
     if (!activeToken) return;
-    await updateDoc(doc(db, 'tokens', activeToken.id), { status: 'HOLD', isHold: true });
-    await updateDoc(doc(db, 'clinics', clinic.id), { currentRunningToken: 'None', currentRunningTokenId: '' });
+    const response = await fetch(`/api/staff/queue/${encodeURIComponent(activeToken.id)}/hold`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'Unable to hold consultation.');
   };
 
   const handleAddDelay = async () => {
@@ -332,13 +334,25 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
     const nextDelay = index >= 0
       ? delaySteps[index + 1] ?? currentDelay
       : delaySteps.find((step) => step > currentDelay) ?? currentDelay;
-    await updateDoc(doc(db, 'clinics', clinic.id), { delayMinutes: nextDelay });
+    const response = await fetch(`/api/staff/clinic/${encodeURIComponent(clinic.id)}/delay`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ delayMinutes: nextDelay, delayReason: clinic.delayReason || '' }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'Unable to update clinic delay.');
   };
 
   const handleToggleBreak = async () => {
-    await updateDoc(doc(db, 'clinics', clinic.id), {
-      doctorStatus: clinic.doctorStatus === 'OUT' ? 'IN' : 'OUT',
+    const response = await fetch(`/api/staff/clinic/${encodeURIComponent(clinic.id)}/status`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: clinic.doctorStatus === 'OUT' ? 'IN' : 'OUT' }),
     });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'Unable to update doctor status.');
   };
   if (isBasicPlan) {
     return (

@@ -6,13 +6,11 @@ import {
   UserRole
 } from '../types/queue';
 import {
-  db,
   auth,
   doc,
   signInWithPopup,
   googleProvider,
   onAuthStateChanged,
-  updateDoc,
   User
 } from '../lib/firebase';
 import {
@@ -143,7 +141,14 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
   const handleToggleDoctorStatus = async () => {
     const newStatus = clinic.doctorStatus === 'IN' ? 'OUT' : 'IN';
     try {
-      await updateDoc(doc(db, 'clinics', clinic.id), { doctorStatus: newStatus });
+      const response = await fetch(`/api/staff/clinic/${encodeURIComponent(clinic.id)}/status`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Unable to update doctor status.');
     } catch (error) {
       console.error('Error toggling doctor status:', error);
     }

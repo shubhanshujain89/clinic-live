@@ -63,6 +63,18 @@ export interface CancelledTokenResult {
   status: 'CANCELLED';
 }
 
+export interface QueueTokenActionResult {
+  id: string;
+  clinicId: string;
+  sessionId: string;
+  doctorId: string;
+  tokenNumber: string;
+  status: Token['status'];
+  isEmergency: boolean;
+  isHold: boolean;
+  priority: number;
+}
+
 export class QueueService {
   /**
    * Get all tokens for a doctor/session with details
@@ -147,15 +159,14 @@ export class QueueService {
       const token = (tokenRows as any[])[0];
       if (!token || (doctorId && token.doctor_id !== doctorId) || token.status !== 'WAITING') return null;
 
-      await connection.execute(
-        `UPDATE \`tokens\`
-         SET status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP
-         WHERE clinic_id = ? AND session_id = ?
-           AND doctor_id = ?
+      const [activeRows] = await connection.execute(
+        `SELECT id FROM \`tokens\`
+         WHERE clinic_id = ? AND session_id = ? AND doctor_id = ?
            AND status IN ('CALLED', 'IN_CONSULTATION', 'SERVING')
-           AND id <> ?`,
-        [clinicId, token.session_id, token.doctor_id, tokenId]
+         LIMIT 1`,
+        [clinicId, token.session_id, token.doctor_id]
       );
+      if ((activeRows as any[]).length > 0) return null;
 
       const [updateResult] = await connection.execute(
         `UPDATE \`tokens\`
@@ -344,6 +355,110 @@ export class QueueService {
         tokenNumber: token.token_number,
         patientName: token.patient_name,
         status: 'CANCELLED',
+      };
+    });
+  }
+
+  async holdTokenForClinic(tokenId: string, clinicId: string, doctorId?: string): Promise<QueueTokenActionResult | null> {
+    return executeTransaction(async (connection) => {
+      const [tokenRows] = await connection.execute(
+        `SELECT t.id, t.clinic_id, t.session_id, t.doctor_id, t.token_number, t.status
+         FROM \`tokens\` t
+         JOIN \`sessions\` s ON s.id = t.session_id
+         WHERE t.id = ? AND t.clinic_id = ? AND s.clinic_id = ? AND s.status = 'ACTIVE'
+         FOR UPDATE`,
+        [tokenId, clinicId, clinicId]
+      );
+      const token = (tokenRows as any[])[0];
+      if (!token || (doctorId && token.doctor_id !== doctorId) || !['CALLED', 'IN_CONSULTATION', 'SERVING'].includes(token.status)) {
+        return null;
+      }
+
+      await connection.execute(
+        `UPDATE \`tokens\` SET status = 'HOLD', is_hold = 1
+         WHERE id = ? AND clinic_id = ? AND session_id = ? AND status IN ('CALLED', 'IN_CONSULTATION', 'SERVING')`,
+        [tokenId, clinicId, token.session_id]
+      );
+      await connection.execute(
+        `UPDATE \`clinics\` SET current_running_token = 'None', current_running_token_id = ''
+         WHERE id = ? AND current_running_token_id = ?`,
+        [clinicId, tokenId]
+      );
+
+      return {
+        id: token.id,
+        clinicId: token.clinic_id,
+        sessionId: token.session_id,
+        doctorId: token.doctor_id,
+        tokenNumber: token.token_number,
+        status: 'HOLD',
+        isEmergency: false,
+        isHold: true,
+        priority: 2,
+      };
+    });
+  }
+
+  async resumeTokenForClinic(tokenId: string, clinicId: string, doctorId?: string): Promise<QueueTokenActionResult | null> {
+    return executeTransaction(async (connection) => {
+      const [tokenRows] = await connection.execute(
+        `SELECT t.id, t.clinic_id, t.session_id, t.doctor_id, t.token_number, t.status, t.is_vip, t.priority
+         FROM \`tokens\` t
+         JOIN \`sessions\` s ON s.id = t.session_id
+         WHERE t.id = ? AND t.clinic_id = ? AND s.clinic_id = ? AND s.status = 'ACTIVE'
+         FOR UPDATE`,
+        [tokenId, clinicId, clinicId]
+      );
+      const token = (tokenRows as any[])[0];
+      if (!token || (doctorId && token.doctor_id !== doctorId) || token.status !== 'HOLD') return null;
+
+      await connection.execute(
+        `UPDATE \`tokens\` SET status = 'WAITING', is_hold = 0, priority = 2
+         WHERE id = ? AND clinic_id = ? AND session_id = ? AND status = 'HOLD'`,
+        [tokenId, clinicId, token.session_id]
+      );
+      return {
+        id: token.id,
+        clinicId: token.clinic_id,
+        sessionId: token.session_id,
+        doctorId: token.doctor_id,
+        tokenNumber: token.token_number,
+        status: 'WAITING',
+        isEmergency: Boolean(token.is_vip),
+        isHold: false,
+        priority: 2,
+      };
+    });
+  }
+
+  async promoteEmergencyForClinic(tokenId: string, clinicId: string, doctorId?: string): Promise<QueueTokenActionResult | null> {
+    return executeTransaction(async (connection) => {
+      const [tokenRows] = await connection.execute(
+        `SELECT t.id, t.clinic_id, t.session_id, t.doctor_id, t.token_number, t.status
+         FROM \`tokens\` t
+         JOIN \`sessions\` s ON s.id = t.session_id
+         WHERE t.id = ? AND t.clinic_id = ? AND s.clinic_id = ? AND s.status = 'ACTIVE'
+         FOR UPDATE`,
+        [tokenId, clinicId, clinicId]
+      );
+      const token = (tokenRows as any[])[0];
+      if (!token || (doctorId && token.doctor_id !== doctorId) || !['WAITING', 'HOLD'].includes(token.status)) return null;
+
+      await connection.execute(
+        `UPDATE \`tokens\` SET token_type = 'EMERGENCY', is_vip = 1, priority = 1
+         WHERE id = ? AND clinic_id = ? AND session_id = ?`,
+        [tokenId, clinicId, token.session_id]
+      );
+      return {
+        id: token.id,
+        clinicId: token.clinic_id,
+        sessionId: token.session_id,
+        doctorId: token.doctor_id,
+        tokenNumber: token.token_number,
+        status: token.status,
+        isEmergency: true,
+        isHold: token.status === 'HOLD',
+        priority: 1,
       };
     });
   }
