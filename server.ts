@@ -325,6 +325,7 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
       clinic: {
         id: clinic.id,
         name: clinic.name,
+        doctorId: scopedDoctors[0]?.id || '',
         doctorName: clinic.doctorName || '',
         specialty: clinic.specialty || '',
         cabinNumber: clinic.cabinNumber || '',

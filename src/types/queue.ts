@@ -46,6 +46,7 @@ export interface PreConsultationNotes {
 export interface TokenItem {
   id: string;
   clinicId: string;
+  doctorId?: string;
   sessionId: string;
   tokenNumber: string; // e.g. "A-101", "W-102", "E-01"
   sequenceNumber: number;
@@ -81,6 +82,7 @@ export interface TokenItem {
 export interface Clinic {
   id: string;
   name: string;
+  doctorId?: string;
   doctorName?: string;
   specialty?: string;
   cabinNumber?: string;

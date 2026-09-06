@@ -39,6 +39,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
   const [bpDiastolic, setBpDiastolic] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const consultationFee = clinic.consultationFee || 750;
 
@@ -47,8 +48,12 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
     if (!patientName.trim() || !patientPhone.trim()) return;
 
     setIsSubmitting(true);
+    setSubmitError('');
     try {
       const tokenId = 'tok_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+        if (!clinic.doctorId) {
+          throw new Error('No active doctor is configured for this clinic.');
+        }
       const randSeq = Math.floor(Math.random() * 80) + 120;
       const tokenNumber = isEmergency ? `E-${randSeq}` : `W-${randSeq}`;
 
@@ -64,6 +69,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
       const newToken: TokenItem = {
         id: tokenId,
         clinicId: clinic.id,
+        doctorId: clinic.doctorId,
         sessionId: clinic.activeSessionId || 'sess_today',
         tokenNumber,
         sequenceNumber: randSeq,
@@ -120,6 +126,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
       onClose();
     } catch (err) {
       console.error('Error adding walk-in patient:', err);
+      setSubmitError(err instanceof Error ? err.message : 'Unable to issue the token. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -149,6 +156,11 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {submitError && (
+            <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+              {submitError}
+            </div>
+          )}
           
           {/* Patient Details */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
