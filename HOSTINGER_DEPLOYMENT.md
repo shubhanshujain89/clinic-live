@@ -53,6 +53,8 @@ SESSION_MAX_AGE=28800
 TRUST_PROXY=true
 ```
 
+`SUPER_ADMIN_USERNAME` must not reuse a clinic account such as `admin@clinic.local`. The seeded clinic administrator remains a `CLINIC_ADMIN`; use a separate super-admin identity such as `superadmin@your-domain.example`.
+
 ### Step 3: Build Configuration
 
 Set in Hostinger deployment settings:

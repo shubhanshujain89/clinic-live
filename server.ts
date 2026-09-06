@@ -739,23 +739,22 @@ app.post('/api/auth/login', async (req, res) => {
     let accountStatus = 'Active';
     let accountClinicName = '';
     
-    // Check super admin credentials
-    if (normalizedEmail.toLowerCase() === superAdminUsername.trim().toLowerCase() && superAdminPassword && secureEqual(normalizedPassword, superAdminPassword)) {
-      context = { userId: 'super-admin', role: 'SUPER_ADMIN', clinicId: null, doctorId: null, email: superAdminUsername };
-      if (process.env.DEBUG_MODE === 'true') console.log('[LOGIN] Super admin authenticated');
-    } else {
-      // Check regular user credentials
-      const account = await findUserByEmail(normalizedEmail);
-      
-      if (account && verifyPassword(normalizedPassword, account.passwordHash)) {
-        accountAccessStatus = account.accessStatus || 'Granted';
-        accountStatus = String(account.status || 'Active');
-        accountClinicName = account.clinicName || '';
-        const role = String(account.role || 'CLINIC_ADMIN').toUpperCase() as AuthContext['role'];
-        if (['CLINIC_ADMIN', 'DOCTOR', 'STAFF', 'SUPER_ADMIN'].includes(role)) {
-          context = { userId: account.id, role, clinicId: account.clinicId || null, doctorId: account.doctorId || null, email: account.email };
-        }
+    // Database accounts take precedence over the bootstrap identity. This prevents
+    // a misconfigured SUPER_ADMIN_USERNAME from promoting a seeded clinic account.
+    const account = await findUserByEmail(normalizedEmail);
+    if (account && verifyPassword(normalizedPassword, account.passwordHash)) {
+      accountAccessStatus = account.accessStatus || 'Granted';
+      accountStatus = String(account.status || 'Active');
+      accountClinicName = account.clinicName || '';
+      const role = String(account.role || 'CLINIC_ADMIN').toUpperCase() as AuthContext['role'];
+      if (['CLINIC_ADMIN', 'DOCTOR', 'STAFF', 'SUPER_ADMIN'].includes(role)) {
+        context = { userId: account.id, role, clinicId: account.clinicId || null, doctorId: account.doctorId || null, email: account.email };
       }
+    }
+
+    if (!context && normalizedEmail.toLowerCase() === superAdminUsername.trim().toLowerCase() && superAdminPassword && secureEqual(normalizedPassword, superAdminPassword)) {
+      context = { userId: 'super-admin', role: 'SUPER_ADMIN', clinicId: null, doctorId: null, email: superAdminUsername };
+      if (process.env.DEBUG_MODE === 'true') console.log('[LOGIN] Super admin bootstrap authenticated');
     }
 
     if (!context) {
