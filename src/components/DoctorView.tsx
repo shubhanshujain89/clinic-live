@@ -166,7 +166,9 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   };
 
   // Filter queues
-  const activeToken = tokens.find(t => t.status === 'SERVING' || t.status === 'IN_CONSULTATION');
+  const activeToken = tokens.find(t => (
+    t.status === 'CALLED' || t.status === 'SERVING' || t.status === 'IN_CONSULTATION'
+  ));
   const waitingTokens = tokens.filter(t => t.status === 'WAITING');
   const completedTokens = tokens.filter(t => t.status === 'COMPLETED');
   const holdTokens = tokens.filter(t => t.status === 'HOLD');
@@ -232,6 +234,16 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
       const action = getDoctorQueueAction({ activeToken, nextToken });
 
       if (activeToken && action !== 'CALL_NEXT') {
+        if (activeToken.status === 'CALLED') {
+          const startResponse = await fetch(`/api/staff/queue/${encodeURIComponent(activeToken.id)}/start`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+          });
+          const startPayload = await startResponse.json();
+          if (!startResponse.ok) throw new Error(startPayload.error || 'Unable to start consultation.');
+        }
+
         const response = await fetch(`/api/staff/queue/${encodeURIComponent(activeToken.id)}/complete`, {
           method: 'POST',
           credentials: 'include',

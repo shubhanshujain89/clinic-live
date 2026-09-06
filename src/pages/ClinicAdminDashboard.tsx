@@ -1970,7 +1970,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      <header className="border-b border-slate-800 bg-slate-950/90 shadow-[0_10px_35px_rgba(2,6,23,0.45)] backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/90 shadow-[0_10px_35px_rgba(2,6,23,0.45)] backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/40">

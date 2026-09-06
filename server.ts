@@ -325,6 +325,9 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
     const tokens = session
       ? (await Promise.all(scopedDoctors.map((doctor) => repositories.tokens.findByDoctorAndSession(doctor.id, session.id)))).flat()
       : [];
+    const clinicRevenue = session
+      ? await repositories.tokens.getCollectedRevenueByClinicAndSession(requestedClinicId, session.id)
+      : 0;
 
     res.status(200).json({
       clinic: {
@@ -343,7 +346,7 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
         currentRunningTokenId: clinic.currentRunningTokenId || '',
         activeSessionId: clinic.activeSessionId || session?.id || '',
         totalPatientsToday: clinic.totalPatientsToday || 0,
-        revenueToday: clinic.revenueToday || 0,
+        revenueToday: clinicRevenue,
         featurePlan: clinic.featurePlan,
         whatsappNotificationsEnabled: clinic.whatsappNotificationsEnabled,
         hasPaymentGateway: clinic.hasPaymentGateway,

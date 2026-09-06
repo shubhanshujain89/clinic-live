@@ -147,6 +147,18 @@ export class TokenRepository extends BaseRepository<Token> {
     });
   }
 
+  async getCollectedRevenueByClinicAndSession(clinicId: string, sessionId: string): Promise<number> {
+    const row = await executeQueryOne<{ total: number | string | null }>(
+      `SELECT COALESCE(SUM(CASE WHEN payment_status = 'PAID' THEN
+         CASE WHEN payment_mode = 'PAY_NOW' THEN GREATEST(amount_paid - 25, 0) ELSE amount_paid END
+         ELSE 0 END), 0) AS total
+       FROM \`tokens\`
+       WHERE clinic_id = ? AND session_id = ?`,
+      [clinicId, sessionId]
+    );
+    return Number(row?.total || 0);
+  }
+
   /**
    * Find tokens by doctor ID and session ID
    */

@@ -29,7 +29,7 @@ import { AddPatientModal } from './AddPatientModal';
 import { DelayBroadcastModal } from './DelayBroadcastModal';
 import { WhatsAppLogsModal } from './WhatsAppLogsModal';
 import { PrintTokenModal } from './PrintTokenModal';
-import { LogOut } from 'lucide-react';
+import { LogOut, Stethoscope, Tv } from 'lucide-react';
 
 interface ClinicQueueAppProps {
   userId: string;
@@ -39,7 +39,9 @@ interface ClinicQueueAppProps {
 }
 
 export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLogout }: ClinicQueueAppProps) {
-  const [currentRole, setCurrentRole] = useState<UserRole>('DOCTOR');
+  const [currentRole, setCurrentRole] = useState<UserRole>(() => (
+    new URLSearchParams(window.location.search).get('view') === 'tv' ? 'TV_DISPLAY' : 'DOCTOR'
+  ));
   const [isBookingActive, setIsBookingActive] = useState(false);
   const [clinicId, setClinicId] = useState<string>(selectedClinicId || DEFAULT_CLINIC_ID);
   const [clinic, setClinic] = useState<Clinic>(INITIAL_CLINIC_DATA);
@@ -50,7 +52,6 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
   const [isSeeding, setIsSeeding] = useState(false);
   const normalizedRole = String(role || '').toUpperCase();
   const isStaffRole = normalizedRole === 'STAFF';
-  const roleSwitchOptions = isStaffRole ? ['RECEPTIONIST'] : ['DOCTOR', 'RECEPTIONIST', 'TV_DISPLAY'];
 
   // Modals state
   const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
@@ -65,6 +66,10 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
 
   // Set role based on login
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('view') === 'tv') {
+      setCurrentRole('TV_DISPLAY');
+      return;
+    }
     if (normalizedRole === 'DOCTOR') {
       setCurrentRole('DOCTOR');
     } else if (normalizedRole === 'STAFF') {
@@ -126,6 +131,12 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
     }
   };
 
+  const handleOpenTvDisplay = () => {
+    const tvUrl = new URL(window.location.href);
+    tvUrl.searchParams.set('view', 'tv');
+    window.open(tvUrl.toString(), '_blank', 'noopener,noreferrer');
+  };
+
   const handleSeedData = async () => {
     setIsSeeding(true);
     await resetClinicDatabase();
@@ -151,28 +162,26 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
       <div className="relative z-10 flex min-h-screen flex-col">
         <div className="border-b border-slate-700/50 bg-slate-950/80 backdrop-blur-sm sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">{clinic.name}</h1>
-              <p className="text-sm text-slate-400">
-                {currentRole === 'DOCTOR' ? 'Doctor Console' : 'Reception Desk'}
-              </p>
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/40">
+                <Stethoscope className="h-5 w-5 text-emerald-400" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-bold text-white">ClinicFlow Pro</h1>
+                <p className="truncate text-sm text-slate-400">
+                  {clinic.name} · {currentRole === 'DOCTOR' ? 'Doctor Console' : 'Reception Desk'}
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex gap-2">
-                {roleSwitchOptions.map(r => (
-                  <button
-                    key={r}
-                    onClick={() => setCurrentRole(r as UserRole)}
-                    className={`px-4 py-2 rounded-lg font-semibold transition ${
-                      currentRole === r
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                    }`}
-                  >
-                    {r === 'DOCTOR' ? 'Doctor' : r === 'RECEPTIONIST' ? 'Reception' : 'TV'}
-                  </button>
-                ))}
-              </div>
+              <button
+                onClick={handleOpenTvDisplay}
+                className="flex items-center gap-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-semibold text-amber-200 transition hover:bg-amber-400/20"
+                title="Open TV display in a new tab"
+              >
+                <Tv className="h-4 w-4" />
+                <span>TV</span>
+              </button>
               <button
                 onClick={onLogout}
                 className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-400 rounded-lg flex items-center gap-2 transition"
@@ -185,7 +194,7 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
         </div>
 
         <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-          {!['TV_DISPLAY'].includes(currentRole) && (
+          {currentRole === 'RECEPTIONIST' && (
             <div className="premium-hero mb-6 rounded-[30px] border border-slate-700/70 bg-slate-900/60 p-4 shadow-[0_20px_60px_rgba(15,23,42,0.45)] backdrop-blur-xl sm:p-6">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="max-w-2xl min-w-0">
