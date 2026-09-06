@@ -140,6 +140,15 @@ export class QueueService {
       const token = (tokenRows as any[])[0];
       if (!token || (doctorId && token.doctor_id !== doctorId) || token.status !== 'WAITING') return null;
 
+      await connection.execute(
+        `UPDATE \`tokens\`
+         SET status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP
+         WHERE clinic_id = ? AND session_id = ?
+           AND status IN ('CALLED', 'IN_CONSULTATION', 'SERVING')
+           AND id <> ?`,
+        [clinicId, token.session_id, tokenId]
+      );
+
       const [updateResult] = await connection.execute(
         `UPDATE \`tokens\`
          SET status = 'CALLED', called_at = CURRENT_TIMESTAMP

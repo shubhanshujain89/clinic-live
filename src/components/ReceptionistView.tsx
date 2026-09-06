@@ -211,15 +211,6 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
 
     setIsAdvancing(true);
     try {
-      // If there is an active token, complete it
-      if (activeToken) {
-        await updateDoc(doc(db, 'tokens', activeToken.id), {
-          status: 'COMPLETED',
-          completedAt: new Date().toISOString(),
-          consultationDurationSeconds: 480,
-        });
-      }
-
       // Pick the next token by emergency/normal priority.
       const nextToken = waitingTokens[0];
       const response = await fetch(`/api/staff/queue/${encodeURIComponent(nextToken.id)}/call`, {
