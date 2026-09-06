@@ -157,7 +157,7 @@ export class BookingService {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           crypto.randomUUID(), input.clinicId, input.doctorId, session.id, trackingId,
-          input.patientName.trim(), input.phone.trim(), input.age || null, input.reason?.trim(),
+          input.patientName.trim(), input.phone.trim(), input.age || null, input.reason?.trim() || null,
           'ONLINE', tokenNumber, sequenceNumber, 'scheduled', now, now, now, now
         ]
       );
@@ -241,7 +241,7 @@ export class BookingService {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           crypto.randomUUID(), input.clinicId, input.doctorId, session.id, trackingId,
-          input.patientName.trim(), input.phone.trim(), input.age || null, input.reason?.trim(),
+          input.patientName.trim(), input.phone.trim(), input.age || null, input.reason?.trim() || null,
           input.tokenType, tokenNumber, sequenceNumber, 'scheduled', now, now, now, now
         ]
       );
