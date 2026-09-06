@@ -9,7 +9,6 @@ import {
   Activity
 } from 'lucide-react';
 import { Clinic, TokenItem } from '../types/queue';
-import { db, doc, setDoc } from '../lib/firebase';
 import { soundManager } from '../lib/audio';
 import { WhatsAppService } from '../lib/whatsappService';
 import { PhoneInput } from './PhoneInput';
@@ -50,12 +49,9 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
     setIsSubmitting(true);
     setSubmitError('');
     try {
-      const tokenId = 'tok_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
-        if (!clinic.doctorId) {
-          throw new Error('No active doctor is configured for this clinic.');
-        }
-      const randSeq = Math.floor(Math.random() * 80) + 120;
-      const tokenNumber = isEmergency ? `E-${randSeq}` : `W-${randSeq}`;
+      if (!clinic.doctorId) {
+        throw new Error('No active doctor is configured for this clinic.');
+      }
 
       const formattedWeight = weight.trim() ? `${weight.trim()} kg` : undefined;
       const formattedTemp = temperature.trim() ? `${temperature.trim()} °F` : undefined;
@@ -66,19 +62,35 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
           ? `${bpSystolic.trim()} mmHg`
           : undefined;
 
+      const response = await fetch(`/api/staff/queue/${encodeURIComponent(clinic.id)}/walk-in`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          doctorId: clinic.doctorId,
+          patientName: patientName.trim(),
+          phone: patientPhone.trim(),
+          age: Number(patientAge) || undefined,
+          tokenType: isEmergency ? 'EMERGENCY' : 'WALK_IN',
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || `Unable to issue token (${response.status}).`);
+
       const newToken: TokenItem = {
-        id: tokenId,
-        clinicId: clinic.id,
-        doctorId: clinic.doctorId,
-        sessionId: clinic.activeSessionId || 'sess_today',
-        tokenNumber,
-        sequenceNumber: randSeq,
+        id: payload.tokenId,
+        clinicId: payload.clinicId || clinic.id,
+        doctorId: payload.doctorId || clinic.doctorId,
+        sessionId: payload.sessionId || clinic.activeSessionId || 'sess_today',
+        tokenNumber: payload.tokenNumber,
+        sequenceNumber: payload.sequenceNumber,
         patientName: patientName.trim(),
         patientPhone: patientPhone.trim(),
         patientAge: Number(patientAge) || 35,
         patientGender,
         tokenType: isEmergency ? 'EMERGENCY' : 'WALK_IN',
         status: 'WAITING',
+        isEmergency,
         isHold: false,
         priority: isEmergency ? 1 : 10,
         amountPaid: consultationFee,
@@ -88,22 +100,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
         weight: formattedWeight,
         temperature: formattedTemp,
         bloodPressure: formattedBp,
-        preConsultationNotes: {
-          symptoms: 'General Consultation / Walk-in',
-          duration: '1 day',
-          severity: isEmergency ? 'Critical' : 'Mild',
-          painScale: isEmergency ? 9 : 3,
-          weight: formattedWeight,
-          temperature: formattedTemp,
-          feverTemp: formattedTemp,
-          bloodPressure: formattedBp,
-          bpReading: formattedBp,
-          submittedAt: new Date().toISOString(),
-          lastEditedBy: 'RECEPTIONIST',
-        },
       };
-
-      await setDoc(doc(db, 'tokens', tokenId), newToken);
 
       if (isEmergency) {
         soundManager.playEmergencyChime();

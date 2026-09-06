@@ -369,7 +369,7 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
         patientGender: token.patientGender,
         tokenType: token.tokenType,
         status: token.status,
-        isVip: token.isVip,
+        isEmergency: token.isEmergency,
         isHold: token.isHold,
         priority: token.priority,
         amountPaid: token.amountPaid,
@@ -497,6 +497,48 @@ app.post('/api/patient/book', async (req, res) => {
     res.status(201).json(booking);
   } catch (error) {
     res.status(400).json({ error: error instanceof Error ? error.message : 'Unable to create booking.' });
+  }
+});
+
+app.post('/api/staff/queue/:clinicId/walk-in', async (req, res) => {
+  try {
+    const context = authContext(req);
+    const clinicId = String(req.params.clinicId || '');
+    if (!context || !context.clinicId || (context.role !== 'SUPER_ADMIN' && context.clinicId !== clinicId)) {
+      res.status(403).json({ error: 'Clinic access denied.' });
+      return;
+    }
+
+    const { doctorId, patientName, phone, age, reason, tokenType } = req.body || {};
+    const normalizedPatientName = String(patientName || '').trim();
+    const normalizedPhone = String(phone || '').trim();
+    const normalizedAge = age === undefined || age === null || age === '' ? undefined : Number(age);
+    const normalizedTokenType = tokenType === 'EMERGENCY' ? 'EMERGENCY' : 'WALK_IN';
+    if (!doctorId || !normalizedPatientName || !normalizedPhone) {
+      res.status(400).json({ error: 'Doctor, patient name, and mobile number are required.' });
+      return;
+    }
+    if (normalizedPatientName.length > 120 || normalizedPhone.length > 30 || String(reason || '').length > 500) {
+      res.status(400).json({ error: 'Walk-in details exceed the allowed length.' });
+      return;
+    }
+    if (normalizedAge !== undefined && (!Number.isInteger(normalizedAge) || normalizedAge < 0 || normalizedAge > 120)) {
+      res.status(400).json({ error: 'Age must be a whole number between 0 and 120.' });
+      return;
+    }
+
+    const result = await services.booking.createWalkInToken({
+      clinicId,
+      doctorId: String(doctorId),
+      patientName: normalizedPatientName,
+      phone: normalizedPhone,
+      age: normalizedAge,
+      reason: undefined,
+      tokenType: normalizedTokenType,
+    });
+    res.status(201).json(result);
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Unable to issue walk-in token.' });
   }
 });
 

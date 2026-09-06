@@ -19,9 +19,9 @@ export interface Token {
   patientPhone: string;
   patientAge?: number;
   patientGender?: 'Male' | 'Female' | 'Other';
-  tokenType: 'ONLINE' | 'WALK_IN' | 'VIP';
+  tokenType: 'ONLINE' | 'WALK_IN' | 'EMERGENCY';
   status: 'WAITING' | 'CALLED' | 'IN_CONSULTATION' | 'SERVING' | 'COMPLETED' | 'HOLD' | 'CANCELLED' | 'NO_SHOW';
-  isVip: boolean;
+  isEmergency: boolean;
   isHold: boolean;
   priority: number;
   amountPaid: number;
@@ -61,7 +61,7 @@ export class TokenRepository extends BaseRepository<Token> {
       patientGender: row.patient_gender,
       tokenType: row.token_type,
       status: row.status,
-      isVip: Boolean(row.is_vip),
+      isEmergency: row.token_type === 'EMERGENCY' || Boolean(row.is_vip),
       isHold: Boolean(row.is_hold),
       priority: row.priority,
       amountPaid: parseFloat(row.amount_paid),
@@ -103,7 +103,7 @@ export class TokenRepository extends BaseRepository<Token> {
     if (entity.patientGender !== undefined) columns.patient_gender = entity.patientGender;
     if (entity.tokenType !== undefined) columns.token_type = entity.tokenType;
     if (entity.status !== undefined) columns.status = entity.status;
-    if (entity.isVip !== undefined) columns.is_vip = entity.isVip ? 1 : 0;
+    if (entity.isEmergency !== undefined) columns.is_vip = entity.isEmergency ? 1 : 0;
     if (entity.isHold !== undefined) columns.is_hold = entity.isHold ? 1 : 0;
     if (entity.priority !== undefined) columns.priority = entity.priority;
     if (entity.amountPaid !== undefined) columns.amount_paid = entity.amountPaid;
@@ -225,7 +225,7 @@ export class TokenRepository extends BaseRepository<Token> {
         [
           id, data.clinicId, data.sessionId, data.doctorId, tokenNumber, sequenceNumber,
           data.patientId, data.patientName, data.patientPhone, data.patientAge, data.patientGender,
-          data.tokenType, data.status, data.isVip ? 1 : 0, data.isHold ? 1 : 0, data.priority,
+          data.tokenType, data.status, data.isEmergency ? 1 : 0, data.isHold ? 1 : 0, data.priority,
           data.amountPaid, data.paymentMode, data.paymentMethod, data.paymentStatus, now,
           data.preConsultationNotes ? JSON.stringify(data.preConsultationNotes) : null
         ]

@@ -23,7 +23,7 @@ export interface TokenWithDetails {
   patientAge?: number;
   tokenType: Token['tokenType'];
   status: Token['status'];
-  isVip: boolean;
+  isEmergency: boolean;
   isHold: boolean;
   priority: number;
   createdAt: Date;
@@ -71,7 +71,7 @@ export class QueueService {
       patientAge: t.patientAge,
       tokenType: t.tokenType,
       status: t.status,
-      isVip: t.isVip,
+      isEmergency: t.isEmergency,
       isHold: t.isHold,
       priority: t.priority,
       createdAt: t.createdAt,
@@ -114,7 +114,7 @@ export class QueueService {
       patientAge: token.patientAge,
       tokenType: token.tokenType,
       status: token.status,
-      isVip: token.isVip,
+      isEmergency: token.isEmergency,
       isHold: token.isHold,
       priority: token.priority,
       createdAt: token.createdAt,
@@ -353,7 +353,7 @@ export class QueueService {
       patientAge: updatedToken.patientAge,
       tokenType: updatedToken.tokenType,
       status: updatedToken.status,
-      isVip: updatedToken.isVip,
+      isEmergency: updatedToken.isEmergency,
       isHold: updatedToken.isHold,
       priority: updatedToken.priority,
       createdAt: updatedToken.createdAt,
@@ -398,7 +398,7 @@ export class QueueService {
       patientAge: updatedToken.patientAge,
       tokenType: updatedToken.tokenType,
       status: updatedToken.status,
-      isVip: updatedToken.isVip,
+      isEmergency: updatedToken.isEmergency,
       isHold: updatedToken.isHold,
       priority: updatedToken.priority,
       createdAt: updatedToken.createdAt,
@@ -429,7 +429,7 @@ export class QueueService {
       patientAge: token.patientAge,
       tokenType: token.tokenType,
       status: token.status,
-      isVip: token.isVip,
+      isEmergency: token.isEmergency,
       isHold: token.isHold,
       priority: token.priority,
       createdAt: token.createdAt,

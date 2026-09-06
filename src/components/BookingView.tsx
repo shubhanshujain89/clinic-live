@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Clinic, TokenItem } from '../types/queue';
-import { db, doc, setDoc } from '../lib/firebase';
 import { WhatsAppService } from '../lib/whatsappService';
 import { PaymentGatewayPage } from './PaymentGatewayPage';
 
@@ -76,49 +75,58 @@ export const BookingView: React.FC<BookingViewProps> = ({
     setTimeout(() => setCopiedUpi(false), 2500);
   };
 
+  const createOnlineToken = async () => {
+    if (!clinic.doctorId) throw new Error('No active doctor is configured for this clinic.');
+    const response = await fetch('/api/patient/book', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clinicId: clinic.id,
+        doctorId: clinic.doctorId,
+        patientName: patientName.trim(),
+        phone: patientPhone.trim(),
+        age: Number(patientAge) || undefined,
+        reason: primaryConcern.trim() || undefined,
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || `Unable to issue token (${response.status}).`);
+
+    return {
+      id: payload.tokenId,
+      clinicId: payload.clinicId || clinic.id,
+      doctorId: payload.doctorId || clinic.doctorId,
+      sessionId: payload.sessionId || clinic.activeSessionId || 'sess_today',
+      tokenNumber: payload.tokenNumber,
+      sequenceNumber: payload.sequenceNumber,
+      patientName: patientName.trim(),
+      patientPhone: patientPhone.trim(),
+      patientAge: Number(patientAge) || 30,
+      patientGender,
+      tokenType: 'ONLINE' as const,
+      status: 'WAITING' as const,
+      isEmergency: false,
+      isHold: false,
+      priority: 10,
+      amountPaid: totalAmount,
+      paymentMode,
+      paymentMethod: 'PAY_AT_CLINIC' as const,
+      paymentStatus: 'PENDING' as const,
+      createdAt: new Date().toISOString(),
+    } satisfies TokenItem;
+  };
+
   // Called when patient completes checkout on the PaymentGatewayPage
   const handleGatewayPaymentSuccess = async (details: { paymentMethod: string; transactionId: string }) => {
     setIsProcessingPayment(true);
     try {
-      const tokenId = 'tok_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
-      const randSeq = Math.floor(Math.random() * 80) + 110;
-      const tokenNumber = `A-${randSeq}`;
-
       const newToken: TokenItem = {
-        id: tokenId,
-        clinicId: clinic.id,
-        sessionId: clinic.activeSessionId || 'sess_today',
-        tokenNumber,
-        sequenceNumber: randSeq,
-        patientName: patientName.trim(),
-        patientPhone: patientPhone.trim(),
-        patientAge: Number(patientAge) || 30,
-        patientGender,
-        tokenType: 'ONLINE',
-        status: 'WAITING',
-        isEmergency: false,
-        isHold: false,
-        priority: 10,
+        ...await createOnlineToken(),
         amountPaid: totalAmount,
         paymentMode: 'PAY_NOW',
         paymentMethod: (details.paymentMethod as any) || 'PAYMENT_GATEWAY',
         paymentStatus: 'PAID',
-        createdAt: new Date().toISOString(),
-        preConsultationNotes: primaryConcern.trim()
-          ? {
-              symptoms: primaryConcern.trim(),
-              duration: '1-2 days',
-              severity: 'Mild',
-              painScale: 3,
-              submittedAt: new Date().toISOString(),
-              lastEditedBy: 'PATIENT',
-            }
-          : undefined,
-        triageNotes: details.transactionId ? `Gateway Txn: ${details.transactionId}` : undefined,
       };
-
-      // Write directly to Firestore
-      await setDoc(doc(db, 'tokens', tokenId), newToken);
 
       // Send WhatsApp Utility Confirmation
       await WhatsAppService.sendWhatsAppNotification(
@@ -171,27 +179,10 @@ export const BookingView: React.FC<BookingViewProps> = ({
 
     setTimeout(async () => {
       try {
-const tokenId = 'tok_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
-        const randSeq = Math.floor(Math.random() * 80) + 110;
-        const tokenNumber = `A-${randSeq}`;
-
         const isPaidOnline = paymentMode === 'PAY_NOW';
 
         const newToken: TokenItem = {
-          id: tokenId,
-          clinicId: clinic.id,
-          sessionId: clinic.activeSessionId || 'sess_today',
-          tokenNumber,
-          sequenceNumber: randSeq,
-          patientName: patientName.trim(),
-          patientPhone: patientPhone.trim(),
-          patientAge: Number(patientAge) || 30,
-          patientGender,
-          tokenType: 'ONLINE',
-          status: 'WAITING',
-          isEmergency: false,
-          isHold: false,
-          priority: 10,
+          ...await createOnlineToken(),
           amountPaid: isPaidOnline ? totalAmount : 0,
           paymentMode,
           paymentMethod: isPaidOnline ? 'QR_BARCODE' : 'PAY_AT_CLINIC',
@@ -209,9 +200,6 @@ const tokenId = 'tok_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
             : undefined,
           triageNotes: isPaidOnline && utrRefNumber.trim() ? `UPI UTR: ${utrRefNumber.trim()}` : undefined,
         };
-
-        // Write directly to Firestore
-        await setDoc(doc(db, 'tokens', tokenId), newToken);
 
         // Send WhatsApp Utility Confirmation
         await WhatsAppService.sendWhatsAppNotification(

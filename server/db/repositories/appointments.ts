@@ -17,7 +17,7 @@ export interface Appointment {
   patientPhone: string;
   patientAge?: number;
   visitReason?: string;
-  appointmentType: 'ONLINE' | 'WALK_IN' | 'VIP';
+  appointmentType: 'ONLINE' | 'WALK_IN' | 'EMERGENCY';
   tokenNumber: string;
   tokenSequence: number;
   status: 'scheduled' | 'waiting' | 'serving' | 'completed' | 'cancelled' | 'no_show';

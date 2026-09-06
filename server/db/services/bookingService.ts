@@ -22,6 +22,11 @@ export interface BookingResult {
   trackingId: string;
   tokenId: string;
   tokenNumber: string;
+  sequenceNumber: number;
+  sessionId: string;
+  clinicId: string;
+  doctorId: string;
+  tokenType: 'ONLINE' | 'WALK_IN' | 'EMERGENCY';
   clinicName: string;
   doctorName: string;
 }
@@ -167,6 +172,11 @@ export class BookingService {
         trackingId,
         tokenId,
         tokenNumber,
+        sequenceNumber,
+        sessionId: session.id,
+        clinicId: input.clinicId,
+        doctorId: input.doctorId,
+        tokenType: 'ONLINE',
         clinicName: clinic.name,
         doctorName: doctor.name,
       };
@@ -176,7 +186,7 @@ export class BookingService {
   /**
    * Create a walk-in token (receptionist booking)
    */
-  async createWalkInToken(input: BookingInput & { tokenType: 'WALK_IN' | 'VIP' }): Promise<BookingResult> {
+  async createWalkInToken(input: BookingInput & { tokenType: 'WALK_IN' | 'EMERGENCY' }): Promise<BookingResult> {
     // Similar to public booking but with different token type
     const clinic = await repositories.clinics.findById(input.clinicId);
     if (!clinic) throw new Error('Clinic not found');
@@ -203,8 +213,7 @@ export class BookingService {
       );
       const sequenceNumber = (seqResult as any[])[0]?.max_sequence + 1 || 1;
       
-      // VIP tokens get a different prefix
-      const prefix = input.tokenType === 'VIP' ? 'VIP' : 'W';
+      const prefix = input.tokenType === 'EMERGENCY' ? 'E' : 'W';
       const tokenNumber = `${prefix}-${String(sequenceNumber).padStart(3, '0')}`;
 
       await connection.execute(
@@ -220,8 +229,8 @@ export class BookingService {
         [
           tokenId, input.clinicId, session.id, input.doctorId, tokenNumber, sequenceNumber,
           patientId, input.patientName.trim(), input.phone.trim(), input.age || null,
-          input.tokenType, 'WAITING', input.tokenType === 'VIP' ? 1 : 0, 0, 
-          input.tokenType === 'VIP' ? 1 : 10, 0, 'PENDING', now,
+          input.tokenType, 'WAITING', 0, 0,
+          input.tokenType === 'EMERGENCY' ? 1 : 10, 0, 'PENDING', now,
           input.reason?.trim() ? JSON.stringify({ symptoms: input.reason.trim() }) : null
         ]
       );
@@ -246,6 +255,11 @@ export class BookingService {
         trackingId,
         tokenId,
         tokenNumber,
+        sequenceNumber,
+        sessionId: session.id,
+        clinicId: input.clinicId,
+        doctorId: input.doctorId,
+        tokenType: input.tokenType,
         clinicName: clinic.name,
         doctorName: doctor.name,
       };

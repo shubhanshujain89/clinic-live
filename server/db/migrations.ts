@@ -66,6 +66,13 @@ export async function runMigrations(): Promise<void> {
       }
     }
   }
+
+  await executeQuery(`ALTER TABLE tokens MODIFY token_type ENUM('ONLINE', 'WALK_IN', 'VIP', 'EMERGENCY') DEFAULT 'ONLINE'`);
+  await executeQuery(`UPDATE tokens SET token_type = 'EMERGENCY' WHERE token_type = 'VIP'`);
+  await executeQuery(`ALTER TABLE tokens MODIFY token_type ENUM('ONLINE', 'WALK_IN', 'EMERGENCY') DEFAULT 'ONLINE'`);
+  await executeQuery(`ALTER TABLE appointments MODIFY appointment_type ENUM('ONLINE', 'WALK_IN', 'VIP', 'EMERGENCY') DEFAULT 'ONLINE'`);
+  await executeQuery(`UPDATE appointments SET appointment_type = 'EMERGENCY' WHERE appointment_type = 'VIP'`);
+  await executeQuery(`ALTER TABLE appointments MODIFY appointment_type ENUM('ONLINE', 'WALK_IN', 'EMERGENCY') DEFAULT 'ONLINE'`);
   
   console.log('✅ All migrations completed successfully');
 }
