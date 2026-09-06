@@ -223,7 +223,6 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
               tokens={tokens}
               currentUser={currentUser}
               onGoogleSignIn={handleGoogleSignIn}
-              onViewPreNotes={(token) => setTokenIntakeNotesToView(token)}
             />
           )}
 

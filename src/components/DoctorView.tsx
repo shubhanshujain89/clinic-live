@@ -9,8 +9,6 @@ import {
   CheckCircle2,
   AlertCircle,
   FileText,
-  Paperclip,
-  Flame,
   ChevronRight,
   TrendingUp,
   UserCheck,
@@ -41,7 +39,6 @@ interface DoctorViewProps {
   tokens: TokenItem[];
   currentUser: User | null;
   onGoogleSignIn: () => void;
-  onViewPreNotes?: (token: TokenItem) => void;
 }
 
 export const DoctorView: React.FC<DoctorViewProps> = ({
@@ -50,12 +47,10 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   tokens,
   currentUser,
   onGoogleSignIn,
-  onViewPreNotes,
 }) => {
   const isBasicPlan = clinic.featurePlan === 'BASIC';
   const [doctorRxNotes, setDoctorRxNotes] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
-  const [selectedTokenForModal, setSelectedTokenForModal] = useState<TokenItem | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -162,9 +157,6 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
 
       showToast(`Updated details & symptoms for #${editingToken.tokenNumber} (${editName})`);
       setEditingToken(null);
-      if (selectedTokenForModal && selectedTokenForModal.id === editingToken.id) {
-        setSelectedTokenForModal(null);
-      }
     } catch (err) {
       console.error('Error saving patient edits:', err);
       showToast('Failed to save patient details. Please retry.');
@@ -188,9 +180,12 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
     : 0;
 
   const totalPatientsToday = tokens.length;
-  const totalRevenue = tokens
-    .filter(t => t.paymentStatus === 'PAID')
-    .reduce((sum, t) => sum + (t.amountPaid || 0), 0);
+  const tokenRevenue = tokens.reduce((total, token) => (
+    token.paymentStatus === 'PAID' ? total + Number(token.amountPaid || 0) : total
+  ), 0);
+  const totalRevenue = Number.isFinite(Number(clinic.revenueToday))
+    ? Number(clinic.revenueToday)
+    : tokenRevenue;
 
   // Active consultation duration timer
   useEffect(() => {
@@ -518,9 +513,9 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
           </div>
           <div className="mt-2 flex items-baseline justify-between">
             <span className="text-2xl sm:text-3xl font-black text-emerald-400">
-              â‚¹{totalRevenue.toLocaleString()}
+              ₹{totalRevenue.toLocaleString('en-IN')}
             </span>
-            <span className="text-xs text-emerald-500/80 font-medium">100% Pre-paid</span>
+            <span className="text-xs text-emerald-500/80 font-medium">Collected today</span>
           </div>
           <div className="mt-2 text-xs text-slate-500">
             Avg Fee: ₹{clinic.consultationFee} / patient
@@ -552,7 +547,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left 7 Columns: Active Patient In Cabin & Clinical Prescription Notes */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="lg:col-span-12 space-y-6">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center space-x-2">
@@ -606,89 +601,6 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                       <span>Edit Patient</span>
                     </button>
                   </div>
-                </div>
-
-                {/* Pre-Consultation Summary of Active Patient */}
-                <div className="bg-teal-950/20 border border-teal-500/30 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-teal-300 flex items-center gap-1.5">
-                      <Activity className="w-3.5 h-3.5" />
-                      Symptoms & Clinical Intake
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {activeToken.preConsultationNotes?.severity && (
-                        <span className={`text-xs px-2 py-0.5 rounded font-bold ${
-                          activeToken.preConsultationNotes.severity === 'Critical' || activeToken.preConsultationNotes.severity === 'Severe'
-                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                            : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                        }`}>
-                          {activeToken.preConsultationNotes.severity} Severity
-                        </span>
-                      )}
-                      <button
-                        onClick={() => openEditModal(activeToken)}
-                        className="text-xs text-teal-400 hover:text-teal-300 flex items-center gap-1 bg-slate-900/80 px-2 py-0.5 rounded border border-teal-500/30 font-medium"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                        <span>Edit Symptoms</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="text-sm text-slate-200 leading-relaxed font-medium">
-                    "{activeToken.preConsultationNotes?.symptoms || 'General Consultation / Checkup'}"
-                  </p>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 pt-3 border-t border-teal-500/20 text-xs">
-                    <div>
-                      <span className="text-slate-400 block">Duration:</span>
-                      <span className="text-slate-200 font-semibold">{activeToken.preConsultationNotes?.duration || '1-2 days'}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block">Pain Scale:</span>
-                      <span className="text-slate-200 font-semibold">{activeToken.preConsultationNotes?.painScale ? `${activeToken.preConsultationNotes.painScale}/10` : 'None'}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block">Allergies:</span>
-                      <span className="text-rose-300 font-semibold">{activeToken.preConsultationNotes?.allergies || 'No known'}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block">Vitals (BP/Temp/Wt):</span>
-                      <span className="text-slate-200 font-semibold">
-                        {[
-                          activeToken.bloodPressure || activeToken.preConsultationNotes?.bloodPressure || activeToken.preConsultationNotes?.bpReading,
-                          activeToken.temperature || activeToken.preConsultationNotes?.temperature || activeToken.preConsultationNotes?.feverTemp,
-                          activeToken.weight || activeToken.preConsultationNotes?.weight
-                        ].filter(Boolean).join(' • ') || 'Normal'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {(activeToken.triageNotes || activeToken.preConsultationNotes?.triageNotes || activeToken.preConsultationNotes?.receptionNotes) && (
-                    <div className="mt-2.5 pt-2 border-t border-teal-500/20 text-xs text-slate-300 flex items-start gap-1.5">
-                      <span className="text-teal-400 font-semibold">Reception Note:</span>
-                      <span className="italic">{activeToken.triageNotes || activeToken.preConsultationNotes?.triageNotes || activeToken.preConsultationNotes?.receptionNotes}</span>
-                    </div>
-                  )}
-
-                  {activeToken.preConsultationNotes?.attachments && activeToken.preConsultationNotes.attachments.length > 0 && (
-                    <div className="mt-3 flex items-center gap-2 pt-2 border-t border-teal-500/20">
-                      <span className="text-xs text-slate-400 flex items-center gap-1">
-                        <Paperclip className="w-3.5 h-3.5 text-teal-400" />
-                        Attached Lab/Files:
-                      </span>
-                      {activeToken.preConsultationNotes.attachments.map((att, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setSelectedTokenForModal(activeToken)}
-                          className="text-xs bg-slate-900 hover:bg-slate-800 text-teal-300 px-2 py-1 rounded border border-teal-500/30 flex items-center gap-1"
-                        >
-                          <FileText className="w-3 h-3" />
-                          <span>{att.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 {/* Doctor Prescription & Clinical Notes Box */}
@@ -794,15 +706,6 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                           EMERGENCY
                         </span>
                       )}
-                      {tok.preConsultationNotes && (
-                        <button
-                          onClick={() => setSelectedTokenForModal(tok)}
-                          className="text-xs text-teal-400 hover:text-teal-300 flex items-center gap-1 bg-slate-800 px-2 py-1 rounded"
-                        >
-                          <FileText className="w-3 h-3" />
-                          <span>Notes</span>
-                        </button>
-                      )}
                     </div>
                   </div>
                 ))
@@ -815,219 +718,8 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
           </div>
         </div>
 
-        {/* Right 5 Columns: Feed of Pre-Consultation Notes (Symptoms submitted by patients) */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col h-full">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div className="flex items-center space-x-2">
-                <Flame className="w-4 h-4 text-amber-400" />
-                <h3 className="text-base font-bold text-white">Pre-Consultation Intake Feed</h3>
-              </div>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                Live Patient Uploads
-              </span>
-            </div>
-
-            <p className="text-xs text-slate-400 mt-2">
-              Patients submit symptoms and attach lab reports from their phones while waiting.
-            </p>
-
-            <div className="mt-4 space-y-3.5 flex-1 overflow-y-auto max-h-[620px] pr-1">
-              {tokens.filter(t => t.preConsultationNotes).length > 0 ? (
-                tokens
-                  .filter(t => t.preConsultationNotes)
-                  .map((tokenItem) => {
-                    const notes = tokenItem.preConsultationNotes!;
-                    const isCurrent = tokenItem.id === activeToken?.id;
-
-                    return (
-                      <div
-                        key={tokenItem.id}
-                        onClick={() => setSelectedTokenForModal(tokenItem)}
-                        className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                          isCurrent
-                            ? 'bg-teal-950/30 border-teal-500/50 shadow-md shadow-teal-500/10 ring-1 ring-teal-500/30'
-                            : 'bg-slate-950/80 border-slate-800 hover:border-slate-700 hover:bg-slate-800/40'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-800 text-teal-300 border border-slate-700">
-                              {tokenItem.tokenNumber}
-                            </span>
-                            <span className="text-sm font-bold text-slate-200">
-                              {tokenItem.patientName}
-                            </span>
-                          </div>
-
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
-                            tokenItem.status === 'SERVING'
-                              ? 'bg-teal-500 text-slate-950'
-                              : tokenItem.status === 'COMPLETED'
-                              ? 'bg-slate-800 text-slate-400'
-                              : 'bg-blue-500/20 text-blue-300'
-                          }`}>
-                            {tokenItem.status}
-                          </span>
-                        </div>
-
-                        <p className="text-xs text-slate-300 mt-2 line-clamp-2 italic">
-                          "{notes.symptoms}"
-                        </p>
-
-                        <div className="flex flex-wrap items-center gap-2 mt-3 text-[11px]">
-                          {notes.severity && (
-                            <span className={`px-1.5 py-0.5 rounded font-semibold ${
-                              notes.severity === 'Critical' || notes.severity === 'Severe'
-                                ? 'bg-rose-500/20 text-rose-300'
-                                : 'bg-amber-500/20 text-amber-300'
-                            }`}>
-                              {notes.severity}
-                            </span>
-                          )}
-
-                          {notes.duration && (
-                            <span className="text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
-                              ⏱ {notes.duration}
-                            </span>
-                          )}
-
-                          {notes.painScale && (
-                            <span className="text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
-                              Pain: {notes.painScale}/10
-                            </span>
-                          )}
-
-                          {notes.attachments && notes.attachments.length > 0 && (
-                            <span className="text-teal-300 font-semibold flex items-center gap-1 bg-teal-950/40 px-1.5 py-0.5 rounded border border-teal-500/30">
-                              <Paperclip className="w-3 h-3" />
-                              {notes.attachments.length} file(s)
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-              ) : (
-                <div className="text-center py-12 text-slate-500 text-xs">
-                  No pre-consultation notes submitted yet today.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        
       </div>
-
-      {/* Pre-Consultation Details Modal */}
-      {selectedTokenForModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div>
-                <span className="text-xs font-mono font-bold text-teal-400">
-                  TOKEN #{selectedTokenForModal.tokenNumber}
-                </span>
-                <h3 className="text-lg font-bold text-white">
-                  {selectedTokenForModal.patientName} - Intake Notes
-                </h3>
-              </div>
-              <button
-                onClick={() => setSelectedTokenForModal(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white bg-slate-800 text-xs"
-              >
-                ✕
-              </button>
-            </div>
-
-            {selectedTokenForModal.preConsultationNotes ? (
-              <div className="space-y-4 text-sm">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-                      Chief Complaint / Symptoms
-                    </span>
-                    <button
-                      onClick={() => openEditModal(selectedTokenForModal)}
-                      className="text-xs text-teal-400 hover:text-teal-300 font-semibold flex items-center gap-1"
-                    >
-                      <Edit3 className="w-3 h-3" />
-                      <span>Edit Intake Info</span>
-                    </button>
-                  </div>
-                  <p className="text-slate-200 mt-1 bg-slate-950 p-3 rounded-xl border border-slate-800">
-                    {selectedTokenForModal.preConsultationNotes.symptoms}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                    <span className="text-slate-400 block">Symptom Duration:</span>
-                    <span className="text-white font-bold">{selectedTokenForModal.preConsultationNotes.duration || 'N/A'}</span>
-                  </div>
-                  <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                    <span className="text-slate-400 block">Pain Severity Scale:</span>
-                    <span className="text-white font-bold">{selectedTokenForModal.preConsultationNotes.painScale ? `${selectedTokenForModal.preConsultationNotes.painScale}/10` : 'None'}</span>
-                  </div>
-                  <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                    <span className="text-slate-400 block">Known Allergies:</span>
-                    <span className="text-rose-300 font-bold">{selectedTokenForModal.preConsultationNotes.allergies || 'No known allergies'}</span>
-                  </div>
-                  <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                    <span className="text-slate-400 block">Vitals (BP / Temp / Wt):</span>
-                    <span className="text-white font-bold">
-                      {[
-                        selectedTokenForModal.bloodPressure || selectedTokenForModal.preConsultationNotes.bloodPressure || selectedTokenForModal.preConsultationNotes.bpReading,
-                        selectedTokenForModal.temperature || selectedTokenForModal.preConsultationNotes.temperature || selectedTokenForModal.preConsultationNotes.feverTemp,
-                        selectedTokenForModal.weight || selectedTokenForModal.preConsultationNotes.weight
-                      ].filter(Boolean).join(' • ') || 'Normal'}
-                    </span>
-                  </div>
-                </div>
-
-                {selectedTokenForModal.preConsultationNotes.attachments && (
-                  <div>
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
-                      Attached Lab Documents / Photos
-                    </span>
-                    <div className="space-y-1.5">
-                      {selectedTokenForModal.preConsultationNotes.attachments.map((att, i) => (
-                        <div key={i} className="flex items-center justify-between p-2.5 bg-slate-950 rounded-lg border border-slate-800 text-xs">
-                          <span className="flex items-center gap-2 text-slate-200">
-                            <FileText className="w-4 h-4 text-teal-400" />
-                            {att.name}
-                          </span>
-                          <span className="text-[10px] text-teal-400 font-mono bg-teal-950/60 px-2 py-0.5 rounded">
-                            Verified Upload
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-slate-400">No pre-consultation notes recorded.</p>
-            )}
-
-            <div className="pt-2 flex justify-between items-center">
-              <button
-                onClick={() => openEditModal(selectedTokenForModal)}
-                className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Edit Patient & Symptoms</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedTokenForModal(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Doctor Full Patient & Symptoms Editor Modal */}
       {editingToken && (
