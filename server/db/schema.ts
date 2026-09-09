@@ -1,5 +1,5 @@
 /**
- * MySQL Schema Definitions for ClinicFlow Pro
+ * MySQL Schema Definitions for NEXTQ
  * 
  * This file contains the SQL statements to create all required tables
  * with proper primary keys, foreign keys, indexes, and constraints.
@@ -347,8 +347,8 @@ INSERT IGNORE INTO sessions (
 
 -- Insert default settings
 INSERT IGNORE INTO settings (id, clinic_id, \`key\`, value, category, updated_at) VALUES
-('site_settings', NULL, 'site_name', 'ClinicFlow Pro', 'site', NOW()),
-('site_contact', NULL, 'contact_email', 'hello@clinicflow.local', 'site', NOW()),
+('site_settings', NULL, 'site_name', 'NEXTQ', 'site', NOW()),
+('site_contact', NULL, 'contact_email', 'hello@nextq.app', 'site', NOW()),
 ('site_banner', NULL, 'hero_title', 'Smarter queues, calmer clinics', 'site', NOW());
 
 -- Insert default users (passwords are hashed versions of 'admin', 'doctor', 'staff')

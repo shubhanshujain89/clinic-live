@@ -1,5 +1,5 @@
 /**
- * Database Migration Scripts for ClinicFlow Pro
+ * Database Migration Scripts for NEXTQ
  * 
  * This file contains functions to run migrations and seed data.
  * Run with: npm run db:migrate

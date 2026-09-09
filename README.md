@@ -1,6 +1,6 @@
-# ClinicFlow Pro
+# NEXTQ
 
-A premium clinic queue and token management platform for doctors, reception teams, and patients with real-time queue workflows, patient tracking, and comprehensive admin dashboard.
+A smart, app-free clinic appointment and queue management platform for doctors, reception teams, and patients with real-time queue workflows, patient tracking, and comprehensive admin dashboard.
 
 ## Quick Start - Local Development
 
@@ -13,7 +13,7 @@ A premium clinic queue and token management platform for doctors, reception team
 ```bash
 # Clone repository
 git clone <repo-url>
-cd clinicflow-pro
+cd nextq
 
 # Install dependencies
 npm ci
@@ -64,7 +64,7 @@ Database seeding requires unique passwords of at least 12 characters for `SUPER_
 
 ```bash
 git add .
-git commit -m "Production ready: ClinicFlow Pro v1.0"
+git commit -m "Production ready: NEXTQ v1.0"
 git push origin main
 ```
 
@@ -115,7 +115,7 @@ curl https://your-domain.com/api/status
 ## Project Structure
 
 ```
-clinicflow-pro/
+nextq/
 ├── src/                    # React frontend components
 │   ├── components/        # React components
 │   ├── pages/            # Page components

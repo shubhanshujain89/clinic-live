@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import crypto from 'crypto';
+import dotenv from 'dotenv';
 import { getDatabase, readDoc, listQuery, writeDoc, updateDoc, deleteDoc, findUserByEmail, verifyPassword, createPublicBooking, resetUserPassword, extractTableName } from './server/db.js';
 import { executeQueryOne } from './server/db/connection.js';
 import { repositories } from './server/db/repositories/index.js';
@@ -8,12 +9,14 @@ import { services } from './server/db/services/index.js';
 import { getClinicPlanSnapshot, getPlanLimits } from './server/db/services/planService.js';
 import { getClinicBusinessDate } from './server/db/services/clinicTime.js';
 
+dotenv.config();
+
 const app = express();
 app.set('trust proxy', process.env.TRUST_PROXY === 'true' ? 1 : false);
 
 const PORT = Number(process.env.BACKEND_PORT || process.env.PORT || 4000);
 const SESSION_TTL_SECONDS = Number(process.env.SESSION_MAX_AGE || 8 * 60 * 60);
-const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === 'development' ? 'clinicflow-development-session-secret' : '');
+const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === 'development' ? 'nextq-development-session-secret' : '');
 
 const databaseReady = getDatabase();
 const rateLimitTableReady = databaseReady.then(async () => {
@@ -101,7 +104,7 @@ const createSessionToken = (context: AuthContext) => {
 };
 
 const authContext = async (req: express.Request) => {
-  const token = cookieValue(req, 'clinicflow_session');
+  const token = cookieValue(req, 'nextq_session');
   if (!token || !SESSION_SECRET) return undefined;
   const [payload, signature] = token.split('.');
   if (!payload || !signature) return undefined;
@@ -278,7 +281,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
   const stateChangingMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
-  const hasSessionCookie = Boolean(cookieValue(req, 'clinicflow_session'));
+  const hasSessionCookie = Boolean(cookieValue(req, 'nextq_session'));
   const origin = String(req.headers.origin || '');
   if (stateChangingMethod && hasSessionCookie && origin) {
     const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
@@ -302,7 +305,7 @@ app.use((req, res, next) => {
 app.get('/api/health', (_req, res) => {
   res.status(200).json({
     status: 'ok',
-    app: 'ClinicFlow Pro',
+    app: 'NEXTQ',
     timestamp: new Date().toISOString(),
   });
 });
@@ -311,7 +314,7 @@ app.get('/api/status', (_req, res) => {
   res.status(200).json({
     service: 'clinic-queue-backend',
     mode: 'operational',
-    platform: 'ClinicFlow Pro',
+    platform: 'NEXTQ',
     features: [
       'Queue orchestration',
       'Patient intake',
@@ -913,7 +916,7 @@ app.post('/api/auth/login', async (req, res) => {
       `Max-Age=${SESSION_TTL_SECONDS}`,
       ...(isSecureCookie ? ['Secure'] : []),
     ];
-    res.setHeader('Set-Cookie', `clinicflow_session=${encodeURIComponent(token)}; ${cookieAttributes.join('; ')}`);
+    res.setHeader('Set-Cookie', `nextq_session=${encodeURIComponent(token)}; ${cookieAttributes.join('; ')}`);
 
     const responseData = { 
       user: { 
@@ -934,7 +937,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.post('/api/auth/logout', (req, res) => {
   const isSecureCookie = process.env.NODE_ENV === 'production' || String(req.headers['x-forwarded-proto'] || '').toLowerCase() === 'https';
-  res.setHeader('Set-Cookie', `clinicflow_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${isSecureCookie ? '; Secure' : ''}`);
+  res.setHeader('Set-Cookie', `nextq_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${isSecureCookie ? '; Secure' : ''}`);
   res.status(204).end();
 });
 
@@ -1451,7 +1454,7 @@ app.use((req, res) => {
   res.status(404).json({
     status: 'not_found',
     path: req.originalUrl,
-    message: 'Route not found on ClinicFlow Pro backend',
+    message: 'Route not found on NEXTQ backend',
   });
 });
 
@@ -1465,7 +1468,7 @@ app.use((err: any, _req: any, res: any, _next: any) => {
 
 const startServer = async () => {
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`ClinicFlow Pro backend listening on port ${PORT}`);
+    console.log(`NEXTQ backend listening on port ${PORT}`);
   });
 };
 

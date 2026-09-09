@@ -61,9 +61,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) 
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-4">
               <Heart className="w-10 h-10 text-emerald-400" />
-              <h1 className="text-3xl font-bold">ClinicFlow Pro</h1>
+              <h1 className="text-3xl font-bold">NEXTQ</h1>
             </div>
-            <p className="text-slate-400">Use your assigned clinic credentials to continue</p>
+            <p className="text-slate-400">Smart Queue. Less Waiting.</p>
           </div>
 
           {error && (

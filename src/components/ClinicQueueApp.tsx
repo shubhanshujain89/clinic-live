@@ -189,7 +189,7 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
                 <Stethoscope className="h-5 w-5 text-emerald-400" />
               </div>
               <div className="min-w-0">
-                <h1 className="truncate text-lg font-bold text-white">ClinicFlow Pro</h1>
+                <h1 className="truncate text-lg font-bold text-white">NEXTQ</h1>
                 <p className="truncate text-sm text-slate-400">
                   {clinic.name} · {currentRole === 'DOCTOR' ? 'Doctor Console' : 'Reception Desk'}
                 </p>
@@ -266,7 +266,7 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
         </main>
 
         <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-800/80 bg-slate-950/70 px-4 py-2 text-[10px] text-slate-500 sm:px-6 lg:px-8">
-          <span>ClinicFlow Pro · {clinic.name}</span>
+          <span>NEXTQ · {clinic.name}</span>
           <a
             href="https://ybgp.in"
             target="_blank"

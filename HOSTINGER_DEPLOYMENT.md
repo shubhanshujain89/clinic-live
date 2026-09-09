@@ -1,8 +1,8 @@
-# ClinicFlow Pro - Hostinger Deployment Guide
+# NEXTQ - Hostinger Deployment Guide
 
 ## Quick Summary
 
-**ClinicFlow Pro** is a clinic queue and token management platform built with React 19, Express.js, TypeScript, and MySQL.
+**NEXTQ** is a smart, app-free clinic appointment and queue management platform built with React 19, Express.js, TypeScript, and MySQL.
 
 - **Repository**: GitHub (Ready for deployment)
 - **Status**: Single-instance deployment ready after environment and database setup
@@ -109,7 +109,7 @@ curl https://your-domain/api/status
 ## 📁 Project Structure
 
 ```
-clinicflow-pro/
+nextq/
 ├── src/                    # React frontend
 │   ├── pages/             # Page components (Admin, Login, etc)
 │   ├── components/        # Reusable UI components

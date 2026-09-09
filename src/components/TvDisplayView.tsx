@@ -92,7 +92,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
           </div>
           <div className="min-w-0">
             <h1 className="truncate text-xl font-black tracking-tight text-white sm:text-2xl lg:text-3xl">
-              ClinicFlow Pro
+              NEXTQ
             </h1>
             <div className="mt-1 flex items-center space-x-2 truncate text-xs text-slate-400 sm:space-x-3 sm:text-sm">
               <span className="truncate font-semibold text-slate-300">{clinic.name}</span>

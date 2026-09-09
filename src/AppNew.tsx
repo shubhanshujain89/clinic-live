@@ -151,7 +151,7 @@ export default function App() {
 
   useEffect(() => {
     if (!userSession) return;
-    const savedProfile = localStorage.getItem(`clinicflow-profile-${userSession.userId}`);
+    const savedProfile = localStorage.getItem(`nextq-profile-${userSession.userId}`);
     const existing = savedProfile ? JSON.parse(savedProfile) : null;
     setProfileForm({
       displayName: existing?.displayName || authUser?.displayName || userSession.role || 'User',
@@ -263,7 +263,7 @@ export default function App() {
       displayName: profileForm.displayName || 'User',
       photoURL: profileForm.photoURL || '',
     };
-    localStorage.setItem(`clinicflow-profile-${userSession.userId}`, JSON.stringify(nextProfile));
+    localStorage.setItem(`nextq-profile-${userSession.userId}`, JSON.stringify(nextProfile));
     if (profileForm.password) {
       void fetch('/api/users/reset-password', {
         method: 'POST',
@@ -326,7 +326,7 @@ export default function App() {
 
       {/* Page Content */}
       <div className="flex-1 min-h-0">
-        <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-400">Loading ClinicFlow...</div>}>
+        <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-400">Loading NEXTQ...</div>}>
         {/* Landing Page */}
         {currentPage === 'landing' && (
           <LandingPage onNavigate={handleNavigate} />
