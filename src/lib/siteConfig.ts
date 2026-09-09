@@ -6,6 +6,7 @@ export interface SiteSettings {
   contactEmail: string;
   contactPhone: string;
   whatsappNumber: string;
+  whatsappMessage: string;
   supportAddress: string;
   facebookUrl: string;
   instagramUrl: string;
@@ -36,16 +37,17 @@ export const defaultSiteSettings: SiteSettings = {
   siteName: 'NEXTQ',
   siteTagline: 'Smart Queue. Less Waiting.',
   contactEmail: 'hello@nextq.in',
-  contactPhone: '+91 98765 43210',
-  whatsappNumber: '+91 98765 43210',
-  supportAddress: '12, Sunrise Avenue, Whitefield',
+  contactPhone: '9953-270-270',
+  whatsappNumber: '9953-270-270',
+  whatsappMessage: 'Hi NEXTQ, I would like to know more about your clinic queue and appointment management solution.',
+  supportAddress: 'Sec 168, Noida',
   facebookUrl: 'https://facebook.com/nextq',
   instagramUrl: 'https://instagram.com/nextq',
   linkedinUrl: 'https://linkedin.com/company/nextq',
   xUrl: 'https://x.com/nextq',
   youtubeUrl: 'https://youtube.com/@nextq',
   freeTrialFormUrl: '',
-  salesFormUrl: '',
+  salesFormUrl: 'https://forms.gle/your-clinic-sales-request',
   heroTitle: 'Smart Queue. Less Waiting.',
   heroSubtitle: 'Book your consultation without an app, track your live token, and arrive closer to your turn.',
   whatsappEnabled: true,

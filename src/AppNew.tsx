@@ -12,11 +12,12 @@ const PatientBooking = lazy(() => import('./pages/PatientBooking').then(({ Patie
 const PatientTracking = lazy(() => import('./pages/PatientTracking').then(({ PatientTracking }) => ({ default: PatientTracking })));
 const ClinicQueueApp = lazy(() => import('./components/ClinicQueueApp').then(({ ClinicQueueApp }) => ({ default: ClinicQueueApp })));
 const WhatWeProvidePage = lazy(() => import('./pages/WhatWeProvidePage').then(({ WhatWeProvidePage }) => ({ default: WhatWeProvidePage })));
+const HowItWorksPage = lazy(() => import('./pages/HowItWorksPage').then(({ HowItWorksPage }) => ({ default: HowItWorksPage })));
 const WhyChooseUsPage = lazy(() => import('./pages/WhyChooseUsPage').then(({ WhyChooseUsPage }) => ({ default: WhyChooseUsPage })));
 const BenefitsPage = lazy(() => import('./pages/BenefitsPage').then(({ BenefitsPage }) => ({ default: BenefitsPage })));
 const ContactPage = lazy(() => import('./pages/ContactPage').then(({ ContactPage }) => ({ default: ContactPage })));
 
-type AppPage = 'landing' | 'what-we-provide' | 'why-choose-us' | 'benefits' | 'contact' | 'login' | 'clinic-admin' | 'site-admin' | 'doctor-management' | 'patient-booking' | 'patient-tracking' | 'clinic-queue';
+type AppPage = 'landing' | 'what-we-provide' | 'how-it-works' | 'why-choose-us' | 'benefits' | 'contact' | 'login' | 'clinic-admin' | 'site-admin' | 'doctor-management' | 'patient-booking' | 'patient-tracking' | 'clinic-queue';
 
 interface UserSession {
   userId: string;
@@ -57,6 +58,7 @@ export const resolveAppPageForRoute = (path: string, userRole?: string | null): 
   if (path === '/booking') return 'patient-booking';
   if (path === '/login') return 'login';
   if (path === '/what-we-provide') return 'what-we-provide';
+  if (path === '/how-it-works') return 'how-it-works';
   if (path === '/why-choose-us') return 'why-choose-us';
   if (path === '/benefits') return 'benefits';
   if (path === '/contact') return 'contact';
@@ -64,7 +66,7 @@ export const resolveAppPageForRoute = (path: string, userRole?: string | null): 
 };
 
 const isPublicRoute = (path: string) => {
-  return path === '/login' || path === '/booking' || path === '/track' || path.startsWith('/track/') || path === '/what-we-provide' || path === '/why-choose-us' || path === '/benefits' || path === '/contact';
+  return path === '/login' || path === '/booking' || path === '/track' || path.startsWith('/track/') || path === '/what-we-provide' || path === '/how-it-works' || path === '/why-choose-us' || path === '/benefits' || path === '/contact';
 };
 
 export default function App() {
@@ -167,6 +169,7 @@ export default function App() {
   const routePathByPage: Record<string, string> = {
     landing: '/',
     'what-we-provide': '/what-we-provide',
+    'how-it-works': '/how-it-works',
     'why-choose-us': '/why-choose-us',
     benefits: '/benefits',
     contact: '/contact',
@@ -213,6 +216,10 @@ export default function App() {
       setCurrentPage('what-we-provide');
       window.history.pushState({}, '', '/what-we-provide');
       applyRouteMetadata('/what-we-provide');
+    } else if (page === 'how-it-works') {
+      setCurrentPage('how-it-works');
+      window.history.pushState({}, '', '/how-it-works');
+      applyRouteMetadata('/how-it-works');
     } else if (page === 'why-choose-us') {
       setCurrentPage('why-choose-us');
       window.history.pushState({}, '', '/why-choose-us');
@@ -364,6 +371,10 @@ export default function App() {
 
         {currentPage === 'what-we-provide' && (
           <WhatWeProvidePage onNavigate={handleNavigate} />
+        )}
+
+        {currentPage === 'how-it-works' && (
+          <HowItWorksPage onNavigate={handleNavigate} />
         )}
 
         {currentPage === 'why-choose-us' && (
@@ -534,8 +545,8 @@ export default function App() {
         </div>
       )}
 
-      {!isTvDisplay && <footer className="border-t border-slate-200 bg-white">
-        <div className="flex flex-col items-start justify-between gap-3 px-2 py-4 text-left text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 sm:flex-row sm:items-center sm:px-4 lg:px-5">
+      {!isTvDisplay && <footer className="site-footer border-t border-slate-200 bg-white">
+        <div className="site-footer-content flex flex-col items-start justify-between gap-3 px-2 py-4 text-left text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 sm:flex-row sm:items-center sm:px-4 lg:px-5">
           <div>
             <span className="block">{content.footerText}</span>
             <span className="mt-1 block text-[9px] tracking-[0.12em] text-slate-400">© {settings.siteName}. All rights reserved.</span>

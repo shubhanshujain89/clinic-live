@@ -112,52 +112,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => (
         </div>
       </section>
 
-      <section className="landing-workflows" aria-labelledby="workflow-heading">
-        <div className="landing-section-intro">
-          <p className="landing-kicker">How NEXTQ works</p>
-          <h2 id="workflow-heading">One clear flow for every part of the clinic.</h2>
-        </div>
-
-        <div className="workflow-list">
-          {workflows.map((workflow) => (
-            <article className="workflow-row" key={workflow.role}>
-              <div className="workflow-row-content">
-                <div className="workflow-copy">
-                  <p className="workflow-role">{workflow.role}</p>
-                  <h3>{workflow.title}</h3>
-                  <p>{workflow.description}</p>
-                </div>
-                <div className="workflow-steps" role="list">
-                  {workflow.steps.map((step, index) => (
-                    <div className="workflow-step-item" key={step} role="listitem">
-                      <div className="workflow-step-card">
-                        <span className="workflow-step-number">0{index + 1}</span>
-                        <span>{step}</span>
-                      </div>
-                      {index < workflow.steps.length - 1 && <ArrowRight className="workflow-step-arrow" aria-hidden="true" />}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <aside className={`flow-dashboard flow-dashboard-${workflow.role.toLowerCase()}`} aria-label={`${workflow.role} dashboard preview`}>
-                <div className="flow-dashboard-topbar">
-                  <span>{workflow.preview.label}</span>
-                  <span className="flow-dashboard-live"><span /> Live</span>
-                </div>
-                <h4>{workflow.preview.title}</h4>
-                <div className="flow-dashboard-metrics">
-                  {workflow.preview.metrics.map(([label, value]) => (
-                    <div key={label}><span>{label}</span><strong>{value}</strong></div>
-                  ))}
-                </div>
-                <div className="flow-dashboard-focus">{workflow.preview.focus}</div>
-                <div className="flow-dashboard-action">{workflow.preview.action}<ArrowRight aria-hidden="true" /></div>
-              </aside>
-            </article>
-          ))}
-        </div>
-      </section>
-
       <section className="landing-experiences" aria-labelledby="experiences-heading">
         <div>
           <p className="landing-kicker">Built around the clinic</p>

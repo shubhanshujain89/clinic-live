@@ -39,6 +39,18 @@ const routeMetadata: Record<string, SeoRouteMetadata> = {
     twitterDescription: 'Learn how NEXTQ brings appointment scheduling, patient queue management, digital token systems, reception workflow, doctor consultation flow, and clinic TV display visibility together.',
     twitterImage: NEXTQ_LOGO_URL,
   },
+  '/how-it-works': {
+    title: 'How NEXTQ Works — Smart Clinic Queue Flow',
+    description: 'See how NEXTQ connects patient booking, token generation, clinic reception workflow, doctor consultation flow, and waiting room visibility in one clear queue journey.',
+    canonical: `${NEXTQ_SITE_URL}/how-it-works`,
+    ogTitle: 'How NEXTQ Works — Smart Clinic Queue Flow',
+    ogDescription: 'See how NEXTQ connects patient booking, token generation, clinic reception workflow, doctor consultation flow, and waiting room visibility in one clear queue journey.',
+    ogUrl: `${NEXTQ_SITE_URL}/how-it-works`,
+    ogImage: NEXTQ_LOGO_URL,
+    twitterTitle: 'How NEXTQ Works — Smart Clinic Queue Flow',
+    twitterDescription: 'See how NEXTQ connects patient booking, token generation, clinic reception workflow, doctor consultation flow, and waiting room visibility in one clear queue journey.',
+    twitterImage: NEXTQ_LOGO_URL,
+  },
   '/why-choose-us': {
     title: 'Why Choose NEXTQ — Smart Clinic Operations',
     description: 'NEXTQ helps clinics reduce patient waiting, improve patient flow, support reception queue management, and create a more confident healthcare queue management experience.',

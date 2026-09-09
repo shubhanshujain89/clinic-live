@@ -23,6 +23,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   const navTabs = [
     { key: 'landing', label: 'Home' },
     { key: 'what-we-provide', label: 'What We Provide' },
+    { key: 'how-it-works', label: 'How It Works' },
     { key: 'why-choose-us', label: 'Why Choose Us' },
     { key: 'benefits', label: 'Benefits' },
     { key: 'contact', label: 'Contact Us' },
@@ -56,6 +57,13 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
           </div>
 
           <div className="hidden shrink-0 items-center gap-2.5 md:flex">
+            <button
+              type="button"
+              onClick={() => onNavigate('contact')}
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700"
+            >
+              Request a Demo →
+            </button>
             {isLoggedIn && (
               <>
                 <button
@@ -112,7 +120,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
             <button
               key={tab.key}
               onClick={() => onNavigate(tab.key)}
-                className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all duration-200 ${
+              className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all duration-200 ${
                 currentPage === tab.key
                   ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'

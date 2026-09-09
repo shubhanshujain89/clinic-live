@@ -42,6 +42,32 @@ test('landing page and contact copy remove the defunct app-download stat and uns
   assert.ok(!contactPageSource.includes('24/7'));
 });
 
+test('how it works route opens a dedicated public page', () => {
+  assert.equal(resolveAppPageForRoute('/how-it-works', null), 'how-it-works');
+});
+
+test('contact page WhatsApp link carries a configurable prefilled message that mirrors the settings model', () => {
+  const siteConfigSource = readFileSync(new URL('./lib/siteConfig.ts', import.meta.url), 'utf8');
+  const contactPageSource = readFileSync(new URL('./pages/ContactPage.tsx', import.meta.url), 'utf8');
+
+  assert.ok(siteConfigSource.includes('whatsappMessage:'));
+  assert.ok(contactPageSource.includes('encodeURIComponent(settings.whatsappMessage'));
+});
+
+test('how it works page explains the patient queue workflow instead of duplicating service capabilities', () => {
+  const howItWorksPageSource = readFileSync(new URL('./pages/HowItWorksPage.tsx', import.meta.url), 'utf8');
+  const whatWeProvidePageSource = readFileSync(new URL('./pages/WhatWeProvidePage.tsx', import.meta.url), 'utf8');
+
+  assert.ok(howItWorksPageSource.includes('PATIENT'));
+  assert.ok(howItWorksPageSource.includes('RECEPTION'));
+  assert.ok(howItWorksPageSource.includes('DOCTOR'));
+  assert.ok(howItWorksPageSource.includes('TV'));
+  assert.ok(howItWorksPageSource.includes('Scan QR / Open Link'));
+  assert.ok(howItWorksPageSource.includes('See Queue'));
+  assert.ok(!howItWorksPageSource.includes('Digital booking'));
+  assert.ok(!whatWeProvidePageSource.includes('From scan to turn'));
+});
+
 test('booking confirmation can point users to a prefilled live tracking URL', () => {
   assert.equal(buildTrackingHref('+91 98765 43210'), '/track?mobile=9876543210');
   assert.equal(buildTrackingHref('9876543210'), '/track?mobile=9876543210');

@@ -1501,11 +1501,12 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
             key: 'contact',
             title: 'Contact details',
             badge: 'Contact',
-            summary: 'Edit the main contact channels and support address for the clinic.',
+            summary: 'Edit the main contact channels, support address, and WhatsApp greeting for the clinic.',
             fields: [
               { label: 'Email', value: siteSettings.contactEmail, onChange: (value: string) => setSiteSettings({ ...siteSettings, contactEmail: value }), type: 'email' },
               { label: 'Phone', value: siteSettings.contactPhone, onChange: (value: string) => setSiteSettings({ ...siteSettings, contactPhone: value }), type: 'tel' },
               { label: 'WhatsApp', value: siteSettings.whatsappNumber, onChange: (value: string) => setSiteSettings({ ...siteSettings, whatsappNumber: value }), type: 'tel' },
+              { label: 'WhatsApp prefilled message', value: siteSettings.whatsappMessage, onChange: (value: string) => setSiteSettings({ ...siteSettings, whatsappMessage: value }), textarea: true },
               { label: 'Support address', value: siteSettings.supportAddress, onChange: (value: string) => setSiteSettings({ ...siteSettings, supportAddress: value }) },
             ],
           },
