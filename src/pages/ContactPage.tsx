@@ -74,10 +74,6 @@ export const ContactPage: React.FC<Props> = ({ onNavigate }) => {
             <Sparkles className="h-4 w-4" />
             Clinic support desk
           </span>
-          <span className="premium-contact-chip">
-            <Phone className="h-4 w-4" />
-            Available 24/7 for queue assistance
-          </span>
         </div>
       </section>
     </div>

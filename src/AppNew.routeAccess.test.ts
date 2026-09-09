@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { resolveAppPageForRoute } from './AppNew';
 import { buildTrackingHref } from './lib/trackingLink';
 
@@ -31,6 +32,14 @@ test('login route stays on the login page when no authenticated user is present'
 test('login route redirects a logged-in clinic admin to the dashboard', () => {
   assert.equal(resolveAppPageForRoute('/login', 'CLINIC_ADMIN'), 'clinic-admin');
   assert.equal(resolveAppPageForRoute('/login', 'SUPER_ADMIN'), 'site-admin');
+});
+
+test('landing page and contact copy remove the defunct app-download stat and unsupported 24/7 wording', () => {
+  const landingPageSource = readFileSync(new URL('./pages/LandingPage.tsx', import.meta.url), 'utf8');
+  const contactPageSource = readFileSync(new URL('./pages/ContactPage.tsx', import.meta.url), 'utf8');
+
+  assert.ok(!landingPageSource.includes('0</strong><small>App downloads</small>'));
+  assert.ok(!contactPageSource.includes('24/7'));
 });
 
 test('booking confirmation can point users to a prefilled live tracking URL', () => {

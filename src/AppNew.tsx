@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { auth, onAuthStateChanged, User, signInWithEmailAndPassword, signOut } from './lib/firebase';
 import { GlobalHeader } from './components/GlobalHeader';
 import { useSiteConfig } from './lib/siteConfig';
+import { applyRouteMetadata } from './lib/seo';
 
 const LandingPage = lazy(() => import('./pages/LandingPage').then(({ LandingPage }) => ({ default: LandingPage })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then(({ LoginPage }) => ({ default: LoginPage })));
@@ -163,6 +164,20 @@ export default function App() {
     });
   }, [userSession, authUser]);
 
+  const routePathByPage: Record<string, string> = {
+    landing: '/',
+    'what-we-provide': '/what-we-provide',
+    'why-choose-us': '/why-choose-us',
+    benefits: '/benefits',
+    contact: '/contact',
+    'patient-booking': '/booking',
+  };
+
+  useEffect(() => {
+    const path = routePathByPage[currentPage] || window.location.pathname || '/';
+    applyRouteMetadata(path);
+  }, [currentPage]);
+
   const handleNavigate = (page: string, role?: string) => {
     const effectiveRole = role || userSession?.role || '';
 
@@ -193,18 +208,23 @@ export default function App() {
     } else if (page === 'booking') {
       setCurrentPage('patient-booking');
       window.history.pushState({}, '', '/booking');
+      applyRouteMetadata('/booking');
     } else if (page === 'what-we-provide') {
       setCurrentPage('what-we-provide');
       window.history.pushState({}, '', '/what-we-provide');
+      applyRouteMetadata('/what-we-provide');
     } else if (page === 'why-choose-us') {
       setCurrentPage('why-choose-us');
       window.history.pushState({}, '', '/why-choose-us');
+      applyRouteMetadata('/why-choose-us');
     } else if (page === 'benefits') {
       setCurrentPage('benefits');
       window.history.pushState({}, '', '/benefits');
+      applyRouteMetadata('/benefits');
     } else if (page === 'contact') {
       setCurrentPage('contact');
       window.history.pushState({}, '', '/contact');
+      applyRouteMetadata('/contact');
     } else if (page === 'site-admin') {
       if (effectiveRole === 'SUPER_ADMIN') {
         setCurrentPage('site-admin');
@@ -221,8 +241,8 @@ export default function App() {
       }
     } else if (page === 'landing') {
       setCurrentPage('landing');
-      // Do NOT log the user out when navigating Home — only clear the loaded page.
       window.history.pushState({}, '', '/');
+      applyRouteMetadata('/');
     }
   };
 

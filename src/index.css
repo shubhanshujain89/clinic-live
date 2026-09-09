@@ -179,7 +179,7 @@ textarea {
 }
 
 .landing-hero {
-  padding-bottom: 8rem;
+  padding-bottom: 6.5rem;
 }
 
 .landing-hero-grid {
@@ -219,7 +219,7 @@ textarea {
   border: 1px solid #0f766e;
   background: #0f766e;
   color: #ffffff;
-  box-shadow: 0 14px 34px rgba(15, 118, 110, 0.24);
+  box-shadow: 0 14px 34px rgba(15, 118, 110, 0.24), 0 2px 0 rgba(255,255,255,0.36) inset;
 }
 
 .landing-primary-cta svg {
@@ -310,14 +310,14 @@ textarea {
 .landing-subtitle {
   margin-top: 2rem;
   max-width: 32rem;
-  color: #334155;
+  color: #314155;
   font-size: clamp(1.2rem, 2vw, 1.55rem);
   line-height: 1.45;
 }
 
 .landing-note {
   margin-top: 1.25rem;
-  color: #64748b;
+  color: #475569;
   font-size: 0.95rem;
   font-weight: 600;
 }
@@ -721,8 +721,8 @@ textarea {
   gap: 2rem;
   grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.8fr);
   border-top: 1px solid #dce6e2;
-  margin-top: 4rem;
-  padding: 2.5rem 0 5rem;
+  margin-top: 3.4rem;
+  padding: 2.2rem 0 4rem;
 }
 
 .landing-experiences > p {

@@ -36,10 +36,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
             onClick={() => onNavigate('landing')}
             className="group flex min-w-0 items-center"
           >
-            <img src="/nextq-logo.png" alt={settings.siteName} className="h-14 w-24 shrink-0 object-contain object-left" />
-            <span className="hidden max-w-[12rem] text-[10px] font-semibold uppercase leading-tight tracking-[0.16em] text-slate-500 sm:block">
-              {settings.siteTagline}
-            </span>
+            <img src="/nextq-logo.png" alt="NEXTQ logo" className="h-14 w-24 shrink-0 object-contain object-left" />
           </button>
 
           <div className="absolute left-1/2 hidden -translate-x-1/2 items-center justify-center gap-1 xl:flex">

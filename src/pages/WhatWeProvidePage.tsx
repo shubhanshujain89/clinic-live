@@ -88,10 +88,10 @@ export const WhatWeProvidePage: React.FC<Props> = ({ onNavigate }) => {
             </div> 
           </div> 
           <div className="mt-8 flex flex-wrap gap-3"> 
-            <button type="button" onClick={() => onNavigate('booking')} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-700"> 
+            <button type="button" onClick={() => onNavigate('booking')} className="landing-primary-cta inline-flex items-center gap-2"> 
               Start with NEXTQ <ArrowRight className="h-4 w-4" aria-hidden="true" /> 
             </button> 
-            <button type="button" onClick={() => onNavigate('contact')} className="rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-emerald-400 hover:text-emerald-700"> 
+            <button type="button" onClick={() => onNavigate('contact')} className="landing-secondary-cta"> 
               Talk to our team 
             </button> 
           </div> 
