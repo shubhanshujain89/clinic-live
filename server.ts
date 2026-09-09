@@ -725,6 +725,27 @@ app.patch('/api/staff/clinic/:clinicId/delay', async (req, res) => {
   }
 });
 
+app.patch('/api/staff/clinic/:clinicId/cabin', async (req, res) => {
+  try {
+    const context = await authContext(req);
+    const clinicId = String(req.params.clinicId || '');
+    if (!context || !context.clinicId || (context.role !== 'SUPER_ADMIN' && context.clinicId !== clinicId) || !['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'STAFF'].includes(context.role)) {
+      res.status(403).json({ error: 'Clinic room update access denied.' });
+      return;
+    }
+    if (!await requireActivePlan(res, clinicId, context.role)) return;
+    const cabinNumber = String(req.body?.cabinNumber || req.body?.roomNumber || '').trim();
+    const clinic = await repositories.clinics.update(clinicId, { cabinNumber });
+    if (!clinic) {
+      res.status(404).json({ error: 'Clinic not found.' });
+      return;
+    }
+    res.status(200).json({ ok: true, clinic: { id: clinic.id, cabinNumber: clinic.cabinNumber || '' } });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to update room number.' });
+  }
+});
+
 app.delete('/api/staff/queue/:tokenId/cancel', async (req, res) => {
   try {
     const context = await authContext(req);

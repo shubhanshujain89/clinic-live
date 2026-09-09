@@ -83,6 +83,17 @@ export class StaffUserRepository extends BaseRepository<StaffUser> {
   }
 
   /**
+   * Find user by email-or-name fallback used by clinic and staff login forms.
+   */
+  async findByEmailOrName(value: string): Promise<StaffUser | null> {
+    const needle = String(value || '').trim().toLowerCase();
+    if (!needle) return null;
+    const sql = `SELECT * FROM \`staff_users\` WHERE LOWER(\`email\`) = ? OR LOWER(\`name\`) = ? OR LOWER(\`display_name\`) = ? LIMIT 1`;
+    const result = await executeQueryOne<any>(sql, [needle, needle, needle]);
+    return result ? this.mapRowToEntity(result) : null;
+  }
+
+  /**
    * Find users by clinic ID
    */
   async findByClinicId(clinicId: string): Promise<StaffUser[]> {

@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { PhoneInput } from '../components/PhoneInput';
 
+const getTrackingMobileFromQuery = () => {
+  const params = new URLSearchParams(window.location.search);
+  const mobile = params.get('mobile') || '';
+  return mobile.replace(/\D/g, '').slice(0, 10);
+};
+
 interface TrackingData {
   clinic: string;
   doctor: string;
@@ -20,8 +26,14 @@ interface PatientTrackingProps {
 export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
   const [tracking, setTracking] = useState<TrackingData | null>(null);
   const [unavailable, setUnavailable] = useState(false);
-  const [mobile, setMobile] = useState('');
+  const [mobile, setMobile] = useState(getTrackingMobileFromQuery());
   const [isSearching, setIsSearching] = useState(false);
+
+  useEffect(() => {
+    if (!mobile.trim()) return;
+    void findBooking();
+  }, []);
+
   useEffect(() => {
     if (!tracking) return;
     const interval = window.setInterval(() => {

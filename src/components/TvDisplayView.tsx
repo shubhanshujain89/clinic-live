@@ -87,9 +87,9 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
           <img src="/nextq-logo.png" alt="NEXTQ" className="h-16 w-44 shrink-0 object-contain object-left sm:h-20 sm:w-56" />
           <div className="min-w-0">
             <div className="mt-1 flex items-center space-x-2 truncate text-xs text-slate-400 sm:space-x-3 sm:text-sm">
-              <span className="truncate font-black text-lg text-white sm:text-2xl lg:text-3xl">{clinic.name}</span>
+              <span className="truncate font-black text-2xl text-white sm:text-3xl lg:text-4xl">{clinic.name}</span>
               <span className="text-slate-500">•</span>
-              <span className="text-teal-300 font-black text-base sm:text-xl lg:text-2xl">{clinic.doctorName}</span>
+              <span className="text-teal-300 font-black text-xl sm:text-2xl lg:text-3xl">{clinic.doctorName}</span>
               <span className="text-slate-500">•</span>
               <span className="text-slate-300 font-semibold text-sm sm:text-base">{clinic.cabinNumber}</span>
             </div>
@@ -248,13 +248,14 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
       <footer className="grid grid-cols-1 items-center gap-2 border-t border-slate-800/80 pt-3 text-center text-[11px] font-medium text-slate-400 sm:grid-cols-2 sm:text-xs sm:text-left">
         <div className="flex items-center space-x-2">
           <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
-          <span>Live queue · Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="font-bold uppercase tracking-wide text-teal-300">{clinic.name} · Smart Queue</span>
         </div>
         <div className="text-center">
-          <span>Estimated Pacing: ~{clinic.avgConsultationMinutes || 8.5} mins/patient</span>
+          <span>Live queue · Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="ml-2">· Est. pacing ~{clinic.avgConsultationMinutes || 8.5} min/patient</span>
           {clinic.delayMinutes > 0 && (
             <span className="text-amber-400 font-bold ml-2">
-              (⚠️ Delay Broadcast: +{clinic.delayMinutes} mins)
+              · Delay +{clinic.delayMinutes} min
             </span>
           )}
         </div>

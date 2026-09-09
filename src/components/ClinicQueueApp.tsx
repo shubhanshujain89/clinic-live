@@ -232,7 +232,7 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
           </div>
         </div>
 
-        <main className="min-h-0 flex-1 max-w-7xl w-full mx-auto overflow-y-auto p-4 pt-24 sm:p-6 sm:pt-24 lg:p-8 lg:pt-24">
+        <main className="min-h-0 flex-1 max-w-7xl w-full mx-auto p-4 pt-24 sm:p-6 sm:pt-24 lg:p-8 lg:pt-24">
           {queueAccessError && (
             <div className="mx-auto max-w-2xl rounded-2xl border border-amber-500/40 bg-amber-500/10 p-6 text-center">
               <h2 className="text-xl font-bold text-amber-200">Clinic access restricted</h2>
@@ -249,6 +249,7 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
               tokens={tokens}
               currentUser={currentUser}
               onGoogleSignIn={handleGoogleSignIn}
+              onClinicUpdated={(nextClinic) => setClinic(nextClinic)}
             />
           )}
 

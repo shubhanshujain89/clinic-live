@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, Stethoscope, ChevronRight, Check, Heart } from 'lucide-react';
 import { PhoneInput } from '../components/PhoneInput';
+import { buildTrackingHref } from '../lib/trackingLink';
 
 interface Clinic {
   id: string;
@@ -430,7 +431,9 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
 
               <div className="border-t border-slate-700 pt-4">
                 <p className="text-sm text-slate-400">Use the mobile number from this booking to view your live queue status.</p>
-                <a className="text-sm text-emerald-400 font-semibold" href="/track">Open live tracker</a>
+                <a className="text-sm text-emerald-400 font-semibold" href={buildTrackingHref(bookingData.phone)}>
+                  Open live tracker
+                </a>
               </div>
             </div>
 

@@ -12,7 +12,8 @@ export { hashPassword, verifyPassword };
 
 // User authentication
 export const findUserByEmail = async (email: string) => {
-  const user = await repositories.staffUsers.findByEmail(email);
+  const user = await repositories.staffUsers.findByEmail(email)
+    || await repositories.staffUsers.findByEmailOrName(email);
   if (!user) return null;
   return {
     id: user.id,

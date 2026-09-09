@@ -36,6 +36,7 @@ interface DoctorViewProps {
   tokens: TokenItem[];
   currentUser: User | null;
   onGoogleSignIn: () => void;
+  onClinicUpdated?: (clinic: Clinic) => void;
 }
 
 export const DoctorView: React.FC<DoctorViewProps> = ({
@@ -44,6 +45,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   tokens,
   currentUser,
   onGoogleSignIn,
+  onClinicUpdated,
 }) => {
   const isBasicPlan = String(clinic.featurePlan || '').toUpperCase() === 'BASIC';
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -69,6 +71,9 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   const [editWeight, setEditWeight] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [roomNumber, setRoomNumber] = useState(clinic.cabinNumber || '');
+  const [editingRoomNumber, setEditingRoomNumber] = useState(false);
+  const [isSavingRoomNumber, setIsSavingRoomNumber] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -127,6 +132,31 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
     }
 
     setEditNotes(token.triageNotes || preNotes?.triageNotes || preNotes?.receptionNotes || '');
+  };
+
+  const handleSaveRoomNumber = async () => {
+    if (!clinic.id || isBasicPlan) return;
+    setIsSavingRoomNumber(true);
+    try {
+      const response = await fetch(`/api/staff/clinic/${encodeURIComponent(clinic.id)}/cabin`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cabinNumber: roomNumber.trim() }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Unable to update room number.');
+      const nextClinic = { ...clinic, cabinNumber: roomNumber.trim() };
+      if (onClinicUpdated) onClinicUpdated(nextClinic);
+      setRoomNumber(roomNumber.trim());
+      setEditingRoomNumber(false);
+      showToast('Room number updated.');
+    } catch (error) {
+      console.error('Error updating room number:', error);
+      showToast(error instanceof Error ? error.message : 'Unable to update room number.');
+    } finally {
+      setIsSavingRoomNumber(false);
+    }
   };
 
   const handleSavePatientEdits = async (e: React.FormEvent) => {
@@ -342,49 +372,6 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
     if (!response.ok) throw new Error(payload.error || 'Unable to update clinic delay.');
   };
 
-  if (isBasicPlan) {
-    return (
-      <div className="space-y-6 max-w-5xl mx-auto">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <div className="text-xs uppercase tracking-[0.2em] text-violet-300 font-bold">Basic plan</div>
-              <h1 className="text-2xl font-black text-white mt-2">Doctor live tracking</h1>
-            </div>
-            <div className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-300">
-              Active queue only
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-            <div className="text-xs uppercase tracking-wider text-teal-300 font-bold">Currently running</div>
-            <div className="mt-4 text-4xl font-black text-white">{activeToken ? activeToken.tokenNumber : 'None'}</div>
-            <div className="mt-2 text-sm text-slate-300">{activeToken ? activeToken.patientName : 'No patient in consultation'}</div>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-            <div className="text-xs uppercase tracking-wider text-sky-300 font-bold">In queue</div>
-            <div className="mt-4 space-y-2">
-              {waitingTokens.length > 0 ? waitingTokens.slice(0, 5).map(token => (
-                <div key={token.id} className="flex items-center justify-between rounded-xl bg-slate-950 px-3 py-2 border border-slate-800">
-                  <div>
-                    <div className="font-semibold text-white">{token.patientName}</div>
-                    <div className="text-xs text-slate-400">{token.patientPhone}</div>
-                  </div>
-                  <div className="text-sm font-bold text-teal-300">{token.tokenNumber}</div>
-                </div>
-              )) : (
-                <div className="text-sm text-slate-400 py-2">No patients waiting.</div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Metrics Row */}
@@ -399,7 +386,36 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
             <div className="min-w-0">
               <h2 className="break-words text-sm font-bold leading-tight text-white">{clinic.doctorName || 'Doctor'}</h2>
               <p className="mt-0.5 break-words text-[11px] leading-snug text-slate-400">{clinic.specialty || 'General Practice'}</p>
-              <p className="mt-1 break-words text-[10px] font-mono leading-snug text-slate-500">{clinic.cabinNumber || 'Cabin'}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className="break-words text-[10px] font-mono leading-snug text-slate-500">
+                  {roomNumber ? `Room ${roomNumber}` : 'No room number'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setEditingRoomNumber((value) => !value)}
+                  className="rounded border border-slate-700 px-2 py-0.5 text-[10px] font-bold text-teal-300 hover:bg-slate-800"
+                >
+                  Edit
+                </button>
+                {editingRoomNumber && (
+                  <div className="mt-2 flex w-full items-center gap-2">
+                    <input
+                      value={roomNumber}
+                      onChange={(e) => setRoomNumber(e.target.value)}
+                      className="min-w-0 flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-white outline-none focus:border-teal-300"
+                      placeholder="Room / cabin"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveRoomNumber}
+                      disabled={isSavingRoomNumber}
+                      className="rounded bg-teal-500 px-2 py-1 text-[10px] font-black text-slate-950 disabled:opacity-50"
+                    >
+                      {isSavingRoomNumber ? '...' : 'Save'}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -538,14 +554,14 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                         {activeToken.tokenNumber}
                       </span>
                     </div>
-                    {!isBasicPlan && <button
-                        onClick={() => openEditModal(activeToken)}
-                        className="px-2.5 py-1.5 rounded-lg bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 border border-teal-500/30 text-xs font-semibold flex items-center gap-1.5 transition-colors"
-                        title="Edit patient name, phone, symptoms, and vitals"
-                      >
-                        <Edit3 className="w-3.5 h-3.5 text-teal-400" />
-                        <span>Edit Patient</span>
-                      </button>}
+                    <button
+                      onClick={() => openEditModal(activeToken)}
+                      className="px-2.5 py-1.5 rounded-lg bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 border border-teal-500/30 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                      title="Edit patient name, phone, symptoms, and vitals"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-teal-400" />
+                      <span>Edit Patient</span>
+                    </button>
                   </div>
                 </div>
 
@@ -701,7 +717,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
       )}
 
       {/* Doctor Full Patient & Symptoms Editor Modal */}
-      {editingToken && !isBasicPlan && (
+      {editingToken && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl space-y-5 my-8">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
