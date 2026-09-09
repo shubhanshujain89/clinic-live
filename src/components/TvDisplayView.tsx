@@ -86,15 +86,12 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
         <div className="flex min-w-0 items-center space-x-3 sm:space-x-4">
           <img src="/nextq-logo.png" alt="NEXTQ" className="h-16 w-44 shrink-0 object-contain object-left sm:h-20 sm:w-56" />
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-black tracking-tight text-white sm:text-2xl lg:text-3xl">
-              NEXTQ
-            </h1>
             <div className="mt-1 flex items-center space-x-2 truncate text-xs text-slate-400 sm:space-x-3 sm:text-sm">
-              <span className="truncate font-semibold text-slate-300">{clinic.name}</span>
-              <span>•</span>
-              <span className="text-teal-300 font-bold">{clinic.doctorName}</span>
-              <span>•</span>
-              <span className="text-slate-300 font-semibold">{clinic.cabinNumber}</span>
+              <span className="truncate font-black text-lg text-white sm:text-2xl lg:text-3xl">{clinic.name}</span>
+              <span className="text-slate-500">•</span>
+              <span className="text-teal-300 font-black text-base sm:text-xl lg:text-2xl">{clinic.doctorName}</span>
+              <span className="text-slate-500">•</span>
+              <span className="text-slate-300 font-semibold text-sm sm:text-base">{clinic.cabinNumber}</span>
             </div>
           </div>
         </div>

@@ -36,7 +36,6 @@ interface DoctorViewProps {
   tokens: TokenItem[];
   currentUser: User | null;
   onGoogleSignIn: () => void;
-  onToggleDoctorStatus: () => Promise<void>;
 }
 
 export const DoctorView: React.FC<DoctorViewProps> = ({
@@ -45,7 +44,6 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   tokens,
   currentUser,
   onGoogleSignIn,
-  onToggleDoctorStatus,
 }) => {
   const isBasicPlan = String(clinic.featurePlan || '').toUpperCase() === 'BASIC';
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -53,7 +51,6 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isPatientListOpen, setIsPatientListOpen] = useState(false);
   const [isDeletingPatient, setIsDeletingPatient] = useState(false);
-  const [isUpdatingDoctorStatus, setIsUpdatingDoctorStatus] = useState(false);
 
   // Doctor editing patient details state
   const [editingToken, setEditingToken] = useState<TokenItem | null>(null);
@@ -345,17 +342,6 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
     if (!response.ok) throw new Error(payload.error || 'Unable to update clinic delay.');
   };
 
-  const handleToggleDoctorStatus = async () => {
-    setIsUpdatingDoctorStatus(true);
-    try {
-      await onToggleDoctorStatus();
-    } catch (error) {
-      console.error('Error updating doctor status:', error);
-      showToast(error instanceof Error ? error.message : 'Unable to update doctor status.');
-    } finally {
-      setIsUpdatingDoctorStatus(false);
-    }
-  };
   if (isBasicPlan) {
     return (
       <div className="space-y-6 max-w-5xl mx-auto">
@@ -416,19 +402,6 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
               <p className="mt-1 break-words text-[10px] font-mono leading-snug text-slate-500">{clinic.cabinNumber || 'Cabin'}</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => void handleToggleDoctorStatus()}
-            disabled={isUpdatingDoctorStatus}
-            className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition disabled:cursor-wait disabled:opacity-60 ${
-              clinic.doctorStatus === 'IN'
-                ? 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                : 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
-            }`}
-          >
-            <span className={`h-2 w-2 rounded-full ${clinic.doctorStatus === 'IN' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-            {isUpdatingDoctorStatus ? 'Updating...' : clinic.doctorStatus === 'IN' ? 'Doctor IN' : 'Doctor OUT'}
-          </button>
         </div>
 
         {/* Metric 1: Total Patients Today */}

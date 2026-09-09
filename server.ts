@@ -454,12 +454,16 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
     const clinicRevenue = todaySession
       ? await repositories.tokens.getCollectedRevenueByClinicAndSession(requestedClinicId, todaySession.id)
       : 0;
+    const doctorIdForQr = context.role === 'DOCTOR'
+      ? context.doctorId || displayedDoctor?.id || ''
+      : displayedDoctor?.id || scopedActiveDoctors[0]?.id || '';
+    const primaryDoctorForClinic = displayedDoctor || scopedActiveDoctors[0] || null;
 
     res.status(200).json({
       clinic: {
         id: clinic.id,
         name: clinic.name,
-        doctorId: context.role === 'DOCTOR' ? context.doctorId || '' : scopedActiveDoctors[0]?.id || '',
+        doctorId: context.role === 'DOCTOR' ? context.doctorId || '' : primaryDoctorForClinic?.id || '',
         doctorName: displayedDoctor?.name || clinic.doctorName || '',
         doctorPhoto: displayedDoctor?.photo || '',
         specialty: displayedDoctor?.specialization || clinic.specialty || '',
@@ -484,7 +488,7 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
         whatsappNotificationsEnabled: clinic.whatsappNotificationsEnabled,
         hasPaymentGateway: clinic.hasPaymentGateway,
         clinicUpiId: clinic.clinicUpiId || '',
-        qrCodeUrl: clinic.qrCodeUrl || '',
+        qrCodeUrl: makeDoctorBookingQrCodeUrl(req, clinic.id, doctorIdForQr || ''),
       },
       session: session ? {
         id: session.id,
@@ -606,6 +610,16 @@ app.post('/api/staff/queue/:tokenId/complete', async (req, res) => {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to complete consultation.' });
   }
 });
+
+const makeDoctorBookingQrCodeUrl = (req: express.Request, clinicId: string, doctorId: string) => {
+  if (!clinicId || !doctorId) return '';
+  const protocol = req.protocol || 'http';
+  const host = req.get('host') || 'localhost:3000';
+  const baseUrl = `${protocol}://${host}`;
+  const bookingUrl = `${baseUrl}/booking?clinicId=${encodeURIComponent(clinicId)}&doctorId=${encodeURIComponent(doctorId)}`;
+  const encodedBookingUrl = encodeURIComponent(bookingUrl);
+  return `https://chart.googleapis.com/chart?cht=qr&chs=220x220&chl=${encodedBookingUrl}`;
+};
 
 const queueMutationContext = async (req: express.Request, res: express.Response) => {
   const context = await authContext(req);

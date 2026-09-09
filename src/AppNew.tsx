@@ -514,7 +514,7 @@ export default function App() {
         </div>
       )}
 
-      {!isTvDisplay && !isClinicQueue && <footer className="border-t border-slate-200 bg-white">
+      {!isTvDisplay && <footer className="border-t border-slate-200 bg-white">
         <div className="flex flex-col items-start justify-between gap-3 px-2 py-4 text-left text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 sm:flex-row sm:items-center sm:px-4 lg:px-5">
           <div>
             <span className="block">{content.footerText}</span>

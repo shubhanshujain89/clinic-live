@@ -186,13 +186,15 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
     <div className="app-shell h-screen overflow-hidden text-slate-100 flex flex-col selection:bg-teal-500 selection:text-slate-950">
       <div className="relative z-10 flex h-full min-h-0 flex-col">
         <div className="fixed inset-x-0 top-0 z-50 border-b border-slate-700/50 bg-slate-950/90 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
             <div className="flex min-w-0 items-center gap-3">
               <img src="/nextq-logo.png" alt="NEXTQ" className="h-12 w-36 shrink-0 object-contain object-left" />
               <div className="min-w-0">
-                <h1 className="truncate text-lg font-bold text-white">NEXTQ</h1>
+                <p className="truncate text-lg font-black text-white">
+                  {clinic.name}
+                </p>
                 <p className="truncate text-sm text-slate-400">
-                  {clinic.name} · {currentRole === 'DOCTOR' ? 'Doctor Console' : 'Reception Desk'}
+                  {currentRole === 'DOCTOR' ? 'Doctor Console' : 'Reception Desk'}
                 </p>
               </div>
             </div>
@@ -247,7 +249,6 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
               tokens={tokens}
               currentUser={currentUser}
               onGoogleSignIn={handleGoogleSignIn}
-              onToggleDoctorStatus={handleToggleDoctorStatus}
             />
           )}
 
@@ -263,10 +264,6 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
           )}
           </>)}
         </main>
-
-        <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-800/80 bg-slate-950/70 px-4 py-2 text-[10px] text-slate-500 sm:px-6 lg:px-8">
-          <span>NEXTQ · {clinic.name}</span>
-        </footer>
 
         {/* Modals */}
         {isAddPatientOpen && (
