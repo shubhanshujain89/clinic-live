@@ -20,9 +20,7 @@ import { BookingView } from './BookingView';
 import { TvDisplayView } from './TvDisplayView';
 import { AddPatientModal } from './AddPatientModal';
 import { DelayBroadcastModal } from './DelayBroadcastModal';
-import { WhatsAppLogsModal } from './WhatsAppLogsModal';
-import { PrintTokenModal } from './PrintTokenModal';
-import { LogOut, Stethoscope, Tv } from 'lucide-react';
+import { LogOut, Tv } from 'lucide-react';
 
 interface ClinicQueueAppProps {
   userId: string;
@@ -48,8 +46,6 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
   // Modals state
   const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
   const [isDelayModalOpen, setIsDelayModalOpen] = useState(false);
-  const [isWhatsAppLogsOpen, setIsWhatsAppLogsOpen] = useState(false);
-  const [tokenToPrint, setTokenToPrint] = useState<TokenItem | null>(null);
   const [tokenIntakeNotesToView, setTokenIntakeNotesToView] = useState<TokenItem | null>(null);
 
   useEffect(() => {
@@ -187,9 +183,7 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
         <div className="fixed inset-x-0 top-0 z-50 border-b border-slate-700/50 bg-slate-950/90 backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/40">
-                <Stethoscope className="h-5 w-5 text-emerald-400" />
-              </div>
+              <img src="/nextq-logo.png" alt="NEXTQ" className="h-12 w-36 shrink-0 object-contain object-left" />
               <div className="min-w-0">
                 <h1 className="truncate text-lg font-bold text-white">NEXTQ</h1>
                 <p className="truncate text-sm text-slate-400">
@@ -248,6 +242,7 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
               tokens={tokens}
               currentUser={currentUser}
               onGoogleSignIn={handleGoogleSignIn}
+              onToggleDoctorStatus={handleToggleDoctorStatus}
             />
           )}
 
@@ -259,9 +254,7 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
               tokens={tokens}
               onOpenAddWalkIn={() => setIsAddPatientOpen(true)}
               onOpenDelayBroadcast={() => setIsDelayModalOpen(true)}
-              onOpenWhatsAppLogs={() => setIsWhatsAppLogsOpen(true)}
               onViewTokenDetails={(token) => setTokenIntakeNotesToView(token)}
-              onPrintTokenSlip={(token) => setTokenToPrint(token)}
             />
           )}
           </>)}
@@ -291,17 +284,6 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
           />
         )}
 
-        {isWhatsAppLogsOpen && (
-          <WhatsAppLogsModal onClose={() => setIsWhatsAppLogsOpen(false)} />
-        )}
-
-        {tokenToPrint && (
-          <PrintTokenModal
-            token={tokenToPrint}
-            clinic={clinic}
-            onClose={() => setTokenToPrint(null)}
-          />
-        )}
       </div>
     </div>
   );

@@ -164,7 +164,15 @@ export default function App() {
   const handleNavigate = (page: string, role?: string) => {
     const effectiveRole = role || userSession?.role || '';
 
-    if (page === 'login') {
+    if (page === 'dashboard') {
+      if (effectiveRole === 'SUPER_ADMIN' || effectiveRole === 'CLINIC_ADMIN') {
+        setCurrentPage(effectiveRole === 'SUPER_ADMIN' ? 'site-admin' : 'clinic-admin');
+        window.history.pushState({}, '', '/site/admin');
+      } else if (effectiveRole === 'DOCTOR' || effectiveRole === 'STAFF') {
+        setCurrentPage('clinic-queue');
+        window.history.pushState({}, '', '/site/queue');
+      }
+    } else if (page === 'login') {
       if (userSession) {
         if (userSession.role === 'SUPER_ADMIN') {
           setCurrentPage('site-admin');
@@ -307,9 +315,9 @@ export default function App() {
   }
 
   const isAdminArea = currentPage === 'site-admin' || currentPage === 'clinic-admin' || currentPage === 'doctor-management';
-  const showPublicHeader = !userSession && !isAdminArea;
   const isTvDisplay = currentPage === 'clinic-queue' && new URLSearchParams(window.location.search).get('view') === 'tv';
   const isClinicQueue = currentPage === 'clinic-queue';
+  const showPublicHeader = !isAdminArea && !isClinicQueue && !isTvDisplay;
 
   return (
     <div className="app-root min-h-screen flex flex-col">

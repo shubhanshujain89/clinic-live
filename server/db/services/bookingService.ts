@@ -233,7 +233,7 @@ export class BookingService {
           tokenId, input.clinicId, session.id, input.doctorId, tokenNumber, sequenceNumber,
           patientId, input.patientName.trim(), input.phone.trim(), input.age || null,
           input.tokenType, 'WAITING', 0, 0,
-          input.tokenType === 'EMERGENCY' ? 1 : 10, 0, 'PENDING', now,
+          input.tokenType === 'EMERGENCY' ? 1 : 10, Number(doctor.consultationFee || 0), 'PENDING', now,
           input.reason?.trim() ? JSON.stringify({ symptoms: input.reason.trim() }) : null
         ]
       );

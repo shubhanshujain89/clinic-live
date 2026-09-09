@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-  Stethoscope, 
+  Stethoscope,
   Users, 
   Smartphone, 
   Tv, 
@@ -43,9 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           
           {/* Brand Logo & Clinic Info */}
           <div className="flex min-w-0 items-center space-x-3">
-            <div className="logo-glow flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-400 via-cyan-400 to-emerald-300 text-slate-950 shadow-[0_14px_30px_rgba(45,212,191,0.35)]">
-              <Stethoscope className="w-5 h-5" />
-            </div>
+            <img src="/nextq-logo.png" alt="NEXTQ" className="h-12 w-36 shrink-0 object-contain object-left" />
             <div className="min-w-0">
               <div className="flex items-center space-x-2">
                 <span className="truncate text-base font-black tracking-[-0.04em] text-white sm:text-lg">

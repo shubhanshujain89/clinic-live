@@ -449,7 +449,7 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
         delayMinutes: clinic.delayMinutes || 0,
         delayReason: clinic.delayReason || '',
         avgConsultationMinutes: clinic.avgConsultationMinutes || 0,
-        consultationFee: clinic.consultationFee || 0,
+        consultationFee: scopedActiveDoctors[0]?.consultationFee ?? clinic.consultationFee ?? 0,
         activeSessionId: clinic.activeSessionId || session?.id || '',
         totalPatientsToday: clinic.totalPatientsToday || 0,
         revenueToday: clinicRevenue,
@@ -869,11 +869,14 @@ app.post('/api/auth/login', async (req, res) => {
       accountClinicName = account.clinicName || '';
       const role = String(account.role || 'CLINIC_ADMIN').toUpperCase() as AuthContext['role'];
       if (['CLINIC_ADMIN', 'DOCTOR', 'STAFF', 'SUPER_ADMIN'].includes(role)) {
+        const linkedDoctor = role === 'DOCTOR' && account.clinicId && !account.doctorId
+          ? await repositories.doctors.findByEmail(account.email)
+          : null;
         context = {
           userId: account.id,
           role,
           clinicId: account.clinicId || null,
-          doctorId: account.doctorId || null,
+          doctorId: account.doctorId || linkedDoctor?.id || null,
           email: account.email,
           authVersion: crypto.createHash('sha256').update(account.passwordHash).digest('base64url'),
         };

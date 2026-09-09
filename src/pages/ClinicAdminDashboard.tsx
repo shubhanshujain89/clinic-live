@@ -630,7 +630,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         if (editingUser?.source === 'doctors') {
           await updateDoc(doc(db, 'doctors', editingUser.id), doctorPayload);
         } else {
-          await addDoc(collection(db, 'doctors'), {
+          const doctorRef = await addDoc(collection(db, 'doctors'), {
             ...doctorPayload,
             createdAt: new Date().toISOString()
           });
@@ -642,6 +642,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
             role: 'DOCTOR',
             status: 'Active',
             clinicId: selectedClinic?.id,
+            doctorId: doctorRef.id,
             clinicName: userFormData.clinicName,
             phone: payload.phone,
             accessStatus: databaseAccessStatus,

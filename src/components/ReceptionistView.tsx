@@ -10,8 +10,6 @@ import {
   Search,
   CheckCircle2,
   Phone,
-  MessageSquare,
-  Printer,
   ChevronRight,
   RotateCw,
   Filter,
@@ -34,9 +32,7 @@ interface ReceptionistViewProps {
   tokens: TokenItem[];
   onOpenAddWalkIn: () => void;
   onOpenDelayBroadcast: () => void;
-  onOpenWhatsAppLogs: () => void;
   onViewTokenDetails: (token: TokenItem) => void;
-  onPrintTokenSlip: (token: TokenItem) => void;
 }
 
 export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
@@ -45,9 +41,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
   tokens,
   onOpenAddWalkIn,
   onOpenDelayBroadcast,
-  onOpenWhatsAppLogs,
   onViewTokenDetails,
-  onPrintTokenSlip,
 }) => {
   const isBasicPlan = clinic.featurePlan === 'BASIC';
   const [filterTab, setFilterTab] = useState<'ALL' | 'WAITING' | 'SERVING' | 'HOLD' | 'COMPLETED'>('WAITING');
@@ -299,12 +293,6 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
     }
   };
 
-  // Send Manual WhatsApp Alert
-  const handleSendWhatsAppAlert = async (token: TokenItem) => {
-    void token;
-    showToast('WhatsApp notifications are not available in the current launch plans.');
-  };
-
   if (isBasicPlan) {
     return (
       <div className="space-y-6 max-w-5xl mx-auto pb-12">
@@ -383,14 +371,14 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5 sm:gap-4">
       {/* Patient currently in the cabin */}
-      <div className="col-span-2 min-h-20 rounded-2xl border border-teal-500/30 bg-teal-950/20 p-4 sm:col-span-4 sm:p-5 lg:col-span-1 lg:aspect-square lg:flex lg:items-center lg:justify-center">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+      <div className="col-span-2 min-h-20 rounded-2xl border border-teal-500/30 bg-teal-950/20 p-4 sm:col-span-4 sm:p-5 lg:col-span-1 lg:flex lg:items-center lg:justify-center">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-teal-300">In cabin now</p>
             {activeToken ? (
               <>
-                <h2 className="mt-1 text-lg font-bold text-white">{activeToken.patientName}</h2>
-                <p className="mt-1 text-xs text-slate-400">
+                <h2 className="mt-1 truncate text-lg font-bold text-white">{activeToken.patientName}</h2>
+                <p className="mt-1 break-words text-xs text-slate-400">
                   {activeToken.patientPhone}
                   {activeToken.patientAge ? ` · ${activeToken.patientAge} years` : ''}
                   {activeToken.patientGender ? ` · ${activeToken.patientGender}` : ''}
@@ -401,16 +389,16 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
             )}
           </div>
           {activeToken && (
-            <div className="flex items-center gap-3">
-              <span className="rounded-lg border border-teal-500/40 bg-teal-500/10 px-3 py-2 text-center">
+            <div className="flex w-full shrink-0 items-stretch gap-3 sm:w-auto">
+              <span className="min-w-[4.75rem] shrink-0 rounded-lg border border-teal-500/40 bg-teal-500/10 px-3 py-2 text-center">
                 <span className="block text-[10px] uppercase tracking-wider text-teal-300">Token</span>
-                <span className="block text-xl font-black text-white">{activeToken.tokenNumber}</span>
+                <span className="block whitespace-nowrap text-xl font-black text-white">{activeToken.tokenNumber}</span>
               </span>
               <button
                 onClick={() => onViewTokenDetails(activeToken)}
-                className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-teal-400/50 hover:text-white"
+                className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-teal-400/50 hover:text-white sm:flex-none"
               >
-                View details
+                <span className="whitespace-nowrap">View details</span>
               </button>
             </div>
           )}
@@ -426,9 +414,9 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
           disabled={isAdvancing || waitingTokens.length === 0}
           className="col-span-2 min-h-20 sm:col-span-1 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold p-3.5 rounded-2xl flex flex-col items-center justify-center text-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed lg:aspect-square"
         >
-          <Play className="w-5 h-5 mb-1 text-slate-950" />
-          <span className="text-xs font-bold">Call next</span>
-          <span className="text-[10px] text-slate-900/80 font-bold mt-0.5">
+          <Play className="mb-2 h-6 w-6 text-slate-950" />
+          <span className="text-base font-bold leading-tight">Call next</span>
+          <span className="mt-1 text-xs font-bold leading-tight text-slate-900/80">
             {waitingTokens.length > 0 ? `Next: #${waitingTokens[0].tokenNumber}` : 'Queue Empty'}
           </span>
         </button>
@@ -438,9 +426,9 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
           onClick={onOpenAddWalkIn}
           className="min-h-20 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-semibold p-3.5 rounded-2xl flex flex-col items-center justify-center text-center transition-colors lg:aspect-square"
         >
-          <UserPlus className="w-5 h-5 mb-1 text-teal-400" />
-          <span className="text-xs sm:text-sm">Add patient</span>
-          <span className="text-[10px] text-slate-400 font-normal">Walk-in token</span>
+          <UserPlus className="mb-2 h-6 w-6 text-teal-400" />
+          <span className="text-base font-semibold leading-tight">Add patient</span>
+          <span className="mt-1 text-xs font-normal leading-tight text-slate-400">Walk-in token</span>
         </button>
 
         {/* Button 3: Hold / No-Show */}
@@ -449,9 +437,9 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
           disabled={!activeToken}
           className="min-h-20 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-semibold p-3.5 rounded-2xl flex flex-col items-center justify-center text-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed lg:aspect-square"
         >
-          <Pause className="w-5 h-5 mb-1 text-amber-400" />
-          <span className="text-xs sm:text-sm">Hold patient</span>
-          <span className="text-[10px] text-slate-400 font-normal">Skip active token</span>
+          <Pause className="mb-2 h-6 w-6 text-amber-400" />
+          <span className="text-base font-semibold leading-tight">Hold patient</span>
+          <span className="mt-1 text-xs font-normal leading-tight text-slate-400">Skip active token</span>
         </button>
 
         {/* Button 4: Delay Broadcast */}
@@ -459,9 +447,9 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
           onClick={onOpenDelayBroadcast}
           className="min-h-20 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-semibold p-3.5 rounded-2xl flex flex-col items-center justify-center text-center transition-colors lg:aspect-square"
         >
-          <Clock className="w-5 h-5 mb-1 text-slate-300" />
-          <span className="text-xs sm:text-sm">Set delay</span>
-          <span className="text-[10px] text-slate-400 font-normal">
+          <Clock className="mb-2 h-6 w-6 text-slate-300" />
+          <span className="text-base font-semibold leading-tight">Set delay</span>
+          <span className="mt-1 text-xs font-normal leading-tight text-slate-400">
             {clinic.delayMinutes > 0 ? `+${clinic.delayMinutes}m Active` : 'Add Delay to ETAs'}
           </span>
         </button>
@@ -705,23 +693,6 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
                             </button>
                           )}
 
-                          {/* Send WhatsApp Alert */}
-                          <button
-                            onClick={() => handleSendWhatsAppAlert(token)}
-                            title="Dispatch WhatsApp Alert"
-                            className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-colors"
-                          >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                          </button>
-
-                          {/* Print Token */}
-                          <button
-                            onClick={() => onPrintTokenSlip(token)}
-                            title="Print Token Slip"
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                          >
-                            <Printer className="w-3.5 h-3.5" />
-                          </button>
                         </div>
                       </td>
                     </tr>

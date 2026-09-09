@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogIn, Lock, Mail, Eye, EyeOff, Heart } from 'lucide-react';
+import { LogIn, Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { auth, signInWithEmailAndPassword } from '../lib/firebase';
 
 interface LoginPageProps {
@@ -60,7 +60,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/75 p-6 shadow-2xl shadow-slate-950/40">
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-4">
-              <Heart className="w-10 h-10 text-emerald-400" />
+              <img src="/nextq-logo.png" alt="NEXTQ" className="h-24 w-64 object-contain" />
               <h1 className="text-3xl font-bold">NEXTQ</h1>
             </div>
             <p className="text-slate-400">Smart Queue. Less Waiting.</p>

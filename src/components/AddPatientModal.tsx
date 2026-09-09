@@ -39,7 +39,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
-  const consultationFee = clinic.consultationFee || 750;
+  const consultationFee = clinic.consultationFee ?? 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

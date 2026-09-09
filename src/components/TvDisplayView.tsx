@@ -7,7 +7,6 @@ import {
   VolumeX,
   Activity,
   Clock,
-  Stethoscope,
   Barcode
 } from 'lucide-react';
 import { Clinic, TokenItem, QueueSession } from '../types/queue';
@@ -85,11 +84,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
         
         {/* Clinic Name & Doctor Details */}
         <div className="flex min-w-0 items-center space-x-3 sm:space-x-4">
-          <div className="h-12 w-12 shrink-0 rounded-2xl bg-gradient-to-tr from-teal-400 to-emerald-400 p-1 shadow-xl shadow-teal-500/20 sm:h-14 sm:w-14">
-            <div className="flex h-full w-full items-center justify-center rounded-[12px] bg-slate-950">
-              <Stethoscope className="h-6 w-6 text-teal-400 sm:h-7 sm:w-7" />
-            </div>
-          </div>
+          <img src="/nextq-logo.png" alt="NEXTQ" className="h-16 w-44 shrink-0 object-contain object-left sm:h-20 sm:w-56" />
           <div className="min-w-0">
             <h1 className="truncate text-xl font-black tracking-tight text-white sm:text-2xl lg:text-3xl">
               NEXTQ
