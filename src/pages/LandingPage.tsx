@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Activity,
   ArrowRight,
-  BellRing,
+  CalendarDays,
   CheckCircle2,
   Clock3,
   Heart,
@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Sparkles,
   Stethoscope,
+  Ticket,
   Users,
 } from 'lucide-react';
 import { useSiteConfig } from '../lib/siteConfig';
@@ -19,7 +20,8 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
-  const { content, settings } = useSiteConfig();
+  const { settings } = useSiteConfig();
+
   const openForm = (url: string, label: string) => {
     if (!url.trim()) {
       window.alert(`${label} link is not configured yet.`);
@@ -28,373 +30,264 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
 
     window.open(url, '_blank', 'noopener,noreferrer');
   };
-  const trustMetrics = [
-    { value: '400+', label: 'Clinics onboarded' },
-    { value: '60%', label: 'Less waiting stress' },
-    { value: '4.9/5', label: 'Patient experience' },
-    { value: '24/7', label: 'Live operational view' },
-  ];
 
-  const featurePillars = [
+  const featureCards = [
     {
-      icon: Stethoscope,
-      title: 'Real-time queue visibility',
-      text: 'Track every token, doctor, and waiting room update instantly with a calm, transparent workflow.',
-      tone: 'emerald',
+      icon: Ticket,
+      title: 'Appointments & tokens',
+      text: 'Give patients a fast booking flow and keep every queue movement organised in one place.',
     },
     {
-      icon: Heart,
-      title: 'Patient-first experience',
-      text: 'Give patients clarity, faster movement, and confidence with live wait updates.',
-      tone: 'cyan',
+      icon: Users,
+      title: 'Doctor visibility',
+      text: 'See who is waiting, who is next, and where bottlenecks are forming in real time.',
     },
     {
-      icon: ShieldCheck,
-      title: 'Operational control',
-      text: 'Manage multi-doctor clinics, reception flow, and queue rules from one secure dashboard.',
-      tone: 'purple',
+      icon: Activity,
+      title: 'Live patient tracking',
+      text: 'Monitor queue status, waiting times, and progress without extra calls or manual follow-up.',
     },
   ];
 
-  const workflow = [
+  const workflowSteps = [
     {
       step: '01',
       title: 'Set up your clinic',
-      desc: 'Add doctors, assign departments, and configure your queue flow in a few guided steps.',
+      desc: 'Create your clinic profile, add doctors, and configure queue rules in just a few clicks.',
       icon: Users,
     },
     {
       step: '02',
-      title: 'Scan and book',
-      desc: 'Patients scan the QR code, choose a doctor, and receive a token without app downloads.',
-      icon: BellRing,
+      title: 'Book and issue tokens',
+      desc: 'Patients reserve visits online and your team can issue tokens quickly without added friction.',
+      icon: Ticket,
     },
     {
       step: '03',
-      title: 'Monitor and improve',
-      desc: 'Track turn times, patient flow, and clinic activity with live insights and reporting.',
+      title: 'Track and improve',
+      desc: 'Review live queue activity, patient movement, and staff efficiency from a simple dashboard.',
       icon: Activity,
     },
   ];
 
-  const proof = [
+  const trustPoints = [
     {
-      quote: 'Wait times came down immediately. Patients feel informed, and our reception team finally has control.',
-      name: 'Clinic Director',
-      role: 'Multi-location healthcare team',
+      icon: Stethoscope,
+      title: 'Built for healthcare teams',
+      text: 'Designed to support busy clinics and modern care environments with a professional patient experience.',
     },
     {
-      quote: 'We replaced chaos with a structured queue. The system is simple for patients and effortless for staff.',
-      name: 'Operations Lead',
-      role: 'Care delivery operations',
+      icon: ShieldCheck,
+      title: 'Simple and reliable',
+      text: 'Keep operations steady with a clean system that gives your team confidence and clarity.',
     },
     {
-      quote: 'Our experience now feels premium. Patients notice the clarity, and the clinic runs smoother every day.',
-      name: 'Healthcare Partner',
-      role: 'Clinic experience team',
+      icon: Heart,
+      title: 'Patient-friendly',
+      text: 'Reduce uncertainty with clear updates, better communication, and a calmer front-desk flow.',
     },
   ];
 
-  return (
-    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_20%_50%,_rgba(16,185,129,0.08),transparent_18%),radial-gradient(circle_at_80%_80%,_rgba(34,211,238,0.1),transparent_22%),linear-gradient(180deg,#0a0e1a_0%,#050812_50%,#0a0e1a_100%)] text-white">
-      <style>{`
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes fadeInScale {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        @keyframes floatSlow {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-        }
-        @keyframes slideInRight {
-          from { opacity: 0; transform: translateX(30px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        .animate-in-up { animation: fadeInUp 0.8s ease-out forwards; }
-        .animate-in-scale { animation: fadeInScale 0.7s ease-out forwards; }
-        .animate-float { animation: floatSlow 5s ease-in-out infinite; }
-        .animate-slide-right { animation: slideInRight 0.9s ease-out forwards; }
-        .delay-100 { animation-delay: 100ms; }
-        .delay-200 { animation-delay: 200ms; }
-        .delay-300 { animation-delay: 300ms; }
-        .delay-400 { animation-delay: 400ms; }
-      `}</style>
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.02)_1px,transparent_1px)] bg-[size:52px_52px] [mask-image:radial-gradient(circle_at_center,black,transparent_85%)]" />
+  const stats = [
+    { value: '400+', label: 'Clinics onboarded' },
+    { value: '60%', label: 'Waiting stress reduced' },
+    { value: '4.9/5', label: 'Patient experience' },
+  ];
 
-      <section className="relative mx-auto max-w-7xl px-4 pb-10 pt-5 sm:px-6 lg:px-8 lg:pb-10">
-        <div className="grid items-center gap-8 lg:grid-cols-[1.3fr_0.7fr]">
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <section className="mx-auto max-w-7xl px-4 pb-10 pt-8 sm:px-6 lg:px-8 lg:pb-14">
+        <div className="grid items-center gap-12 lg:grid-cols-[1.12fr_0.88fr]">
           <div className="text-center lg:text-left">
-            <div className="animate-in-up mb-5 inline-flex items-center gap-2.5 rounded-full border border-emerald-400/25 bg-emerald-500/8 px-3 py-2 text-xs font-medium text-emerald-200 sm:text-sm">
-              <Sparkles className="h-4 w-4" />
-              Trusted by global healthcare networks
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
+              <Sparkles className="h-3.5 w-3.5" />
+              Smarter healthcare operations
             </div>
 
-            <h1 className="animate-in-up delay-100 mb-5 text-4xl font-black leading-[1.1] tracking-tight text-white md:text-5xl xl:text-6xl">
-              {content.heroTitle.split(',')[0] || 'Healthcare queues'}
-              <span className="mt-2 block bg-gradient-to-r from-emerald-200 via-cyan-200 to-sky-100 bg-clip-text text-transparent">
-                {content.heroTitle.includes(',') ? content.heroTitle.split(',').slice(1).join(',').trim() || 'reimagined' : 'reimagined'}
-              </span>
+            <h1 className="mb-5 text-5xl font-black leading-[0.96] tracking-[-0.06em] text-slate-900 md:text-6xl xl:text-[5.2rem]">
+              Modern queue management
+              <span className="mt-2 block text-slate-600">for calmer clinics.</span>
             </h1>
 
-            <p className="animate-in-up delay-200 mx-auto max-w-2xl text-base leading-7 text-slate-300 lg:mx-0 lg:text-lg">
-              {content.heroSubtitle}
+            <p className="mx-auto max-w-xl text-lg leading-8 text-slate-600 lg:mx-0">
+              NEXTQ helps clinics manage appointments, tokens, and patient flow from one clean, easy-to-use platform.
             </p>
 
-            <div className="animate-in-up delay-300 mt-6 flex flex-col items-center gap-3 sm:flex-row lg:items-start">
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row lg:items-start">
               <button
                 onClick={() => onNavigate('booking')}
-                className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 via-cyan-500 to-sky-500 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-[0_20px_60px_rgba(34,211,238,0.3)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(16,185,129,0.35)]"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-7 py-3.75 text-base font-semibold text-white shadow-sm transition hover:bg-emerald-500"
               >
-                Book appointment now
+                Get Started
+                <ArrowRight className="h-4 w-4" />
+              </button>
+
+              <button
+                onClick={() => onNavigate('what-we-provide')}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-7 py-3.75 text-base font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
+              >
+                <Play className="h-4 w-4" />
+                How it works
               </button>
             </div>
 
-            <div className="animate-in-up delay-400 mt-6 flex flex-wrap items-center justify-center gap-2 text-[11px] font-medium text-slate-300 lg:justify-start">
-              {['Real-time visibility', 'Zero setup delays', 'Enterprise security'].map((item) => (
-                <div key={item} className="flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-900/40 px-3 py-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5 text-sm text-slate-600 lg:justify-start">
+              {['Appointments', 'Token management', 'Live queue updates'].map((item) => (
+                <div key={item} className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 shadow-sm">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                   {item}
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="animate-slide-right relative">
-            <div className="absolute -inset-8 rounded-3xl bg-gradient-to-r from-emerald-500/10 via-cyan-500/10 to-violet-500/10 blur-3xl" />
-            <div className="relative overflow-hidden rounded-3xl border border-slate-700/50 bg-slate-900/70 p-5 shadow-[0_40px_160px_rgba(2,6,23,0.95)] backdrop-blur-xl">
-              <div className="mb-6 flex items-center justify-between border-b border-slate-700/50 pb-5">
-                <div>
-                  <div className="text-[10px] uppercase tracking-[0.28em] text-slate-500">Dashboard</div>
-                  <div className="mt-1.5 text-2xl font-bold text-white">Live operations</div>
-                </div>
-                <div className="rounded-full border border-emerald-400/30 bg-emerald-500/12 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-300">
-                  Active
-                </div>
+          <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_28px_80px_rgba(15,23,42,0.08)] sm:p-6">
+            <div className="mb-5 flex items-center justify-between border-b border-slate-200 pb-4">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Live operations</div>
+                <div className="mt-1 text-2xl font-bold text-slate-900">Clinic queue</div>
               </div>
-
-              <div className="grid grid-cols-3 gap-3 mb-5">
-                {[
-                  { label: 'Queued', value: '18' },
-                  { label: 'In progress', value: '7' },
-                  { label: 'Completed', value: '42' },
-                ].map((card) => (
-                  <div key={card.label} className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-3 text-center">
-                    <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">{card.label}</div>
-                    <div className="mt-2.5 text-2xl font-black text-white">{card.value}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-2.5">
-                {[
-                  ['Patient 01', 'Consultation', '4 min'],
-                  ['Patient 02', 'Diagnostic review', '11 min'],
-                  ['Patient 03', 'Lab check-in', '8 min'],
-                ].map(([name, stage, time]) => (
-                  <div key={name} className="flex items-center justify-between rounded-2xl border border-slate-700/50 bg-slate-800/50 p-3">
-                    <div>
-                      <div className="text-sm font-bold text-white">{name}</div>
-                      <div className="text-xs text-slate-400">{stage}</div>
-                    </div>
-                    <div className="rounded-full border border-cyan-400/25 bg-cyan-500/12 px-2.5 py-1 text-[10px] font-semibold text-cyan-300">
-                      {time}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/8 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-[9px] uppercase tracking-[0.2em] text-emerald-300/80">Average wait</div>
-                    <div className="mt-1.5 text-lg font-bold text-emerald-200">6.2 minutes</div>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-lg border border-emerald-400/20 bg-slate-900/80 px-2.5 py-1.5 text-xs font-semibold text-emerald-300">
-                    <Clock3 className="h-3 w-3" />
-                    ↓ 58% vs last month
-                  </div>
-                </div>
+              <div className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                Active
               </div>
             </div>
-          </div>
-        </div>
-      </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-10 pt-6 sm:px-6 lg:px-8">
-        <div className="grid gap-4 md:grid-cols-3">
-          {featurePillars.map(({ icon: Icon, title, text, tone }) => (
-            <div
-              key={title}
-              className={`group rounded-2xl border p-4 transition duration-300 hover:border-emerald-400/40 hover:-translate-y-1 ${
-                tone === 'emerald'
-                  ? 'border-emerald-500/20 bg-emerald-500/10'
-                  : tone === 'cyan'
-                    ? 'border-cyan-500/20 bg-cyan-500/10'
-                    : 'border-violet-500/20 bg-violet-500/10'
-              }`}
-            >
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950/60 ring-1 ring-white/10 transition group-hover:ring-2 group-hover:ring-emerald-400/40">
-                <Icon className={`h-5 w-5 transition ${
-                  tone === 'emerald' ? 'text-emerald-300 group-hover:text-emerald-200' : tone === 'cyan' ? 'text-cyan-300 group-hover:text-cyan-200' : 'text-violet-300 group-hover:text-violet-200'
-                }`} />
-              </div>
-              <h3 className="mb-1.5 text-lg font-bold text-white">{title}</h3>
-              <p className="text-sm leading-6 text-slate-300">{text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {trustMetrics.map((metric, idx) => (
-            <div key={metric.label} className={`rounded-2xl border border-slate-700/60 bg-slate-900/50 p-4 text-center transition hover:border-emerald-400/30 hover:bg-slate-900/70 animate-in-up delay-${idx * 100}`}>
-              <div className="text-2xl font-black text-white">{metric.value}</div>
-              <div className="mt-1 text-xs text-slate-400">{metric.label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-6 text-center">
-          <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-400">How it works</div>
-          <h2 className="mt-2 text-3xl font-bold text-white md:text-4xl">Get started in three steps</h2>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          {workflow.map(({ step, title, desc, icon: Icon }, idx) => (
-            <div key={step} className={`rounded-2xl border border-slate-700/60 bg-slate-900/50 p-5 transition hover:border-emerald-400/30 hover:bg-slate-900/70 hover:-translate-y-1 animate-in-up delay-${idx * 100}`}>
-              <div className="mb-4 flex items-center justify-between">
-                <div className="text-xs font-bold tracking-[0.24em] text-emerald-400">{step}</div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-600/60 bg-slate-800/70">
-                  <Icon className="h-4 w-4 text-cyan-300" />
-                </div>
-              </div>
-              <h3 className="mb-2 text-xl font-bold text-white">{title}</h3>
-              <p className="text-sm leading-6 text-slate-300">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="grid items-center gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <div>
-            <div className="mb-4 text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-400">Built for outpatient clinics</div>
-            <h2 className="mb-4 text-3xl font-black text-white md:text-4xl">Queue management that feels calm, fast, and patient-friendly.</h2>
-            <p className="mb-6 max-w-xl text-base leading-7 text-slate-300">
-              From the moment a patient scans a QR code to the final consultation, every step is visible, organised, and low-friction.
-            </p>
-
-            <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-3">
               {[
-                'No patient app downloads required',
-                'Real-time queue sync across reception, doctor, and waiting area',
-                'Clear queue updates when it is time to enter the clinic',
-                'Multi-doctor support and live operational insights',
-              ].map((item) => (
-                <div key={item} className="flex items-start gap-3 rounded-2xl border border-slate-700/50 bg-slate-900/50 p-3 text-slate-200">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-400" />
-                  <span className="text-sm leading-6">{item}</span>
+                { label: 'Queued', value: '18' },
+                { label: 'In progress', value: '7' },
+                { label: 'Completed', value: '42' },
+              ].map((card) => (
+                <div key={card.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center">
+                  <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500">{card.label}</div>
+                  <div className="mt-2 text-2xl font-black text-slate-900">{card.value}</div>
                 </div>
               ))}
             </div>
-          </div>
 
-          <div className="relative overflow-hidden rounded-[28px] border border-slate-700/60 bg-slate-900/70 p-4 shadow-[0_35px_120px_rgba(15,23,42,0.8)]">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Patient flow</div>
-                <div className="mt-1 text-xl font-bold text-white">Live queue status</div>
-              </div>
-              <div className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300">
-                Live
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-700/50 bg-slate-950/80 p-4">
-              <div className="mb-4 flex items-center justify-between rounded-xl border border-slate-700/60 bg-slate-900/80 px-3 py-2">
-                <div>
-                  <div className="text-xs text-slate-400">Current token</div>
-                  <div className="text-lg font-bold text-white">A-014</div>
-                </div>
-                <div className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-300">
-                  4 waiting
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {[
-                  ['Priya Sharma', 'Now consulting'],
-                  ['Arjun Nair', 'Waiting'],
-                  ['Meera Iyer', 'Next up'],
-                ].map(([name, status]) => (
-                  <div key={name} className="flex items-center justify-between rounded-xl border border-slate-700/60 bg-slate-900/70 px-3 py-2.5">
-                    <div className="font-medium text-white">{name}</div>
-                    <div className="text-xs text-slate-300">{status}</div>
+            <div className="mt-5 space-y-2.5">
+              {[
+                ['Patient 01', 'Consultation', '4 min'],
+                ['Patient 02', 'Diagnostic review', '11 min'],
+                ['Patient 03', 'Lab check-in', '8 min'],
+              ].map(([name, stage, time]) => (
+                <div key={name} className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-2.5">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">{name}</div>
+                    <div className="text-xs text-slate-500">{stage}</div>
                   </div>
-                ))}
-              </div>
+                  <div className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">
+                    {time}
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-        </div>
-      </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6 text-center">
-          <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-cyan-400">See it in action</div>
-          <h2 className="mt-2 text-3xl font-bold text-white md:text-4xl">Watch how a modern clinic queue works</h2>
-        </div>
-
-        <div className="overflow-hidden rounded-[32px] border border-slate-700/60 bg-slate-900/70 p-3 shadow-[0_40px_120px_rgba(15,23,42,0.6)]">
-          <div className="relative overflow-hidden rounded-[24px] border border-slate-700/60 bg-slate-950/80">
-            <video
-              className="block h-[360px] w-full object-cover md:h-[500px]"
-              poster="https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1200&q=80"
-              controls
-              preload="metadata"
-            >
-              <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" type="video/mp4" />
-            </video>
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/10 to-slate-950/30" />
-            <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 md:p-7">
+            <div className="mt-5 flex items-center justify-between rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3.5">
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300">QCare-style demo</div>
-                <div className="mt-2 text-xl font-bold text-white md:text-2xl">Scan • Queue • Notify</div>
+                <div className="text-[10px] uppercase tracking-[0.18em] text-emerald-700">Average wait</div>
+                <div className="mt-1 text-lg font-bold text-slate-900">6.2 minutes</div>
               </div>
-              <div className="flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/60 px-3 py-2 text-xs font-medium text-slate-100 backdrop-blur-sm">
-                <Play className="h-3.5 w-3.5 text-emerald-300" />
-                1-minute overview
+              <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                <Clock3 className="h-3.5 w-3.5" />
+                58% faster
               </div>
             </div>
           </div>
         </div>
       </section>
 
-
-      <section className="mx-auto max-w-7xl px-4 pb-12 pt-4 sm:px-6 lg:px-8">
-        <div className="rounded-[28px] border border-emerald-400/20 bg-gradient-to-r from-emerald-500/10 via-slate-900/80 to-cyan-500/10 p-6 md:p-8">
-          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300">Ready to modernise queue flow?</div>
-              <h2 className="mt-3 text-3xl font-black text-white md:text-4xl">Turn every wait into a smoother patient experience.</h2>
+      <section className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
+        <div className="grid gap-4 md:grid-cols-3">
+          {stats.map((stat) => (
+            <div key={stat.label} className="rounded-2xl border border-slate-200/80 bg-white p-5 text-center shadow-[0_8px_22px_rgba(15,23,42,0.03)]">
+              <div className="text-3xl font-black text-slate-900">{stat.value}</div>
+              <div className="mt-1 text-sm text-slate-600">{stat.label}</div>
             </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+        <div className="mb-6 text-center">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-emerald-700">What you get</div>
+          <h2 className="mt-2 text-4xl font-black tracking-[-0.04em] text-slate-900 md:text-5xl">Simple tools for a smoother clinic day</h2>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {featureCards.map(({ icon: Icon, title, text }) => (
+            <div key={title} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_8px_22px_rgba(15,23,42,0.03)] transition hover:-translate-y-1 hover:border-emerald-200/80 hover:shadow-[0_14px_28px_rgba(15,23,42,0.04)]">
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+                <Icon className="h-5 w-5" />
+              </div>
+              <h3 className="mb-2 text-xl font-bold text-slate-900">{title}</h3>
+              <p className="text-sm leading-6 text-slate-600">{text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+        <div className="mb-6 text-center">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-emerald-700">How it works</div>
+          <h2 className="mt-2 text-4xl font-black tracking-[-0.04em] text-slate-900 md:text-5xl">A simple flow from check-in to care</h2>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {workflowSteps.map(({ step, title, desc, icon: Icon }) => (
+            <div key={step} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_8px_22px_rgba(15,23,42,0.03)]">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">{step}</div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                  <Icon className="h-4 w-4" />
+                </div>
+              </div>
+              <h3 className="mb-2 text-xl font-bold text-slate-900">{title}</h3>
+              <p className="text-sm leading-6 text-slate-600">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+        <div className="mb-6 text-center">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Why clinics choose NEXTQ</div>
+          <h2 className="mt-2 text-4xl font-black tracking-[-0.04em] text-slate-900 md:text-5xl">Reliable queue management that feels easy from day one</h2>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {trustPoints.map(({ icon: Icon, title, text }) => (
+            <div key={title} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_8px_22px_rgba(15,23,42,0.03)]">
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+                <Icon className="h-5 w-5" />
+              </div>
+              <h3 className="mb-2 text-xl font-bold text-slate-900">{title}</h3>
+              <p className="text-sm leading-6 text-slate-600">{text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 pb-8 pt-2 sm:px-6 lg:px-8 lg:pb-10">
+        <div className="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-[0_8px_22px_rgba(15,23,42,0.03)] md:p-8">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Ready to get started?</div>
+              <h2 className="mt-3 text-4xl font-black tracking-[-0.04em] text-slate-900 md:text-5xl">Give your clinic a more organised day.</h2>
+            </div>
+
             <div className="flex flex-col items-stretch gap-3 sm:flex-row">
               <button
                 onClick={() => settings.freeTrialFormUrl.trim() ? openForm(settings.freeTrialFormUrl, 'Free trial form') : onNavigate('contact')}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 via-cyan-500 to-sky-500 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-[0_18px_60px_rgba(34,211,238,0.3)] transition hover:-translate-y-1"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-7 py-3.75 text-base font-semibold text-white shadow-sm transition hover:bg-emerald-500"
               >
-                Start free trial
+                Get Started
                 <ArrowRight className="h-4 w-4" />
               </button>
+
               <button
                 onClick={() => settings.salesFormUrl.trim() ? openForm(settings.salesFormUrl, 'Sales form') : onNavigate('contact')}
-                className="inline-flex items-center justify-center rounded-xl border border-slate-600 bg-slate-900/60 px-6 py-3.5 text-sm font-bold text-white transition hover:border-emerald-400/50 hover:bg-emerald-500/8"
+                className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-slate-50 px-7 py-3.75 text-base font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-100"
               >
                 Talk to sales
               </button>
@@ -402,7 +295,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
           </div>
         </div>
       </section>
-
     </div>
   );
 };
