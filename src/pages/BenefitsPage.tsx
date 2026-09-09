@@ -30,7 +30,7 @@ export const BenefitsPage: React.FC<Props> = ({ onNavigate }) => {
             <p className="public-kicker premium-kicker">Benefits</p>
             <h1 className="premium-benefits-title">{content.benefitsTitle}</h1>
             <p className="premium-benefits-summary">
-              From patient arrival to post-visit clarity, NEXTQ turns healthcare operations into a calmer, faster experience.
+              From appointment scheduling to live tracking and waiting room visibility, NEXTQ turns healthcare queue management into a calmer, faster patient flow experience.
             </p>
           </div>
           <div className="premium-benefits-aside">

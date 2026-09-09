@@ -37,7 +37,7 @@ export const ContactPage: React.FC<Props> = ({ onNavigate }) => {
             <p className="public-kicker premium-kicker">Contact Us</p>
             <h1 className="premium-contact-title">{content.contactTitle}</h1>
             <p className="premium-contact-summary">
-              Our care team helps clinics, patients, and hospital operations connect with a faster queue experience.
+              Our care team helps clinics, healthcare teams, and patient operations plan clinic queue management software, appointment scheduling, patient token tracking, and live queue visibility.
             </p>
           </div>
           <div className="premium-contact-aside">

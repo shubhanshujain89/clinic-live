@@ -42,10 +42,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => (
       <section className="landing-hero">
         <div className="landing-hero-grid">
           <div className="landing-hero-copy">
-            <p className="landing-kicker">NEXTQ · Clinic queue management</p>
+            <p className="landing-kicker">NEXTQ · Clinic queue management software</p>
             <h1 className="landing-title">Smart Queue. Less Waiting.</h1>
-            <p className="landing-subtitle">Simple appointment and live queue management for clinics.</p>
-            <p className="landing-note">No app. No signup. Just scan, book and track.</p>
+            <p className="landing-subtitle">Clinic appointment management and live patient queue tracking for modern clinics.</p>
+            <p className="landing-note">No app. No signup. Just scan, book, track live tokens, and reduce waiting room crowding.</p>
 
             <div className="landing-hero-actions">
               <button type="button" className="landing-primary-cta" onClick={() => onNavigate('booking')}>
@@ -171,7 +171,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => (
       <section className="landing-cta" aria-labelledby="cta-heading">
         <div>
           <p className="landing-kicker">Ready when your clinic is</p>
-          <h2 id="cta-heading">Make the next visit easier.</h2>
+          <h2 id="cta-heading">Simplify clinic appointment and queue management.</h2>
         </div>
         <button type="button" onClick={() => onNavigate('booking')}>
           Start with NEXTQ

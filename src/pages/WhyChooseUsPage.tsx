@@ -21,7 +21,7 @@ export const WhyChooseUsPage: React.FC<Props> = ({ onNavigate }) => {
     <div className="public-light-page">
       <section className="premium-why-section mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="premium-why-headline">
-          <span className="premium-why-headline-text">Healthcare operations that feel effortless</span>
+          <span className="premium-why-headline-text">Healthcare operations that feel effortless with live queue tracking</span>
         </div>
 
         <div className="premium-cards-grid premium-cards-grid-single">

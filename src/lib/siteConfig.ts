@@ -35,7 +35,7 @@ export interface ContentSections {
 export const defaultSiteSettings: SiteSettings = {
   siteName: 'NEXTQ',
   siteTagline: 'Smart Queue. Less Waiting.',
-  contactEmail: 'hello@nextq.app',
+  contactEmail: 'hello@nextq.in',
   contactPhone: '+91 98765 43210',
   whatsappNumber: '+91 98765 43210',
   supportAddress: '12, Sunrise Avenue, Whitefield',

@@ -99,8 +99,8 @@ export const WhatWeProvidePage: React.FC<Props> = ({ onNavigate }) => {
         <section className="py-14 lg:py-20" aria-labelledby="experience-heading"> 
           <div className="max-w-2xl"> 
             <p className="public-kicker">Four connected experiences</p> 
-            <h2 id="experience-heading" className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">Every role knows what to do next.</h2> 
-            <p className="mt-4 leading-7 text-slate-600">NEXTQ keeps each workflow focused while sharing one reliable source of queue truth across the clinic.</p> 
+            <h2 id="experience-heading" className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">Every role knows what to do next in the patient queue.</h2> 
+            <p className="mt-4 leading-7 text-slate-600">NEXTQ keeps each workflow focused while sharing one reliable source of queue truth across clinic appointment booking, reception flow, token calling, and patient queue tracking.</p> 
           </div> 
           <div className="mt-10 grid gap-5 lg:grid-cols-2"> 
             {experiences.map((experience) => { 
