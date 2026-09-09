@@ -32,7 +32,6 @@ interface ReceptionistViewProps {
   tokens: TokenItem[];
   onOpenAddWalkIn: () => void;
   onOpenDelayBroadcast: () => void;
-  onViewTokenDetails: (token: TokenItem) => void;
 }
 
 export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
@@ -41,9 +40,8 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
   tokens,
   onOpenAddWalkIn,
   onOpenDelayBroadcast,
-  onViewTokenDetails,
 }) => {
-  const isBasicPlan = clinic.featurePlan === 'BASIC';
+  const isBasicPlan = String(clinic.featurePlan || '').toUpperCase() === 'BASIC';
   const [filterTab, setFilterTab] = useState<'ALL' | 'WAITING' | 'SERVING' | 'HOLD' | 'COMPLETED'>('WAITING');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAdvancing, setIsAdvancing] = useState(false);
@@ -138,6 +136,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
   const activeToken = tokens.find(t => (
     t.status === 'CALLED' || t.status === 'SERVING' || t.status === 'IN_CONSULTATION'
   ));
+  const isServingStatus = (status: TokenItem['status']) => ['CALLED', 'SERVING', 'IN_CONSULTATION'].includes(status);
   const waitingTokens = tokens.filter(t => t.status === 'WAITING').sort((a, b) => {
     const pA = a.priority ?? 10;
     const pB = b.priority ?? 10;
@@ -158,7 +157,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
   const filteredTokens = tokens.filter(token => {
     // Tab filter
     if (filterTab === 'WAITING' && token.status !== 'WAITING') return false;
-    if (filterTab === 'SERVING' && token.status !== 'SERVING') return false;
+    if (filterTab === 'SERVING' && !isServingStatus(token.status)) return false;
     if (filterTab === 'HOLD' && token.status !== 'HOLD') return false;
     if (filterTab === 'COMPLETED' && token.status !== 'COMPLETED') return false;
 
@@ -371,37 +370,31 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5 sm:gap-4">
       {/* Patient currently in the cabin */}
-      <div className="col-span-2 min-h-20 min-w-0 overflow-hidden rounded-2xl border border-teal-500/30 bg-teal-950/20 p-4 sm:col-span-4 sm:p-5 lg:col-span-1 lg:flex lg:items-center lg:justify-center">
-        <div className="flex min-w-0 w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0 flex-1 overflow-hidden">
+      <div className="col-span-2 min-h-20 min-w-0 overflow-hidden rounded-2xl border border-teal-500/30 bg-gradient-to-br from-teal-950/30 to-slate-900 p-4 shadow-lg shadow-teal-950/20 sm:col-span-4 sm:p-5 lg:col-span-1">
+        <div className="flex min-w-0 w-full flex-col gap-4">
+          <div className="min-w-0 overflow-hidden">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-teal-300">In cabin now</p>
             {activeToken ? (
               <>
-                <h2 className="mt-1 truncate text-lg font-bold text-white">{activeToken.patientName}</h2>
-                <p className="mt-1 truncate whitespace-nowrap text-xs text-slate-400" title={`${activeToken.patientPhone}${activeToken.patientAge ? ` · ${activeToken.patientAge} years` : ''}${activeToken.patientGender ? ` · ${activeToken.patientGender}` : ''}`}>
-                  {activeToken.patientPhone}
-                  {activeToken.patientAge ? ` · ${activeToken.patientAge} years` : ''}
-                  {activeToken.patientGender ? ` · ${activeToken.patientGender}` : ''}
-                </p>
+                <div className="mt-3 rounded-xl border border-teal-500/20 bg-slate-950/50 p-3">
+                  <span className="block text-[10px] uppercase tracking-wider text-teal-300">Token number</span>
+                  <span className="mt-1 block truncate text-2xl font-black tracking-wide text-white">{activeToken.tokenNumber}</span>
+                </div>
+                <h2 className="mt-3 truncate text-base font-bold text-white">{activeToken.patientName}</h2>
+                <div className="mt-1 space-y-1 text-xs text-slate-400">
+                  <p className="truncate">{activeToken.patientPhone}</p>
+                  {(activeToken.patientAge || activeToken.patientGender) && (
+                    <p className="truncate">{activeToken.patientAge ? `${activeToken.patientAge} years` : ''}{activeToken.patientAge && activeToken.patientGender ? ' · ' : ''}{activeToken.patientGender || ''}</p>
+                  )}
+                </div>
               </>
             ) : (
-              <h2 className="mt-1 text-lg font-semibold text-slate-300">No patient in cabin</h2>
+              <div className="mt-3 rounded-xl border border-slate-700 bg-slate-950/40 p-3">
+                <h2 className="text-sm font-semibold text-slate-300">No patient in cabin</h2>
+                <p className="mt-1 text-xs text-slate-500">The cabin is ready for the next token.</p>
+              </div>
             )}
           </div>
-          {activeToken && (
-            <div className="flex w-full shrink-0 items-stretch gap-3 sm:w-auto">
-              <span className="min-w-[4.75rem] shrink-0 rounded-lg border border-teal-500/40 bg-teal-500/10 px-3 py-2 text-center">
-                <span className="block text-[10px] uppercase tracking-wider text-teal-300">Token</span>
-                <span className="block whitespace-nowrap text-xl font-black text-white">{activeToken.tokenNumber}</span>
-              </span>
-              <button
-                onClick={() => onViewTokenDetails(activeToken)}
-                className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-teal-400/50 hover:text-white sm:flex-none"
-              >
-                <span className="whitespace-nowrap">View details</span>
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -552,7 +545,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
             <tbody className="divide-y divide-slate-800/60 text-slate-300">
               {filteredTokens.length > 0 ? (
                 filteredTokens.map((token, index) => {
-                  const isServing = token.status === 'SERVING';
+                  const isServing = isServingStatus(token.status);
                   const isHold = token.status === 'HOLD';
                   const isCompleted = token.status === 'COMPLETED';
 

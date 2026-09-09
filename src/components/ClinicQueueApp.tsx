@@ -46,7 +46,6 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
   // Modals state
   const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
   const [isDelayModalOpen, setIsDelayModalOpen] = useState(false);
-  const [tokenIntakeNotesToView, setTokenIntakeNotesToView] = useState<TokenItem | null>(null);
 
   useEffect(() => {
     setClinicId(selectedClinicId || '');
@@ -260,7 +259,6 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
               tokens={tokens}
               onOpenAddWalkIn={() => setIsAddPatientOpen(true)}
               onOpenDelayBroadcast={() => setIsDelayModalOpen(true)}
-              onViewTokenDetails={(token) => setTokenIntakeNotesToView(token)}
             />
           )}
           </>)}

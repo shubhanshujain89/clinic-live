@@ -23,7 +23,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
   onClose,
   onAdded,
 }) => {
-  const isBasicPlan = clinic.featurePlan === 'BASIC';
+  const isBasicPlan = String(clinic.featurePlan || '').toUpperCase() === 'BASIC';
   const [patientName, setPatientName] = useState('');
   const [patientPhone, setPatientPhone] = useState('');
   const [patientAge, setPatientAge] = useState('42');

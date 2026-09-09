@@ -47,7 +47,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   onGoogleSignIn,
   onToggleDoctorStatus,
 }) => {
-  const isBasicPlan = clinic.featurePlan === 'BASIC';
+  const isBasicPlan = String(clinic.featurePlan || '').toUpperCase() === 'BASIC';
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -408,7 +408,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
         <div className="min-w-0 bg-slate-900/90 border border-slate-800/90 rounded-2xl p-3 shadow-lg">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-teal-400 ring-1 ring-teal-400/40">
-              <Stethoscope className="h-6 w-6" />
+              {clinic.doctorPhoto ? <img src={clinic.doctorPhoto} alt={clinic.doctorName || 'Doctor'} className="h-full w-full rounded-xl object-cover" /> : <Stethoscope className="h-6 w-6" />}
             </div>
             <div className="min-w-0">
               <h2 className="break-words text-sm font-bold leading-tight text-white">{clinic.doctorName || 'Doctor'}</h2>
@@ -565,14 +565,14 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                         {activeToken.tokenNumber}
                       </span>
                     </div>
-                    <button
-                      onClick={() => openEditModal(activeToken)}
-                      className="px-2.5 py-1.5 rounded-lg bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 border border-teal-500/30 text-xs font-semibold flex items-center gap-1.5 transition-colors"
-                      title="Edit patient name, phone, symptoms, and vitals"
-                    >
-                      <Edit3 className="w-3.5 h-3.5 text-teal-400" />
-                      <span>Edit Patient</span>
-                    </button>
+                    {!isBasicPlan && <button
+                        onClick={() => openEditModal(activeToken)}
+                        className="px-2.5 py-1.5 rounded-lg bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 border border-teal-500/30 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                        title="Edit patient name, phone, symptoms, and vitals"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-teal-400" />
+                        <span>Edit Patient</span>
+                      </button>}
                   </div>
                 </div>
 
@@ -728,7 +728,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
       )}
 
       {/* Doctor Full Patient & Symptoms Editor Modal */}
-      {editingToken && (
+      {editingToken && !isBasicPlan && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl space-y-5 my-8">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">

@@ -11,8 +11,10 @@ const normalizeDashboardMode = (value?: string): DashboardMode => value === 'sit
 export const isAllowedUserCreationRole = (role: string) => {
   const normalized = String(role || '').trim();
   const lower = normalized.toLowerCase();
-  return lower !== 'super admin' && lower !== 'site admin' && ['clinic admin', 'doctor', 'reception'].includes(lower);
+  return lower !== 'super admin' && lower !== 'site admin' && ['clinic', 'clinic admin', 'doctor', 'reception'].includes(lower);
 };
+
+const displayUserRole = (role: string) => String(role || '').toUpperCase() === 'CLINIC_ADMIN' || String(role || '').toLowerCase() === 'clinic admin' ? 'Clinic' : role;
 
 const HOURS_OPTIONS = [
   '9:00 AM - 6:00 PM',
@@ -27,6 +29,8 @@ const PACK_OPTIONS = [
   { value: 'TRIAL', label: 'Trial Pack', validityDays: 30, price: '₹0' },
   { value: 'BASIC', label: 'Basic Pack', validityDays: 30, price: '₹1,499/mo' },
 ] as const;
+
+const TRIAL_TARGET_OPTIONS = [{ value: 'BASIC', label: 'Basic Pack' }] as const;
 
 const getPackMeta = (plan?: FeaturePlan) => PACK_OPTIONS.find((pack) => pack.value === plan) ?? PACK_OPTIONS[0];
 
@@ -165,7 +169,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   const resolvedMode: DashboardMode = normalizeDashboardMode(mode);
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [appointments, setAppointments] = useState<Array<{ clinicId: string; appointmentType?: string; status?: string }>>([]);
-  const [payments, setPayments] = useState<Array<{ id: string; clinicId: string; clinicName: string; pack: FeaturePlan; amount: number; durationDays: number; status: 'PAID' | 'PENDING'; paidAt: string; startDate: string; expiryDate: string; notes?: string }>>([]);
+  const [payments, setPayments] = useState<Array<{ id: string; clinicId: string; clinicName: string; pack: FeaturePlan; trialForPlan?: FeaturePlan; amount: number; durationDays: number; status: 'PAID' | 'PENDING'; paidAt: string; startDate: string; expiryDate: string; notes?: string }>>([]);
   const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; role: string; status: 'Active' | 'Offline' | 'Pending'; clinicName?: string; phone?: string; accessStatus?: 'Granted' | 'Hold' | 'Denied'; photoURL?: string; passwordReset?: string; source?: 'staff_users' | 'doctors' }>>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -209,6 +213,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     clinicId: '',
     clinicName: '',
     pack: 'TRIAL' as FeaturePlan,
+    trialForPlan: 'BASIC' as FeaturePlan,
     amount: '',
     fromDate: new Date().toISOString().slice(0, 10),
     durationDays: '30',
@@ -219,7 +224,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   const [userFormData, setUserFormData] = useState({
     name: '',
     email: '',
-    role: 'Clinic Admin',
+    role: 'Clinic',
     status: 'Active' as 'Active' | 'Offline' | 'Pending',
     clinicName: '',
     phone: '+91 ',
@@ -513,6 +518,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
           clinicId: item.clinicId || item.clinic_id || '',
           clinicName: item.clinicName || item.clinic_name || 'Unnamed clinic',
           pack: (item.pack || item.plan || 'TRIAL') as FeaturePlan,
+          trialForPlan: (item.trialForPlan || item.trial_for_plan || (item.pack === 'TRIAL' ? 'BASIC' : undefined)) as FeaturePlan | undefined,
           amount: Number(item.amount || 0),
           durationDays: Number(item.durationDays || item.duration_days || 30),
           status: (item.status || 'PAID') as 'PAID' | 'PENDING',
@@ -780,7 +786,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     setUserFormData({
       name: user.name,
       email: user.email,
-      role: user.role,
+      role: displayUserRole(user.role),
       status: user.status,
       clinicName: user.clinicName || '',
       phone: user.phone || '+91 ',
@@ -886,6 +892,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         clinicId,
         clinicName,
         pack: paymentForm.pack,
+        ...(paymentForm.pack === 'TRIAL' ? { trialForPlan: paymentForm.trialForPlan } : {}),
         amount: amountValue,
         durationDays: durationValue,
         status: paymentForm.status,
@@ -956,7 +963,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         notes: paymentForm.notes.trim(),
       }, ...currentPayments]);
       setEditingPaymentId(null);
-      setPaymentForm({ clinicId: '', clinicName: '', pack: 'TRIAL', amount: '', fromDate: new Date().toISOString().slice(0, 10), durationDays: '30', status: 'PAID', notes: '' });
+      setPaymentForm({ clinicId: '', clinicName: '', pack: 'TRIAL', trialForPlan: 'BASIC', amount: '', fromDate: new Date().toISOString().slice(0, 10), durationDays: '30', status: 'PAID', notes: '' });
       setBillingTab('overview');
       await fetchPayments();
       void recordAuditEvent('Billing added', `Billing for ${clinicName} was added: ${paymentForm.pack}, ₹${amountValue.toLocaleString('en-IN')}, ${paymentForm.status}.`);
@@ -1103,6 +1110,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       clinicId: clinic.id,
       clinicName: clinic.name,
       pack,
+      trialForPlan: payment?.trialForPlan || 'BASIC',
       amount: payment ? String(payment.amount) : String(getPackPrice(pack)),
       fromDate: payment ? payment.startDate.slice(0, 10) : new Date().toISOString().slice(0, 10),
       durationDays: payment ? String(payment.durationDays) : String(getPackMeta(pack).validityDays),
@@ -1309,7 +1317,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                   <p className="mt-2 text-xs text-slate-500">Total platform users</p>
                 </button>
                 <button onClick={() => setActiveTab('users')} className="rounded-2xl border border-slate-700 bg-slate-900/70 p-5 text-left hover:border-cyan-400/50 hover:bg-slate-800/70 transition">
-                  <div className="text-[10px] uppercase tracking-[0.18em] text-cyan-400">Clinic admins</div>
+                  <div className="text-[10px] uppercase tracking-[0.18em] text-cyan-400">Clinic users</div>
                   <div className="mt-3 text-4xl font-black text-white">{clinicAdminCount}</div>
                   <p className="mt-2 text-xs text-slate-500">Clinic management access</p>
                 </button>
@@ -1987,6 +1995,19 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                       </select>
                     </div>
 
+                    {paymentForm.pack === 'TRIAL' && (
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-slate-300">Trial for plan</label>
+                        <select
+                          value={paymentForm.trialForPlan}
+                          onChange={(event) => setPaymentForm((current) => ({ ...current, trialForPlan: event.target.value as FeaturePlan }))}
+                          className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-white focus:border-violet-400 focus:outline-none"
+                        >
+                          {TRIAL_TARGET_OPTIONS.map((plan) => <option key={plan.value} value={plan.value}>{plan.label}</option>)}
+                        </select>
+                      </div>
+                    )}
+
                     <div>
                       <label className="mb-2 block text-sm font-medium text-slate-300">Amount paid</label>
                       <input
@@ -2073,7 +2094,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                     <div key={payment.id} className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-800/70 p-4 md:flex-row md:items-center md:justify-between">
                       <div>
                         <div className="text-base font-semibold text-white">{payment.clinicName || 'Unnamed clinic'}</div>
-                        <div className="mt-1 text-xs text-slate-400">{payment.pack} • {payment.durationDays} days • Paid {formatDashboardDate(payment.paidAt)} • Expires {formatDashboardDate(payment.expiryDate)}</div>
+                        <div className="mt-1 text-xs text-slate-400">{payment.pack}{payment.pack === 'TRIAL' && payment.trialForPlan ? ` for ${payment.trialForPlan}` : ''} • {payment.durationDays} days • Paid {formatDashboardDate(payment.paidAt)} • Expires {formatDashboardDate(payment.expiryDate)}</div>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="rounded-full bg-slate-700 px-2 py-1 text-[10px] uppercase tracking-[0.14em] text-slate-200">{payment.status}</span>
@@ -2229,7 +2250,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
               <div>
                 <label className="block text-sm font-semibold mb-2">Role</label>
                 <select value={userFormData.role} onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value })} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none">
-                  <option value="Clinic Admin">Clinic Admin</option>
+                  <option value="Clinic">Clinic</option>
                   <option value="Doctor">Doctor</option>
                   <option value="Reception">Reception</option>
                 </select>

@@ -84,6 +84,7 @@ export interface Clinic {
   name: string;
   doctorId?: string;
   doctorName?: string;
+  doctorPhoto?: string;
   specialty?: string;
   cabinNumber?: string;
   doctorStatus: DoctorStatus | 'ON_BREAK' | 'EMERGENCY';

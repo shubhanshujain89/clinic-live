@@ -461,6 +461,7 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
         name: clinic.name,
         doctorId: context.role === 'DOCTOR' ? context.doctorId || '' : scopedActiveDoctors[0]?.id || '',
         doctorName: displayedDoctor?.name || clinic.doctorName || '',
+        doctorPhoto: displayedDoctor?.photo || '',
         specialty: displayedDoctor?.specialization || clinic.specialty || '',
         cabinNumber: clinic.cabinNumber || '',
         doctorStatus: clinic.doctorStatus,
