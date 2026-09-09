@@ -620,7 +620,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
               </h3>
             </div>
 
-            <div className="mt-4 min-h-0 flex-1 divide-y divide-slate-800/80 overflow-y-auto">
+            <div className="mt-4 min-h-0 flex-1 divide-y divide-slate-800/80">
               {waitingTokens.length > 0 ? (
                 waitingTokens.slice(0, 5).map((tok, idx) => (
                   <div key={tok.id} className="py-3 flex items-center justify-between group hover:bg-slate-800/30 px-2 rounded-lg transition-colors">
@@ -676,7 +676,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
               </button>
             </div>
 
-            <div className="space-y-2 overflow-y-auto p-5">
+            <div className="space-y-2 p-5">
               {currentPatients.length > 0 ? currentPatients.map((token) => {
                 const canDelete = token.status === 'WAITING' || token.status === 'HOLD';
                 return (

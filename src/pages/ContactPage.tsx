@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mail, MapPin, Phone } from 'lucide-react';
+import { Mail, MapPin, Phone, ArrowRight, Headphones, Sparkles } from 'lucide-react';
 import { useSiteConfig } from '../lib/siteConfig';
 
 interface Props {
@@ -31,23 +31,53 @@ export const ContactPage: React.FC<Props> = ({ onNavigate }) => {
 
   return (
     <div className="public-light-page">
-      <section className="public-light-section max-w-7xl mx-auto px-4 pt-6 pb-16 sm:px-6 lg:px-8">
-        <div className="mb-10 flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-amber-400 uppercase tracking-[0.2em] text-xs font-semibold mb-3">Contact Us</p>
-            <h1 className="text-4xl md:text-5xl font-bold">{content.contactTitle}</h1>
+      <section className="premium-contact-section mx-auto max-w-7xl px-4 pt-6 pb-16 sm:px-6 lg:px-8">
+        <div className="premium-contact-header">
+          <div className="premium-contact-heading">
+            <p className="public-kicker premium-kicker">Contact Us</p>
+            <h1 className="premium-contact-title">{content.contactTitle}</h1>
+            <p className="premium-contact-summary">
+              Our care team helps clinics, patients, and hospital operations connect with a faster queue experience.
+            </p>
+          </div>
+          <div className="premium-contact-aside">
+            <span className="premium-contact-aside-small">NEXTQ Care</span>
+            <span className="premium-contact-aside-score">
+              <Headphones className="h-6 w-6" />
+            </span>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="premium-contact-grid">
           {cards.map(({ icon: Icon, title, value, note }) => (
-            <div key={title} className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-              <Icon className="w-12 h-12 text-amber-400 mx-auto mb-4" />
-              <h2 className="text-xl font-bold mb-2">{title}</h2>
-              <p className="text-slate-300 font-medium">{value}</p>
-              <p className="text-slate-400 text-sm mt-2">{note}</p>
-            </div>
+            <article key={title} className="premium-contact-card">
+              <div className="premium-contact-card-top">
+                <span className="premium-contact-icon">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="premium-contact-tag">{title}</span>
+              </div>
+              <div className="premium-contact-content">
+                <h2>{title}</h2>
+                <p className="premium-contact-value">{value}</p>
+                <p className="premium-contact-note">{note}</p>
+              </div>
+              <div className="premium-contact-arrow">
+                <ArrowRight className="h-4 w-4" />
+              </div>
+            </article>
           ))}
+        </div>
+
+        <div className="premium-contact-footer">
+          <span className="premium-contact-chip">
+            <Sparkles className="h-4 w-4" />
+            Clinic support desk
+          </span>
+          <span className="premium-contact-chip">
+            <Phone className="h-4 w-4" />
+            Available 24/7 for queue assistance
+          </span>
         </div>
       </section>
     </div>

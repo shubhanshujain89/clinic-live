@@ -39,11 +39,79 @@ const workflows = [
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => (
   <div className="landing-page-shell min-h-screen text-slate-900">
     <main className="landing-main px-4 pb-20 pt-16 sm:px-6 sm:pt-24 lg:px-8">
-      <section className="landing-hero max-w-3xl">
-        <p className="landing-kicker">NEXTQ · Clinic queue management</p>
-        <h1 className="landing-title">Smart Queue. Less Waiting.</h1>
-        <p className="landing-subtitle">Simple appointment and live queue management for clinics.</p>
-        <p className="landing-note">No app. No signup. Just scan, book and track.</p>
+      <section className="landing-hero">
+        <div className="landing-hero-grid">
+          <div className="landing-hero-copy">
+            <p className="landing-kicker">NEXTQ · Clinic queue management</p>
+            <h1 className="landing-title">Smart Queue. Less Waiting.</h1>
+            <p className="landing-subtitle">Simple appointment and live queue management for clinics.</p>
+            <p className="landing-note">No app. No signup. Just scan, book and track.</p>
+
+            <div className="landing-hero-actions">
+              <button type="button" className="landing-primary-cta" onClick={() => onNavigate('booking')}>
+                Start with NEXTQ <ArrowRight aria-hidden="true" />
+              </button>
+              <button type="button" className="landing-secondary-cta" onClick={() => onNavigate('contact')}>
+                Talk to our team
+              </button>
+            </div>
+
+            <div className="landing-proof">
+              <span><strong>24/7</strong><small>Live visibility</small></span>
+              <span><strong>1</strong><small>Clinic flow</small></span>
+              <span><strong>0</strong><small>App downloads</small></span>
+            </div>
+          </div>
+
+          <aside className="landing-dashboard-preview landing-hero-preview" aria-label="clinic queue dashboard preview">
+            <div className="dashboard-preview-topbar">
+              <span className="dashboard-preview-brand">
+                <span className="site-brand-mark">N</span>
+                <span>NEXTQ</span>
+              </span>
+              <span className="dashboard-preview-live"><span /> Live</span>
+            </div>
+            <div className="dashboard-preview-heading">
+              <div>
+                <span className="dashboard-preview-label">SMART QUEUE</span>
+                <h3>Today’s flow</h3>
+              </div>
+              <ArrowRight aria-hidden="true" />
+            </div>
+            <div className="dashboard-preview-metrics">
+              <div>
+                <span>Now serving</span>
+                <strong>A-104</strong>
+              </div>
+              <div>
+                <span>Waiting</span>
+                <strong>08</strong>
+              </div>
+              <div>
+                <span>Avg. wait</span>
+                <strong>12m</strong>
+              </div>
+            </div>
+            <div className="dashboard-preview-queue">
+              <div className="dashboard-preview-queue-heading">
+                <span>Queue live</span>
+                <span>Room 02</span>
+              </div>
+              <div className="dashboard-preview-queue-row">
+                <strong>Token A-101</strong>
+                <b>Doctor in consultation</b>
+              </div>
+              <div className="dashboard-preview-queue-row">
+                <strong>Token A-102</strong>
+                <b>Next patient ready</b>
+              </div>
+              <div className="dashboard-preview-queue-row">
+                <strong>Token A-103</strong>
+                <b>Reception review</b>
+              </div>
+            </div>
+          </aside>
+        </div>
       </section>
 
       <section className="landing-workflows" aria-labelledby="workflow-heading">

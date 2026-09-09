@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Users, ChevronRight } from 'lucide-react';
+import { Heart, Users, ChevronRight, Sparkles, Stethoscope } from 'lucide-react';
 import { useSiteConfig } from '../lib/siteConfig';
 
 interface Props {
@@ -24,44 +24,68 @@ export const BenefitsPage: React.FC<Props> = ({ onNavigate }) => {
 
   return (
     <div className="public-light-page">
-      <section className="public-light-section max-w-7xl mx-auto px-4 pt-6 pb-16 sm:px-6 lg:px-8">
-        <div className="mb-10 flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-emerald-400 uppercase tracking-[0.2em] text-xs font-semibold mb-3">Benefits</p>
-            <h1 className="text-4xl md:text-5xl font-bold">{content.benefitsTitle}</h1>
+      <section className="premium-benefits-section mx-auto max-w-7xl px-4 pt-6 pb-16 sm:px-6 lg:px-8">
+        <div className="premium-benefits-header">
+          <div className="premium-benefits-heading">
+            <p className="public-kicker premium-kicker">Benefits</p>
+            <h1 className="premium-benefits-title">{content.benefitsTitle}</h1>
+            <p className="premium-benefits-summary">
+              From patient arrival to post-visit clarity, NEXTQ turns healthcare operations into a calmer, faster experience.
+            </p>
+          </div>
+          <div className="premium-benefits-aside">
+            <span className="premium-benefits-aside-small">NEXTQ impact</span>
+            <span className="premium-benefits-aside-score">360°</span>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-              <Heart className="w-6 h-6 text-emerald-400" />
-              For Clinics & Hospitals
-            </h2>
-            <ul className="space-y-4 text-slate-600">
+        <div className="premium-benefits-grid">
+          <article className="premium-benefit-card premium-benefit-card-clinic">
+            <div className="premium-benefit-card-top">
+              <span className="premium-benefit-icon premium-benefit-icon-clinic">
+                <Heart className="h-5 w-5" />
+              </span>
+              <span className="premium-benefit-tag">Clinic OS</span>
+            </div>
+            <h2 className="premium-benefit-card-title">For Clinics & Hospitals</h2>
+            <ul className="premium-benefit-list">
               {clinics.map((item) => (
-                <li key={item} className="flex gap-3">
-                  <ChevronRight className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
+                <li key={item}>
+                  <ChevronRight className="premium-benefit-icon-arrow" />
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
-          </div>
+          </article>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-              <Users className="w-6 h-6 text-cyan-400" />
-              For Patients
-            </h2>
-            <ul className="space-y-4 text-slate-600">
+          <article className="premium-benefit-card premium-benefit-card-patient">
+            <div className="premium-benefit-card-top">
+              <span className="premium-benefit-icon premium-benefit-icon-patient">
+                <Users className="h-5 w-5" />
+              </span>
+              <span className="premium-benefit-tag">Patient Flow</span>
+            </div>
+            <h2 className="premium-benefit-card-title">For Patients</h2>
+            <ul className="premium-benefit-list">
               {patients.map((item) => (
-                <li key={item} className="flex gap-3">
-                  <ChevronRight className="w-5 h-5 text-cyan-400 mt-0.5 shrink-0" />
+                <li key={item}>
+                  <ChevronRight className="premium-benefit-icon-arrow" />
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
-          </div>
+          </article>
+        </div>
+
+        <div className="premium-benefits-footer">
+          <span className="premium-benefits-footer-chip">
+            <Sparkles className="h-4 w-4" />
+            Healthcare experience built for clarity
+          </span>
+          <span className="premium-benefits-footer-chip">
+            <Stethoscope className="h-4 w-4" />
+            Smart queue operational flow
+          </span>
         </div>
       </section>
     </div>

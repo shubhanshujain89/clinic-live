@@ -1,9 +1,74 @@
 import React from 'react';
+import {
+  ArrowRight,
+  Bell,
+  CalendarCheck,
+  CheckCircle2,
+  ClipboardList,
+  MonitorUp,
+  ScanLine,
+  Stethoscope,
+  Users,
+} from 'lucide-react';
 import { useSiteConfig } from '../lib/siteConfig';
 
 interface Props {
   onNavigate: (page: string) => void;
 }
+
+const experiences = [
+  {
+    role: 'Patients',
+    icon: ScanLine,
+    title: 'Book and track',
+    description: 'Patients can book an appointment, receive a token, and follow the live queue without downloading an app.',
+    steps: [
+      ['Choose clinic', 'Pick a clinic and doctor appointment slot.'],
+      ['Book visit', 'Confirm the booking from the online form.'],
+      ['Track live', 'Follow queue progress and arrival timings.'],
+    ],
+  },
+  {
+    role: 'Reception',
+    icon: ClipboardList,
+    title: 'Keep queues moving',
+    description: 'Reception keeps the clinic front desk focused on patient flow and token handoffs.',
+    steps: [
+      ['See queue', 'Review today’s patients and wait status.'],
+      ['Manage flow', 'Call, hold, or reschedule the next token.'],
+      ['Sync the room', 'Keep every token update visible to the team.'],
+    ],
+  },
+  {
+    role: 'Doctors',
+    icon: Stethoscope,
+    title: 'Stay in consultation',
+    description: 'Doctors work on the active patient without losing context from the wider clinic queue.',
+    steps: [
+      ['Review token', 'See the current patient and waiting queue.'],
+      ['Complete visit', 'Move the patient from consultation to completion.'],
+      ['Call next', 'Advance the queue with one clear action.'],
+    ],
+  },
+  {
+    role: 'TV display',
+    icon: MonitorUp,
+    title: 'One shared queue view',
+    description: 'A single wall display keeps the waiting room informed and calm during the clinic day.',
+    steps: [
+      ['Show token', 'Publish the active and next patient tokens.'],
+      ['Guide patients', 'Tell patients where to go and what happens next.'],
+      ['Keep status live', 'Reflect the current token, room, and queue state.'],
+    ],
+  },
+];
+
+const capabilities = [
+  { title: 'Digital booking', text: 'Create appointable clinic visits with patient-friendly forms and simple clinic routing.', icon: CalendarCheck },
+  { title: 'Live token operations', text: 'Move patients from queue to consultation and update room flow without manual confusion.', icon: ClipboardList },
+  { title: 'Front-desk visibility', text: 'Give reception a reliable workflow view of queue activity and customer movement.', icon: Users },
+  { title: 'Waiting room updates', text: 'Keep the waiting room, TV display, and patient track page aligned with the same queue truth.', icon: Bell },
+];
 
 export const WhatWeProvidePage: React.FC<Props> = ({ onNavigate }) => {
   const { content } = useSiteConfig();
