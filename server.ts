@@ -96,6 +96,18 @@ const cookieValue = (req: express.Request, name: string) => {
   return entry ? decodeURIComponent(entry.trim().slice(name.length + 1)) : '';
 };
 
+const resolveDoctorId = async (account: { clinicId?: string; doctorId?: string; email: string; displayName?: string }) => {
+  if (account.doctorId || !account.clinicId) return account.doctorId || null;
+  const linkedDoctor = await repositories.doctors.findByEmail(account.email);
+  if (linkedDoctor) return linkedDoctor.id;
+  const clinicDoctors = await repositories.doctors.findActiveByClinicId(account.clinicId);
+  const normalizedAccountName = String(account.displayName || '').trim().toLowerCase();
+  const namedDoctor = normalizedAccountName
+    ? clinicDoctors.find((doctor) => doctor.name.trim().toLowerCase() === normalizedAccountName)
+    : undefined;
+  return namedDoctor?.id || (clinicDoctors.length === 1 ? clinicDoctors[0].id : null);
+};
+
 const createSessionToken = (context: AuthContext) => {
   if (!SESSION_SECRET) throw new Error('SESSION_SECRET must be configured in production.');
   const issuedAt = Math.floor(Date.now() / 1000);
@@ -122,6 +134,9 @@ const authContext = async (req: express.Request) => {
         ? crypto.createHash('sha256').update(account.passwordHash).digest('base64url')
         : '';
       if (!account || !session.authVersion || !secureEqual(session.authVersion, authVersion)) return undefined;
+      if (session.role === 'DOCTOR' && !session.doctorId) {
+        session.doctorId = await resolveDoctorId(account);
+      }
     }
     return session;
   } catch {
@@ -869,14 +884,11 @@ app.post('/api/auth/login', async (req, res) => {
       accountClinicName = account.clinicName || '';
       const role = String(account.role || 'CLINIC_ADMIN').toUpperCase() as AuthContext['role'];
       if (['CLINIC_ADMIN', 'DOCTOR', 'STAFF', 'SUPER_ADMIN'].includes(role)) {
-        const linkedDoctor = role === 'DOCTOR' && account.clinicId && !account.doctorId
-          ? await repositories.doctors.findByEmail(account.email)
-          : null;
         context = {
           userId: account.id,
           role,
           clinicId: account.clinicId || null,
-          doctorId: account.doctorId || linkedDoctor?.id || null,
+          doctorId: role === 'DOCTOR' ? await resolveDoctorId(account) : account.doctorId || null,
           email: account.email,
           authVersion: crypto.createHash('sha256').update(account.passwordHash).digest('base64url'),
         };

@@ -150,8 +150,14 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || 'Unable to update doctor status.');
+      if (payload.clinic) {
+        setClinic((current) => current ? { ...current, ...payload.clinic } : current);
+      } else {
+        setClinic((current) => current ? { ...current, doctorStatus: newStatus } : current);
+      }
     } catch (error) {
       console.error('Error toggling doctor status:', error);
+      throw error;
     }
   };
 

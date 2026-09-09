@@ -31,7 +31,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   return (
     <nav className="site-header sticky top-0 z-50 border-b border-slate-200 bg-white">
       <div className="mx-auto max-w-none px-2 py-3 sm:px-4 lg:px-5">
-        <div className="flex items-center justify-between gap-4">
+        <div className="relative flex items-center justify-between gap-4">
           <button
             onClick={() => onNavigate('landing')}
             className="group flex min-w-0 items-center"
@@ -42,7 +42,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
             </span>
           </button>
 
-          <div className="hidden flex-1 items-center justify-center gap-1 xl:flex">
+          <div className="absolute left-1/2 hidden -translate-x-1/2 items-center justify-center gap-1 xl:flex">
             {navTabs.map((tab) => (
               <button
                 key={tab.key}
