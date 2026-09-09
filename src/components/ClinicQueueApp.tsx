@@ -13,13 +13,6 @@ import {
   onAuthStateChanged,
   User
 } from '../lib/firebase';
-import {
-  DEFAULT_CLINIC_ID,
-  INITIAL_CLINIC_DATA,
-  INITIAL_SESSION_DATA,
-  INITIAL_TOKENS_DATA,
-  resetClinicDatabase
-} from '../lib/seedData';
 import { Navbar } from './Navbar';
 import { DoctorView } from './DoctorView';
 import { ReceptionistView } from './ReceptionistView';
@@ -43,13 +36,11 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
     new URLSearchParams(window.location.search).get('view') === 'tv' ? 'TV_DISPLAY' : 'DOCTOR'
   ));
   const [isBookingActive, setIsBookingActive] = useState(false);
-  const [clinicId, setClinicId] = useState<string>(selectedClinicId || DEFAULT_CLINIC_ID);
-  const [clinic, setClinic] = useState<Clinic>(INITIAL_CLINIC_DATA);
-  const [session, setSession] = useState<QueueSession | null>(INITIAL_SESSION_DATA);
-  const [tokens, setTokens] = useState<TokenItem[]>(INITIAL_TOKENS_DATA);
+  const [clinicId, setClinicId] = useState<string>(selectedClinicId || '');
+  const [clinic, setClinic] = useState<Clinic | null>(null);
+  const [session, setSession] = useState<QueueSession | null>(null);
+  const [tokens, setTokens] = useState<TokenItem[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [selectedTrackTokenId, setSelectedTrackTokenId] = useState<string>('tok_03');
-  const [isSeeding, setIsSeeding] = useState(false);
   const [queueAccessError, setQueueAccessError] = useState('');
   const normalizedRole = String(role || '').toUpperCase();
   const isStaffRole = normalizedRole === 'STAFF';
@@ -62,7 +53,7 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
   const [tokenIntakeNotesToView, setTokenIntakeNotesToView] = useState<TokenItem | null>(null);
 
   useEffect(() => {
-    setClinicId(selectedClinicId || DEFAULT_CLINIC_ID);
+    setClinicId(selectedClinicId || '');
   }, [selectedClinicId]);
 
   // Set role based on login
@@ -95,6 +86,14 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
   // Load the current clinic queue from MySQL. Queue mutations remain on Firebase until migrated.
   // Poll periodically so Doctor, Receptionist and TV views stay in sync in real time.
   useEffect(() => {
+    if (!clinicId) {
+      setClinic(null);
+      setSession(null);
+      setTokens([]);
+      setQueueAccessError('No clinic is assigned to this account.');
+      return;
+    }
+
     let active = true;
     const abortController = new AbortController();
     const loadQueue = async () => {
@@ -160,15 +159,18 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
     }
   };
 
-  const handleSeedData = async () => {
-    setIsSeeding(true);
-    await resetClinicDatabase();
-    setTimeout(() => {
-      setIsSeeding(false);
-    }, 800);
-  };
-
   // TV Display Mode
+  if (!clinic) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-center text-slate-200">
+        <div>
+          <h1 className="text-xl font-semibold">Clinic queue unavailable</h1>
+          <p className="mt-2 text-sm text-slate-400">{queueAccessError || 'Loading clinic data...'}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (currentRole === 'TV_DISPLAY') {
     return (
       <TvDisplayView
@@ -267,15 +269,6 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
 
         <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-800/80 bg-slate-950/70 px-4 py-2 text-[10px] text-slate-500 sm:px-6 lg:px-8">
           <span>NEXTQ · {clinic.name}</span>
-          <a
-            href="https://ybgp.in"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-right text-teal-300 transition hover:text-teal-200"
-          >
-            <span className="block font-semibold text-slate-400">Looking to Grow Your Business?</span>
-            <span className="block font-bold">YBGP &mdash; Your Business Growth Partner &rarr;</span>
-          </a>
         </footer>
 
         {/* Modals */}

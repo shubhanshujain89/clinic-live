@@ -231,26 +231,19 @@ export const PaymentGatewayPage: React.FC<PaymentGatewayPageProps> = ({
 
               <div>
                 <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-1.5">
-                  Enter 6-Digit OTP (Test Simulator: Any 6 Digits)
+                  Enter 6-Digit OTP
                 </label>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
                     maxLength={6}
                     autoFocus
-                    placeholder="789421"
+                    placeholder="Enter OTP"
                     value={otpValue}
                     onChange={(e) => setOtpValue(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-center text-lg font-mono tracking-widest text-teal-300 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                   />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setOtpValue('842915')}
-                  className="text-[11px] text-teal-400 hover:text-teal-300 underline mt-1.5 block"
-                >
-                  ⚡ Auto-fill sample OTP (842915)
-                </button>
               </div>
 
               <div className="flex space-x-3 pt-2">

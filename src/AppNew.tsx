@@ -297,7 +297,7 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white flex items-center justify-center">
+      <div className="app-root min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-slate-400">Loading...</p>
@@ -312,7 +312,7 @@ export default function App() {
   const isClinicQueue = currentPage === 'clinic-queue';
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white flex flex-col">
+    <div className="app-root min-h-screen flex flex-col">
       {showPublicHeader && (
         <GlobalHeader
           currentPage={currentPage}
@@ -504,19 +504,10 @@ export default function App() {
         </div>
       )}
 
-      {!isTvDisplay && !isClinicQueue && <footer className="border-t border-slate-700/60 bg-slate-950/80">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-4 text-center text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400 sm:flex-row sm:text-left sm:px-6 lg:px-8">
+      {!isTvDisplay && !isClinicQueue && <footer className="border-t border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-4 text-center text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 sm:flex-row sm:text-left sm:px-6 lg:px-8">
           <span>{settings.siteName}</span>
           <span className="text-slate-500">{content.footerText}</span>
-          <a
-            href="https://ybgp.in"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-center normal-case tracking-normal text-teal-300 transition hover:text-teal-200 sm:text-right"
-          >
-            <span className="block text-[10px] font-semibold text-slate-300">Looking to Grow Your Business?</span>
-            <span className="block text-xs font-bold">YBGP &mdash; Your Business Growth Partner &rarr;</span>
-          </a>
         </div>
       </footer>}
     </div>

@@ -38,7 +38,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) 
       const result = await signInWithEmailAndPassword(auth, normalizedEmail, normalizedPassword);
       const user = result.user;
       if (user) {
-        onLoginSuccess(user.uid, user.role || 'CLINIC_ADMIN', user.clinicId || 'clinic_basic_demo');
+        onLoginSuccess(user.uid, user.role || 'CLINIC_ADMIN', user.clinicId);
       }
     } catch (err: any) {
       setError(err.message || 'Authentication failed');

@@ -6,7 +6,6 @@ import {
   Tv, 
   CalendarPlus, 
   MessageSquare, 
-  RotateCcw,
   Sparkles,
   LogOut,
   User as UserIcon,
@@ -23,9 +22,7 @@ interface NavbarProps {
   clinic: Clinic | null;
   currentUser: User | null;
   onGoogleSignIn: () => void;
-  onSeedData: () => void;
   onToggleWhatsAppLogs: () => void;
-  isSeeding?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -34,9 +31,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   clinic,
   currentUser,
   onGoogleSignIn,
-  onSeedData,
   onToggleWhatsAppLogs,
-  isSeeding = false,
 }) => {
   const isDoctorIn = clinic?.doctorStatus === 'IN';
   const isBasicPlan = clinic?.featurePlan === 'BASIC';
@@ -54,16 +49,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="min-w-0">
               <div className="flex items-center space-x-2">
                 <span className="truncate text-base font-black tracking-[-0.04em] text-white sm:text-lg">
-                  {clinic?.name || 'Live Clinic Queue'}
+                  {clinic?.name || 'NEXTQ'}
                 </span>
                 <span className="hidden md:inline-flex items-center rounded-full border border-teal-500/30 bg-teal-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-teal-300">
                   Live sync
                 </span>
               </div>
               <p className="hidden items-center gap-1.5 text-[11px] text-slate-400 sm:flex">
-                <span>{clinic?.doctorName || 'Dr. Aryan Sharma'}</span>
+                <span>{clinic?.doctorName || 'Clinic staff'}</span>
                 <span>•</span>
-                <span className="text-slate-300">{clinic?.cabinNumber || 'Cabin 1'}</span>
+                <span className="text-slate-300">{clinic?.cabinNumber || 'Clinic'}</span>
               </p>
             </div>
           </div>
@@ -138,17 +133,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {isDoctorIn ? 'Doctor IN' : 'Doctor OUT'}
               </span>
             </div>
-
-            {/* Seed / Reset Demo Data */}
-            <button
-              onClick={onSeedData}
-              disabled={isSeeding}
-              title="Reset with realistic demo patient queue"
-              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 text-xs font-medium transition-all"
-            >
-              <RotateCcw className={`w-3.5 h-3.5 ${isSeeding ? 'animate-spin' : ''}`} />
-              <span className="hidden md:inline">Seed Demo</span>
-            </button>
 
             {/* Auth / User Pill */}
             {currentUser ? (

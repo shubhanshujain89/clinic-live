@@ -1,5 +1,3 @@
-export const DEMO_ACCOUNTS: Array<{ email: string; role: string; label: string; clinicId: string; clinicName: string; plan: string }> = [];
-
 export type User = {
   uid: string;
   displayName?: string;

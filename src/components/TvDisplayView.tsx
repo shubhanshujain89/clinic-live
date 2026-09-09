@@ -253,7 +253,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
       </main>
 
       {/* Bottom Signage Footer Ticker */}
-      <footer className="grid grid-cols-1 items-center gap-2 border-t border-slate-800/80 pt-3 text-center text-[11px] font-medium text-slate-400 sm:grid-cols-3 sm:text-xs sm:text-left">
+      <footer className="grid grid-cols-1 items-center gap-2 border-t border-slate-800/80 pt-3 text-center text-[11px] font-medium text-slate-400 sm:grid-cols-2 sm:text-xs sm:text-left">
         <div className="flex items-center space-x-2">
           <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
           <span>Live queue · Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -265,17 +265,6 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
               (⚠️ Delay Broadcast: +{clinic.delayMinutes} mins)
             </span>
           )}
-        </div>
-        <div className="text-center sm:text-right">
-          <a
-            href="https://ybgp.in"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-bold text-teal-300 transition hover:text-teal-200"
-          >
-            <span className="block text-[10px] font-semibold text-slate-300">Looking to Grow Your Business?</span>
-            <span className="block">YBGP &mdash; Your Business Growth Partner &rarr;</span>
-          </a>
         </div>
       </footer>
     </div>

@@ -23,8 +23,8 @@ export const BenefitsPage: React.FC<Props> = ({ onNavigate }) => {
   ];
 
   return (
-    <div className="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
-      <section className="max-w-7xl mx-auto px-4 pt-6 pb-16 sm:px-6 lg:px-8">
+    <div className="public-light-page">
+      <section className="public-light-section max-w-7xl mx-auto px-4 pt-6 pb-16 sm:px-6 lg:px-8">
         <div className="mb-10 flex items-center justify-between gap-4 flex-wrap">
           <div>
             <p className="text-emerald-400 uppercase tracking-[0.2em] text-xs font-semibold mb-3">Benefits</p>
@@ -33,12 +33,12 @@ export const BenefitsPage: React.FC<Props> = ({ onNavigate }) => {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
-          <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-8">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
               <Heart className="w-6 h-6 text-emerald-400" />
               For Clinics & Hospitals
             </h2>
-            <ul className="space-y-4 text-slate-300">
+            <ul className="space-y-4 text-slate-600">
               {clinics.map((item) => (
                 <li key={item} className="flex gap-3">
                   <ChevronRight className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
@@ -48,12 +48,12 @@ export const BenefitsPage: React.FC<Props> = ({ onNavigate }) => {
             </ul>
           </div>
 
-          <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-8">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
               <Users className="w-6 h-6 text-cyan-400" />
               For Patients
             </h2>
-            <ul className="space-y-4 text-slate-300">
+            <ul className="space-y-4 text-slate-600">
               {patients.map((item) => (
                 <li key={item} className="flex gap-3">
                   <ChevronRight className="w-5 h-5 text-cyan-400 mt-0.5 shrink-0" />

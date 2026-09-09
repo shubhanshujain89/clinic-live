@@ -19,7 +19,7 @@
 2. Navigate to **Hosting → Git**
 3. Click **Connect Repository**
 4. Select GitHub and authorize
-5. Choose `live-clinic-queue-&-token-management-system` repository
+5. Choose the NEXTQ repository
 6. Select `main` branch
 7. Click **Connect**
 
@@ -36,12 +36,8 @@ DB_PORT=3306
 DB_USER=<hostinger-mysql-user>
 DB_PASSWORD=<strong-database-password>
 DB_NAME=<hostinger-mysql-database>
-SUPER_ADMIN_PASSWORD=<strong-bootstrap-password-at-least-12-characters>
 SUPER_ADMIN_USERNAME=<unique-production-super-admin-email>
 SESSION_SECRET=<long-random-secret>
-CLINIC_ADMIN_PASSWORD=<strong-seed-password-at-least-12-characters>
-DOCTOR_PASSWORD=<strong-seed-password-at-least-12-characters>
-STAFF_PASSWORD=<strong-seed-password-at-least-12-characters>
 ```
 
 ⚠️ **CRITICAL**: Change `SUPER_ADMIN_PASSWORD` to a strong, unique password before deploying!
@@ -53,7 +49,7 @@ SESSION_MAX_AGE=28800
 TRUST_PROXY=true
 ```
 
-`SUPER_ADMIN_USERNAME` must not reuse a clinic account such as `admin@clinic.local`. The seeded clinic administrator remains a `CLINIC_ADMIN`; use a separate production super-admin identity.
+`SUPER_ADMIN_USERNAME` and `SUPER_ADMIN_PASSWORD` are optional bootstrap credentials. If configured, use a unique production identity.
 
 ### Step 3: Build Configuration
 
@@ -160,15 +156,8 @@ nextq/
 - Rate-limit counters are stored in MySQL and are initialized by `npm run db:migrate`.
 - Back up MySQL regularly for production data.
 
-### Seed Accounts
-`npm run db:seed` is restricted to disposable non-production databases. It inserts demo accounts and must not be run against production.
-
-| Email | Environment password | Role |
-|-------|----------|------|
-| admin@clinic.local | `CLINIC_ADMIN_PASSWORD` | CLINIC_ADMIN |
-| doctor@clinic.local | `DOCTOR_PASSWORD` | DOCTOR |
-| staff@clinic.local | `STAFF_PASSWORD` | STAFF |
-| superadmin@clinic.local | `SUPER_ADMIN_PASSWORD` | SUPER_ADMIN |
+### Database Initialization
+Run `npm run db:migrate` before the first start. It creates the schema only; no users, clinics, or sample records are inserted.
 
 
 ### Ports

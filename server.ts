@@ -8,6 +8,7 @@ import { repositories } from './server/db/repositories/index.js';
 import { services } from './server/db/services/index.js';
 import { getClinicPlanSnapshot, getPlanLimits } from './server/db/services/planService.js';
 import { getClinicBusinessDate } from './server/db/services/clinicTime.js';
+import { validateSuperAdminBootstrapPassword } from './server/bootstrap.js';
 
 dotenv.config();
 
@@ -853,15 +854,14 @@ app.post('/api/auth/login', async (req, res) => {
     const normalizedRole = String(requestedRole).toUpperCase();
     
     const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || '';
-    const superAdminUsername = process.env.SUPER_ADMIN_USERNAME || (process.env.NODE_ENV === 'production' ? '' : 'superadmin@clinic.local');
+    const superAdminUsername = process.env.SUPER_ADMIN_USERNAME || '';
 
     let context: AuthContext | null = null;
     let accountAccessStatus = 'Granted';
     let accountStatus = 'Active';
     let accountClinicName = '';
     
-    // Database accounts take precedence over the bootstrap identity. This prevents
-    // a misconfigured SUPER_ADMIN_USERNAME from promoting a seeded clinic account.
+    // Database accounts take precedence over the bootstrap identity.
     const account = await findUserByEmail(normalizedEmail);
     if (account && verifyPassword(normalizedPassword, account.passwordHash)) {
       accountAccessStatus = account.accessStatus || 'Granted';
@@ -880,8 +880,15 @@ app.post('/api/auth/login', async (req, res) => {
       }
     }
 
-    if (!context && normalizedEmail.toLowerCase() === superAdminUsername.trim().toLowerCase() && superAdminPassword && secureEqual(normalizedPassword, superAdminPassword)) {
-      context = { userId: 'super-admin', role: 'SUPER_ADMIN', clinicId: null, doctorId: null, email: superAdminUsername };
+    if (!context && normalizedEmail.toLowerCase() === superAdminUsername.trim().toLowerCase()) {
+      const bootstrapPasswordError = validateSuperAdminBootstrapPassword(superAdminPassword, process.env.NODE_ENV);
+      if (bootstrapPasswordError) {
+        res.status(503).json({ error: bootstrapPasswordError });
+        return;
+      }
+      if (superAdminPassword && secureEqual(normalizedPassword, superAdminPassword)) {
+        context = { userId: 'super-admin', role: 'SUPER_ADMIN', clinicId: null, doctorId: null, email: superAdminUsername };
+      }
     }
 
     if (!context) {

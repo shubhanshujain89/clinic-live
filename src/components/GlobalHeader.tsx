@@ -29,33 +29,33 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   ];
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-slate-700/60 bg-slate-950/85 backdrop-blur-xl shadow-[0_10px_30px_rgba(15,23,42,0.45)]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
+    <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-xl shadow-sm">
+      <div className="mx-auto max-w-7xl px-4 py-3.5 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-4">
           <button
             onClick={() => onNavigate('landing')}
-            className="flex min-w-0 items-center gap-3 group"
+            className="group flex min-w-0 items-center gap-3"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/40">
-              <Heart className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition-transform" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 ring-1 ring-emerald-200">
+              <Heart className="h-5 w-5 text-emerald-600 transition-transform group-hover:scale-110" />
             </div>
             <div className="min-w-0 text-left">
-              <h1 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">
+              <h1 className="text-lg font-bold text-slate-900 transition-colors group-hover:text-emerald-700">
                 {settings.siteName}
               </h1>
-              <p className="truncate text-[10px] uppercase tracking-[0.18em] text-slate-400">{settings.siteTagline}</p>
+              <p className="truncate text-[10px] uppercase tracking-[0.18em] text-slate-500">{settings.siteTagline}</p>
             </div>
           </button>
 
-          <div className="hidden xl:flex items-center justify-center flex-1 gap-2">
+          <div className="hidden flex-1 items-center justify-center gap-2 xl:flex">
             {navTabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => onNavigate(tab.key)}
-                className={`relative px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 ${
                   currentPage === tab.key
-                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/40 shadow-[0_0_0_1px_rgba(52,211,153,0.12)]'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                    ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
                 {tab.label}
@@ -63,41 +63,41 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
             ))}
           </div>
 
-          <div className="hidden md:flex items-center gap-2.5 shrink-0">
+          <div className="hidden shrink-0 items-center gap-2.5 md:flex">
             {isLoggedIn && (
               <>
                 <button
                   onClick={onOpenProfile}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/80 ring-1 ring-slate-700 text-slate-200 hover:text-white hover:bg-slate-700/80 transition-all duration-200"
+                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
                 >
-                  <Heart className="w-4 h-4 text-emerald-400" />
+                  <Heart className="h-4 w-4 text-emerald-600" />
                   <span className="text-sm font-semibold">{userName}</span>
                 </button>
                 <button
                   onClick={onLogout}
-                  className="px-4 py-2 rounded-xl font-semibold text-slate-200 hover:text-white hover:bg-red-500/10 hover:border hover:border-red-400/40 transition-all duration-200 flex items-center gap-2"
+                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="h-4 w-4" />
                   Logout
                 </button>
               </>
             )}
           </div>
 
-          <div className="md:hidden flex items-center gap-2 shrink-0">
+          <div className="flex shrink-0 items-center gap-2 md:hidden">
             {isLoggedIn ? (
               <>
                 <button
                   onClick={onOpenProfile}
-                  className="px-3 py-2 rounded-xl bg-slate-800/80 ring-1 ring-slate-700 text-slate-200 text-sm font-semibold"
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700"
                 >
                   {userName || 'Profile'}
                 </button>
                 <button
                   onClick={onLogout}
-                  className="px-3 py-2 rounded-xl text-slate-200 hover:bg-red-500/10 hover:text-red-300 transition-colors"
+                  className="rounded-xl px-3 py-2 text-slate-700 hover:bg-red-50 hover:text-red-600"
                 >
-                  <LogOut className="w-5 h-5" />
+                  <LogOut className="h-5 w-5" />
                 </button>
               </>
             ) : null}
@@ -109,10 +109,10 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
             <button
               key={tab.key}
               onClick={() => onNavigate(tab.key)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-200 ${
+              className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all duration-200 ${
                 currentPage === tab.key
-                  ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/40'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                  ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
               {tab.label}

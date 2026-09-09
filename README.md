@@ -34,10 +34,6 @@ npm run dev:server
 
 Visit `http://localhost:3000` in your browser.
 
-### Seed Credentials
-
-Seeding requires unique passwords of at least 12 characters for `SUPER_ADMIN_PASSWORD`, `CLINIC_ADMIN_PASSWORD`, `DOCTOR_PASSWORD`, and `STAFF_PASSWORD`. Credentials are never stored in this repository.
-
 ## Production Build
 
 ```bash
@@ -59,7 +55,6 @@ npm run build     # Create production build
 ```
 
 
-Database seeding requires unique passwords of at least 12 characters for `SUPER_ADMIN_PASSWORD`, `CLINIC_ADMIN_PASSWORD`, `DOCTOR_PASSWORD`, and `STAFF_PASSWORD`. Credentials are never stored in this repository.
 ### 2. Push to GitHub
 
 ```bash
@@ -97,7 +92,7 @@ git push origin main
 
 4. **Database Persistence**
    - Create the MySQL database and user in Hostinger before starting the server.
-   - Run `npm run db:migrate` and `npm run db:seed` once with the production environment variables.
+   - Run `npm run db:migrate` once with the production environment variables. Migrations create an empty schema and never insert accounts or sample records.
    - Back up the MySQL database regularly.
 
 ### 4. Post-Deployment Verification
@@ -178,14 +173,13 @@ See `.env.example` for complete configuration. Key variables:
 - `BACKEND_PORT` - API port (default: 4000)
 - `SUPER_ADMIN_USERNAME` - Super-admin login email
 - `SUPER_ADMIN_PASSWORD` - Strong bootstrap password
-- `CLINIC_ADMIN_PASSWORD`, `DOCTOR_PASSWORD`, `STAFF_PASSWORD` - Seed account passwords
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` - MySQL connection settings
 
 ## Security Notes
 
 ⚠️ **IMPORTANT**: Before going live:
 
-1. Change all seeded account passwords in the deployment environment
+1. Provision the first administrator through the approved production account workflow
 2. Enable HTTPS on Hostinger
 3. Set `NODE_ENV=production`
 4. Disable debug mode (`DEBUG_MODE=false`)
@@ -196,7 +190,7 @@ See `.env.example` for complete configuration. Key variables:
 
 - Authentication uses signed expiring cookies shared across instances; set a long random `SESSION_SECRET` in every instance.
 - Rate-limit counters are stored in MySQL and are initialized by `npm run db:migrate`.
-- Run `npm run db:migrate` and `npm run db:seed` as a release step before the first start.
+- Run `npm run db:migrate` as a release step before the first start.
 - `npm run db:reset` and `npm run db:drop` are destructive commands and must never run against production data.
 - `npm test`, `npm run lint`, and `npm run build` are the required pre-deploy checks.
 

@@ -1,13 +1,12 @@
 /**
  * Database Migration Scripts for NEXTQ
  * 
- * This file contains functions to run migrations and seed data.
+ * This file contains functions to run database migrations.
  * Run with: npm run db:migrate
  */
 
 import { getPool, executeQuery, executeTransaction, closePool } from './connection.js';
-import { SCHEMA_SQL, SEED_DATA_SQL } from './schema.js';
-import { hashPassword } from '../db.js';
+import { SCHEMA_SQL } from './schema.js';
 
 /**
  * Split SQL statements by semicolon, handling edge cases.
@@ -129,71 +128,7 @@ export async function runMigrations(): Promise<void> {
   console.log('✅ All migrations completed successfully');
 }
 
-/**
- * Run seed data insertion
- */
-export async function runSeedData(): Promise<void> {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Refusing to seed production data. Run the seed command only against a disposable non-production database.');
-  }
-  console.log('🌱 Running seed data insertion...');
-  const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD?.trim();
-  const adminPassword = process.env.CLINIC_ADMIN_PASSWORD?.trim();
-  const doctorPassword = process.env.DOCTOR_PASSWORD?.trim();
-  const staffPassword = process.env.STAFF_PASSWORD?.trim();
-  if ([superAdminPassword, adminPassword, doctorPassword, staffPassword].some((password) => !password || password.length < 12)) {
-    throw new Error('SUPER_ADMIN_PASSWORD, CLINIC_ADMIN_PASSWORD, DOCTOR_PASSWORD, and STAFF_PASSWORD must each be configured with at least 12 characters before seeding.');
-  }
-  
-  const statements = splitSqlStatements(SEED_DATA_SQL);
-  
-  for (const statement of statements) {
-    let executableStatement = statement.replace(/^(?:\s*--[^\r\n]*(?:\r?\n|$))+/, '').trim();
-    if (!executableStatement) continue;
-
-    if (executableStatement.includes('INSERT IGNORE INTO staff_users')) {
-      executableStatement = executableStatement
-        .replace('__SUPER_ADMIN_PASSWORD_HASH__', hashPassword(superAdminPassword!))
-        .replace('__ADMIN_PASSWORD_HASH__', hashPassword(adminPassword!))
-        .replace('__DOCTOR_PASSWORD_HASH__', hashPassword(doctorPassword!))
-        .replace('__STAFF_PASSWORD_HASH__', hashPassword(staffPassword!));
-    }
-    
-    try {
-      await executeQuery(executableStatement);
-      console.log(`✅ Seeded: ${executableStatement.substring(0, 80)}...`);
-
-      if (executableStatement.includes('INSERT IGNORE INTO staff_users')) {
-        for (const account of [
-          { email: 'admin@clinic.local', password: adminPassword! },
-          { email: 'doctor@clinic.local', password: doctorPassword! },
-          { email: 'staff@clinic.local', password: staffPassword! },
-        ]) {
-          await executeQuery(
-            'UPDATE `staff_users` SET password_hash = ? WHERE email = ?',
-            [hashPassword(account.password), account.email]
-          );
-        }
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('Duplicate entry') || 
-          errorMessage.includes('Duplicate key')) {
-        console.log(`⚠️  Skipped (already exists): ${executableStatement.substring(0, 80)}...`);
-      } else {
-        console.error(`❌ Failed: ${executableStatement.substring(0, 80)}...`);
-        console.error(`   Error: ${errorMessage}`);
-        throw error;
-      }
-    }
-  }
-  
-  console.log('✅ Seed data insertion completed');
-}
-
-/**
- * Full database initialization - runs migrations and seed data
- */
+/** Run the database migrations required by the application. */
 export async function initializeDatabase(): Promise<void> {
   console.log('🚀 Initializing database...');
   
@@ -208,9 +143,6 @@ export async function initializeDatabase(): Promise<void> {
     
     // Run migrations
     await runMigrations();
-    
-    // Run seed data
-    await runSeedData();
     
     console.log('🎉 Database initialization complete!');
   } catch (error) {
@@ -292,11 +224,6 @@ switch (command) {
       .finally(() => closePool())
       .catch(() => process.exit(1));
     break;
-  case 'seed':
-    runSeedData()
-      .finally(() => closePool())
-      .catch(() => process.exit(1));
-    break;
   case 'reset':
     resetDatabase().catch(() => process.exit(1));
     break;
@@ -308,9 +235,8 @@ switch (command) {
   default:
     console.log(`
 Database Migration Commands:
-  npm run db:migrate    - Run migrations and seed data
-  npm run db:seed       - Run seed data only
-  npm run db:reset      - Drop all tables and reinitialize
+  npm run db:migrate    - Run migrations only
+  npm run db:reset      - Drop all tables and reinitialize empty schema
   npm run db:drop       - Drop all tables (DANGEROUS)
     `);
     process.exit(1);
