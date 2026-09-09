@@ -23,9 +23,11 @@ const PLAN_LIMITS: Partial<Record<Clinic['featurePlan'], { maxDoctors: number; m
 };
 const DEFAULT_PLAN_LIMITS = { maxDoctors: 1, maxStaffUsers: 2 };
 
+const calculateExpiryDate = (startDate: Date, durationDays: number) => new Date(startDate.getTime() + Math.max(0, durationDays - 1) * 24 * 60 * 60 * 1000);
+
 export const getClinicPlanSnapshot = (clinic: Clinic, now = new Date()): ClinicPlanSnapshot => {
   const startedAt = clinic.subscriptionStartedAt || clinic.createdAt;
-  const expiresAt = clinic.subscriptionExpiresAt || new Date(startedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const expiresAt = clinic.subscriptionExpiresAt || calculateExpiryDate(startedAt, 30);
   const status = clinic.subscriptionStatus === 'PAUSED'
     ? 'PAUSED'
     : !LAUNCH_PLANS.includes(clinic.featurePlan)

@@ -23,8 +23,10 @@ interface UserSession {
   clinicId?: string;
 }
 
+const normalizeRole = (value?: string | null) => String(value || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+
 export const resolveAppPageForRoute = (path: string, userRole?: string | null): AppPage => {
-  const normalizedRole = String(userRole || '').toUpperCase();
+  const normalizedRole = normalizeRole(userRole);
 
   if (path === '/site/admin') {
     if (normalizedRole === 'SUPER_ADMIN') return 'site-admin';
@@ -98,7 +100,7 @@ export default function App() {
       } else {
         const nextSession = {
           userId: user.uid,
-          role: user.role || 'CLINIC_ADMIN',
+          role: normalizeRole(user.role || 'CLINIC_ADMIN'),
           clinicId: user.clinicId,
         };
         setUserSession((current) => {
@@ -225,7 +227,7 @@ export default function App() {
   };
 
   const handleLoginSuccess = (userId: string, role: string, clinicId?: string) => {
-    const normalizedRole = String(role || '').toUpperCase();
+    const normalizedRole = normalizeRole(role);
     const uiRole = normalizedRole === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : normalizedRole === 'CLINIC_ADMIN' ? 'CLINIC_ADMIN' : normalizedRole === 'DOCTOR' ? 'DOCTOR' : normalizedRole === 'STAFF' ? 'STAFF' : 'CLINIC_ADMIN';
     const session: UserSession = { userId, role: uiRole, clinicId };
     setUserSession(session);

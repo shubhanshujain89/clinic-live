@@ -1036,6 +1036,14 @@ app.get('/api/clinic-access', async (req, res) => {
         access[record.key.replace(/^clinic_access_/, '')] = record.value;
       }
     });
+    const clinics = context.role === 'SUPER_ADMIN'
+      ? await repositories.clinics.findAll()
+      : context.clinicId ? [await repositories.clinics.findById(context.clinicId)] : [];
+    clinics.filter(Boolean).forEach((clinic) => {
+      if (clinic && getClinicPlanSnapshot(clinic).status === 'EXPIRED') {
+        access[clinic.id] = 'Expired';
+      }
+    });
     res.status(200).json(access);
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to load clinic access.' });
