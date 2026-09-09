@@ -210,6 +210,11 @@ export class QueueService {
       );
       if ((updateResult as any).affectedRows !== 1) return null;
 
+      await connection.execute(
+        `UPDATE \`clinics\` SET delay_minutes = 0, delay_reason = '' WHERE id = ?`,
+        [clinicId]
+      );
+
       return {
         id: token.id,
         clinicId: token.clinic_id,

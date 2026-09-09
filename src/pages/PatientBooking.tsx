@@ -41,6 +41,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedSpecialization, setSelectedSpecialization] = useState('');
+  const [generatedTokenNumber, setGeneratedTokenNumber] = useState('');
   
   const [bookingData, setBookingData] = useState({
     patientName: '',
@@ -151,6 +152,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
         }
       }
       if (!response.ok) throw new Error(payload.error || `Unable to book appointment (${response.status}).`);
+      setGeneratedTokenNumber(payload.tokenNumber || '');
       setStep('confirm');
     } catch (error) {
       console.error('Error booking appointment:', error);
@@ -407,6 +409,10 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
                 <div className="flex justify-between">
                   <span className="text-slate-400">Tracking:</span>
                   <span className="font-bold">Use your mobile number</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Token Number:</span>
+                  <span className="font-bold text-emerald-400">{generatedTokenNumber || 'Generating...'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Doctor:</span>

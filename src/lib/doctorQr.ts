@@ -7,3 +7,10 @@ export const makeDoctorBookingQrCodeUrl = (
   const encodedBookingUrl = encodeURIComponent(bookingUrl);
   return `https://chart.googleapis.com/chart?cht=qr&chs=220x220&chl=${encodedBookingUrl}`;
 };
+
+export const extractBookingTokenNumber = (
+  payload: { tokenNumber?: string | null } | null | undefined
+): string => {
+  const tokenNumber = payload?.tokenNumber;
+  return typeof tokenNumber === 'string' ? tokenNumber.trim() : '';
+};

@@ -110,9 +110,28 @@ export class BookingService {
 
     const today = new Date();
     const businessDate = getClinicBusinessDate(today, clinic.timezone);
+    const phoneVariants = [
+      input.phone.replace(/\D/g, '').replace(/^91/, '').slice(-10),
+      `+91${input.phone.replace(/\D/g, '').replace(/^91/, '').slice(-10)}`,
+      `91${input.phone.replace(/\D/g, '').replace(/^91/, '').slice(-10)}`,
+    ];
 
     // Create patient, token, session (if needed), and appointment in a transaction
     return executeTransaction(async (connection) => {
+      const [existingPatientRows] = await connection.execute(
+        `SELECT p.id
+         FROM \`patients\` p
+         JOIN \`tokens\` t ON t.patient_id = p.id
+         JOIN \`sessions\` s ON s.id = t.session_id
+         WHERE p.phone IN (?, ?, ?)
+           AND s.date = ?
+         LIMIT 1`,
+        [...phoneVariants, businessDate]
+      );
+      if ((existingPatientRows as any[]).length > 0) {
+        throw new Error('A booking is already registered for this mobile number today.');
+      }
+
       const session = await this.getOrCreateSession(connection, input.clinicId, businessDate);
 
       // Generate tracking ID
