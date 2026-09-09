@@ -11,30 +11,34 @@ const workflows = [
     title: 'From scan to turn',
     description: 'A patient can join the right queue in a few clear steps.',
     steps: ['Scan QR / Open Link', 'Book', 'Get Token', 'Track Turn'],
+    preview: { label: 'PATIENT TOKEN', title: 'Your visit is on track', metrics: [['Token', 'A-104'], ['Ahead', '3'], ['Est. wait', '12m']], focus: 'Now serving A-101', action: 'Track live turn' },
   },
   {
     role: 'RECEPTION',
     title: 'Keep the queue moving',
     description: 'The front desk sees the whole room and always knows what happens next.',
     steps: ['See Queue', 'Call Next', 'Manage Priority', 'Keep Queue Moving'],
+    preview: { label: 'RECEPTION DESK', title: 'Queue control center', metrics: [['Waiting', '12'], ['Served', '38'], ['Priority', '2']], focus: 'Next in line: A-104', action: 'Call next patient' },
   },
   {
     role: 'DOCTOR',
     title: 'A focused consultation flow',
     description: 'The doctor controls the active queue without extra steps around care.',
     steps: ['IN', 'Call / Serve', 'Complete', 'OUT'],
+    preview: { label: 'DOCTOR VIEW', title: 'Consultation in focus', metrics: [['Current', 'A-104'], ['Room', '02'], ['Status', 'IN']], focus: 'Patient A-104 is in consultation', action: 'Complete visit' },
   },
   {
     role: 'TV',
     title: 'One calm view for everyone',
     description: 'A simple display keeps patients informed without exposing private details.',
     steps: ['Now Serving', 'Next Tokens', 'Queue Status'],
+    preview: { label: 'TV DISPLAY', title: 'Now serving', metrics: [['Token', 'A-101'], ['Next', 'A-104'], ['Desk', '02']], focus: 'Please wait for your token', action: 'Queue is live' },
   },
 ];
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => (
   <div className="landing-page-shell min-h-screen text-slate-900">
-    <main className="landing-main mx-auto max-w-6xl px-5 pb-20 pt-16 sm:px-8 sm:pt-24 lg:px-10">
+    <main className="landing-main px-4 pb-20 pt-16 sm:px-6 sm:pt-24 lg:px-8">
       <section className="landing-hero max-w-3xl">
         <p className="landing-kicker">NEXTQ · Clinic queue management</p>
         <h1 className="landing-title">Smart Queue. Less Waiting.</h1>
@@ -51,19 +55,38 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => (
         <div className="workflow-list">
           {workflows.map((workflow) => (
             <article className="workflow-row" key={workflow.role}>
-              <div className="workflow-copy">
-                <p className="workflow-role">{workflow.role}</p>
-                <h3>{workflow.title}</h3>
-                <p>{workflow.description}</p>
+              <div className="workflow-row-content">
+                <div className="workflow-copy">
+                  <p className="workflow-role">{workflow.role}</p>
+                  <h3>{workflow.title}</h3>
+                  <p>{workflow.description}</p>
+                </div>
+                <div className="workflow-steps" role="list">
+                  {workflow.steps.map((step, index) => (
+                    <div className="workflow-step-item" key={step} role="listitem">
+                      <div className="workflow-step-card">
+                        <span className="workflow-step-number">0{index + 1}</span>
+                        <span>{step}</span>
+                      </div>
+                      {index < workflow.steps.length - 1 && <ArrowRight className="workflow-step-arrow" aria-hidden="true" />}
+                    </div>
+                  ))}
+                </div>
               </div>
-              <ol className="workflow-steps">
-                {workflow.steps.map((step, index) => (
-                  <li key={step}>
-                    <span className="workflow-step-number">0{index + 1}</span>
-                    <span>{step}</span>
-                  </li>
-                ))}
-              </ol>
+              <aside className={`flow-dashboard flow-dashboard-${workflow.role.toLowerCase()}`} aria-label={`${workflow.role} dashboard preview`}>
+                <div className="flow-dashboard-topbar">
+                  <span>{workflow.preview.label}</span>
+                  <span className="flow-dashboard-live"><span /> Live</span>
+                </div>
+                <h4>{workflow.preview.title}</h4>
+                <div className="flow-dashboard-metrics">
+                  {workflow.preview.metrics.map(([label, value]) => (
+                    <div key={label}><span>{label}</span><strong>{value}</strong></div>
+                  ))}
+                </div>
+                <div className="flow-dashboard-focus">{workflow.preview.focus}</div>
+                <div className="flow-dashboard-action">{workflow.preview.action}<ArrowRight aria-hidden="true" /></div>
+              </aside>
             </article>
           ))}
         </div>

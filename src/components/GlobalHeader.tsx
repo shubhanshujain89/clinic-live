@@ -30,13 +30,13 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
 
   return (
     <nav className="site-header sticky top-0 z-50 border-b border-slate-200 bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-none px-2 py-3 sm:px-4 lg:px-5">
         <div className="flex items-center justify-between gap-4">
           <button
             onClick={() => onNavigate('landing')}
-            className="group flex min-w-0 items-center gap-2"
+            className="group flex min-w-0 items-center"
           >
-            <img src="/nextq-logo.png" alt={settings.siteName} className="h-14 w-40 shrink-0 object-contain object-left" />
+            <img src="/nextq-logo.png" alt={settings.siteName} className="h-14 w-24 shrink-0 object-contain object-left" />
             <span className="hidden max-w-[12rem] text-[10px] font-semibold uppercase leading-tight tracking-[0.16em] text-slate-500 sm:block">
               {settings.siteTagline}
             </span>

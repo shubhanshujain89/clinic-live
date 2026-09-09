@@ -241,19 +241,285 @@ textarea {
 
 .workflow-list {
   margin-top: 2.5rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.workflow-showcase {
+  display: grid;
+  align-items: start;
+  gap: 2rem;
+  grid-template-columns: minmax(0, 1.55fr) minmax(19rem, 0.75fr);
+}
+
+.landing-dashboard-preview {
+  position: sticky;
+  top: 6rem;
+  overflow: hidden;
+  border: 1px solid #d8e9dd;
+  border-radius: 1.25rem;
+  background: #ffffff;
+  box-shadow: 0 20px 42px rgba(15, 23, 42, 0.1);
+}
+
+.dashboard-preview-topbar,
+.dashboard-preview-heading,
+.dashboard-preview-queue-heading,
+.dashboard-preview-queue-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dashboard-preview-topbar {
+  border-bottom: 1px solid #e5edf0;
+  padding: 1rem 1.15rem;
+}
+
+.dashboard-preview-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.dashboard-preview-brand img {
+  height: 1.4rem;
+  width: 3.75rem;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.dashboard-preview-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #047857;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.dashboard-preview-live span {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: #10b981;
+  box-shadow: 0 0 0 4px #d1fae5;
+}
+
+.dashboard-preview-heading {
+  padding: 1.25rem 1.15rem 0;
+}
+
+.dashboard-preview-heading h3 {
+  margin-top: 0.35rem;
+  color: #0f172a;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.dashboard-preview-heading svg {
+  width: 1.1rem;
+  color: #0f766e;
+}
+
+.dashboard-preview-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  padding: 1rem 1.15rem;
+}
+
+.dashboard-preview-metrics div {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid #e5edf0;
+  border-radius: 0.75rem;
+  background: #f8fafb;
+  padding: 0.7rem;
+}
+
+.dashboard-preview-metrics svg {
+  width: 0.9rem;
+  color: #0f766e;
+}
+
+.dashboard-preview-metrics strong {
+  color: #0f172a;
+  font-size: 1.25rem;
+}
+
+.dashboard-preview-metrics span,
+.dashboard-preview-queue-heading,
+.dashboard-preview-queue-row {
+  color: #64748b;
+  font-size: 0.68rem;
+}
+
+.dashboard-preview-queue {
+  margin: 0 1.15rem 1.15rem;
+  border: 1px solid #e5edf0;
+  border-radius: 0.85rem;
+  overflow: hidden;
+}
+
+.dashboard-preview-queue-heading {
+  background: #f0f7f4;
+  color: #0f766e;
+  font-weight: 800;
+  padding: 0.7rem 0.8rem;
+}
+
+.dashboard-preview-queue-row {
+  gap: 0.5rem;
+  border-top: 1px solid #edf2f3;
+  padding: 0.75rem 0.8rem;
+}
+
+.dashboard-preview-queue-row strong {
+  color: #0f172a;
+}
+
+.dashboard-preview-queue-row b {
+  color: #047857;
+  font-size: 0.65rem;
 }
 
 .workflow-row {
   display: grid;
   gap: 2rem;
-  grid-template-columns: minmax(12rem, 0.7fr) minmax(0, 1.3fr);
-  border-top: 1px solid #dce6e2;
-  padding: 2.25rem 0;
-  transition: border-color 160ms ease;
+  grid-template-columns: minmax(10rem, 0.55fr) minmax(0, 1.25fr) minmax(14rem, 0.7fr);
+  border: 1px solid #dce6e2;
+  border-radius: 1rem;
+  background: #ffffff;
+  padding: 2rem;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 .workflow-row:hover {
   border-color: #8fc5ae;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
+}
+
+.workflow-row-content {
+  display: contents;
+}
+
+.flow-dashboard {
+  align-self: stretch;
+  justify-self: end;
+  width: 100%;
+  max-width: 18rem;
+  border: 1px solid #d8e9dd;
+  border-radius: 0.9rem;
+  background: #f8fafb;
+  padding: 0.8rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+}
+
+.flow-dashboard-reception {
+  background: #f1faf6;
+}
+
+.flow-dashboard-doctor {
+  background: #f5f8fc;
+}
+
+.flow-dashboard-tv {
+  background: #f7f7fb;
+}
+
+.flow-dashboard-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #64748b;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.flow-dashboard-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #047857;
+}
+
+.flow-dashboard-live span {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: #10b981;
+  box-shadow: 0 0 0 3px #d1fae5;
+}
+
+.flow-dashboard h4 {
+  margin-top: 0.65rem;
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.flow-dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.flow-dashboard-metrics div {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid #e0eaE4;
+  border-radius: 0.6rem;
+  background: rgba(255, 255, 255, 0.75);
+  padding: 0.55rem;
+}
+
+.flow-dashboard-metrics span {
+  color: #64748b;
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+.flow-dashboard-metrics strong {
+  color: #0f172a;
+  font-size: 0.95rem;
+}
+
+.flow-dashboard-focus {
+  margin-top: 0.65rem;
+  border-left: 3px solid #0f766e;
+  background: #ffffff;
+  padding: 0.6rem 0.7rem;
+  color: #334155;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.flow-dashboard-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.65rem;
+  color: #0f766e;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.flow-dashboard-action svg {
+  width: 0.9rem;
 }
 
 .workflow-role {
@@ -282,27 +548,50 @@ textarea {
 .workflow-steps {
   display: grid;
   align-items: center;
-  gap: 0.6rem;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  list-style: none;
-  margin: 0;
-  padding: 0;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
 }
 
-.workflow-steps li {
+.workflow-step-item {
   display: flex;
-  min-height: 4.5rem;
+  min-width: 0;
+  align-items: center;
+  gap: 1rem;
+}
+
+.workflow-step-card {
+  display: flex;
+  min-height: 5.5rem;
+  min-width: 0;
+  flex: 1;
   flex-direction: column;
   justify-content: space-between;
   gap: 0.8rem;
-  border-left: 1px solid #b7d9cb;
-  padding: 0.1rem 0.8rem;
+  border: 1px solid #d8e9dd;
+  border-radius: 0.8rem;
+  background: linear-gradient(145deg, #ffffff 0%, #f4faf6 100%);
+  padding: 0.85rem 1rem;
   color: #1e293b;
   font-size: 0.92rem;
   font-weight: 700;
   line-height: 1.35;
   overflow-wrap: anywhere;
-  overflow-wrap: anywhere;
+  box-shadow: 0 6px 16px rgba(15, 118, 110, 0.06);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.workflow-step-card:hover {
+  border-color: #8fc5ae;
+  box-shadow: 0 10px 22px rgba(15, 118, 110, 0.12);
+  transform: translateY(-2px);
+}
+
+.workflow-step-arrow {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  color: #0f766e;
+  stroke-width: 2.5;
 }
 
 .workflow-step-number {
@@ -310,6 +599,14 @@ textarea {
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.12em;
+}
+
+.workflow-step-card > span:last-child {
+  overflow-wrap: anywhere;
+}
+
+.workflow-copy {
+  min-width: 0;
 }
 
 .landing-experiences {
@@ -851,8 +1148,27 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .workflow-showcase {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-dashboard-preview {
+    position: static;
+  }
+
   .workflow-row {
     gap: 1.5rem;
+    padding: 1.5rem;
+  }
+
+  .workflow-row-content {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .flow-dashboard {
+    justify-self: stretch;
+    max-width: none;
   }
 
   .workflow-steps {
@@ -860,13 +1176,15 @@ textarea {
     gap: 0.75rem;
   }
 
-  .workflow-steps li {
-    min-height: auto;
-    flex-direction: row;
-    align-items: baseline;
-    justify-content: flex-start;
-    gap: 0.8rem;
-    padding: 0.55rem 0.75rem;
+  .workflow-step-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+  }
+
+  .workflow-step-arrow {
+    align-self: center;
+    transform: rotate(90deg);
   }
 
   .landing-experiences {

@@ -513,9 +513,23 @@ export default function App() {
       )}
 
       {!isTvDisplay && !isClinicQueue && <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-4 text-center text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 sm:flex-row sm:text-left sm:px-6 lg:px-8">
-          <span>{settings.siteName}</span>
-          <span className="text-slate-500">{content.footerText}</span>
+        <div className="flex flex-col items-start justify-between gap-3 px-2 py-4 text-left text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 sm:flex-row sm:items-center sm:px-4 lg:px-5">
+          <div>
+            <span className="block">{content.footerText}</span>
+            <span className="mt-1 block text-[9px] tracking-[0.12em] text-slate-400">© {settings.siteName}. All rights reserved.</span>
+          </div>
+          <a
+            href="https://ybgp.in"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-3 text-right normal-case tracking-normal transition-opacity hover:opacity-80"
+          >
+            <span>
+              <span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Looking to Grow Your Business?</span>
+              <span className="block text-sm font-bold text-slate-800">YBGP — Your Business Growth Partner <span aria-hidden="true">→</span></span>
+            </span>
+            <img src="/ybgp-logo.png" alt="YBGP" className="h-10 w-auto shrink-0 object-contain" />
+          </a>
         </div>
       </footer>}
     </div>
