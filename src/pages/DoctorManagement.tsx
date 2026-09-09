@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Edit, Trash2, Star, Search, Upload } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Search, Upload } from 'lucide-react';
 import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, recordAuditEvent } from '../lib/firebase';
 import { PhoneInput } from '../components/PhoneInput';
 
@@ -28,6 +28,8 @@ interface DoctorManagementProps {
   onBack: () => void;
 }
 
+const isValidPhotoDataUrl = (value: string) => /^data:image\/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(value) && value.length <= 65000;
+
 export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, clinicName, onBack }) => {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +48,10 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
     consultationFee: '',
     availableDays: [] as string[],
     availableHours: '',
+    availableStart: '',
+    availableEnd: '',
+    availableStart2: '',
+    availableEnd2: '',
     status: 'active' as 'active' | 'inactive'
   });
 
@@ -71,12 +77,16 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
 
   const handleSaveDoctor = async () => {
     try {
-      const doctorData = {
+      const doctorData: Record<string, unknown> = {
         ...formData,
         clinicId,
         consultationFee: parseInt(formData.consultationFee),
         rating: editingDoctor?.rating || 0
       };
+      const isValidPhoto = !formData.photo || isValidPhotoDataUrl(formData.photo);
+      if (!isValidPhoto) {
+        delete doctorData.photo;
+      }
 
       if (editingDoctor) {
         await updateDoc(doc(db, 'doctors', editingDoctor.id), {
@@ -106,6 +116,10 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
         consultationFee: '',
         availableDays: [],
         availableHours: '',
+        availableStart: '',
+        availableEnd: '',
+        availableStart2: '',
+        availableEnd2: '',
         status: 'active'
       });
       fetchDoctors();
@@ -118,7 +132,27 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => setFormData((current) => ({ ...current, photo: String(reader.result || '') }));
+    reader.onload = () => {
+      const source = new Image();
+      source.onload = () => {
+        const maxDimension = 512;
+        const scale = Math.min(1, maxDimension / Math.max(source.width, source.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(source.width * scale));
+        canvas.height = Math.max(1, Math.round(source.height * scale));
+        const context = canvas.getContext('2d');
+        if (!context) return;
+        context.drawImage(source, 0, 0, canvas.width, canvas.height);
+        let quality = 0.72;
+        let compressedPhoto = canvas.toDataURL('image/jpeg', quality);
+        while (compressedPhoto.length > 65000 && quality > 0.3) {
+          quality -= 0.08;
+          compressedPhoto = canvas.toDataURL('image/jpeg', quality);
+        }
+        setFormData((current) => ({ ...current, photo: compressedPhoto }));
+      };
+      source.src = String(reader.result || '');
+    };
     reader.readAsDataURL(file);
   };
 
@@ -148,6 +182,10 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
       consultationFee: doctor.consultationFee.toString(),
       availableDays: doctor.availableDays,
       availableHours: doctor.availableHours,
+      availableStart: doctor.availableHours?.split(' - ')[0]?.split(',')[0]?.trim() || '',
+      availableEnd: doctor.availableHours?.split(' - ')[1]?.split(',')[0]?.trim() || '',
+      availableStart2: doctor.availableHours?.split(',')[1]?.split(' - ')[0]?.trim() || '',
+      availableEnd2: doctor.availableHours?.split(',')[1]?.split(' - ')[1]?.trim() || '',
       status: doctor.status
     });
     setShowAddModal(true);
@@ -205,6 +243,10 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
                 consultationFee: '',
                 availableDays: [],
                 availableHours: '',
+                availableStart: '',
+                availableEnd: '',
+                availableStart2: '',
+                availableEnd2: '',
                 status: 'active'
               });
               setShowAddModal(true);
@@ -238,7 +280,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
               <div key={doctor.id} className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden hover:border-emerald-400/50 transition group">
                 {/* Doctor Image Placeholder */}
                 <div className="h-40 bg-gradient-to-br from-emerald-900/30 to-cyan-900/30 flex items-center justify-center">
-                  {doctor.photo ? <img src={doctor.photo} alt={doctor.name} className="h-full w-full object-cover" /> : <Users className="w-20 h-20 text-slate-600" />}
+                  {doctor.photo && isValidPhotoDataUrl(doctor.photo) ? <img src={doctor.photo} alt={doctor.name} className="h-full w-full object-cover" /> : <Users className="w-20 h-20 text-slate-600" />}
                 </div>
 
                 <div className="p-6">
@@ -268,11 +310,6 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
                     <p className="text-slate-400">{doctor.experience} years experience</p>
                     <p className="text-slate-400">{doctor.phone} • {doctor.email}</p>
                     <p className="text-emerald-400 font-semibold">₹{doctor.consultationFee} per consultation</p>
-                  </div>
-
-                  <div className="flex items-center gap-2 mb-4">
-                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                    <span className="text-sm">{doctor.rating.toFixed(1)} (0 reviews)</span>
                   </div>
 
                   <div className="flex gap-2">
@@ -385,7 +422,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
                     <span>{formData.photo ? 'Change photo' : 'Upload photo'}</span>
                     <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
                   </label>
-                  {formData.photo && <img src={formData.photo} alt="Doctor profile preview" className="mt-2 h-16 w-16 rounded-lg border border-slate-600 object-cover" />}
+                  {formData.photo && isValidPhotoDataUrl(formData.photo) && <img src={formData.photo} alt="Doctor profile preview" className="mt-2 h-16 w-16 rounded-lg border border-slate-600 object-cover" />}
                 </div>
               </div>
 
@@ -431,18 +468,68 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
 
               <div>
                 <label className="block text-sm font-semibold mb-2">Available Hours</label>
-                <select
-                  value={formData.availableHours}
-                  onChange={(e) => setFormData({ ...formData, availableHours: e.target.value })}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none"
-                >
-                  <option value="">Select Hours</option>
-                  <option value="9:00 AM - 6:00 PM">9:00 AM - 6:00 PM</option>
-                  <option value="9:30 AM - 7:00 PM">9:30 AM - 7:00 PM</option>
-                  <option value="10:00 AM - 7:00 PM">10:00 AM - 7:00 PM</option>
-                  <option value="8:00 AM - 5:00 PM">8:00 AM - 5:00 PM</option>
-                  <option value="24 Hours">24 Hours</option>
-                </select>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-400">Start time</label>
+                    <input
+                      type="text"
+                      value={formData.availableStart}
+                      onChange={(e) => {
+                        const firstStart = e.target.value;
+                        const firstWindow = firstStart && formData.availableEnd ? `${firstStart} - ${formData.availableEnd}` : '';
+                        const secondWindow = formData.availableStart2 && formData.availableEnd2 ? `${formData.availableStart2} - ${formData.availableEnd2}` : '';
+                        setFormData({ ...formData, availableStart: firstStart, availableHours: [firstWindow, secondWindow].filter(Boolean).join(', ') });
+                      }}
+                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none"
+                      placeholder="e.g. 9:00 AM"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-400">End time</label>
+                    <input
+                      type="text"
+                      value={formData.availableEnd}
+                      onChange={(e) => {
+                        const firstEnd = e.target.value;
+                        const firstWindow = formData.availableStart && firstEnd ? `${formData.availableStart} - ${firstEnd}` : '';
+                        const secondWindow = formData.availableStart2 && formData.availableEnd2 ? `${formData.availableStart2} - ${formData.availableEnd2}` : '';
+                        setFormData({ ...formData, availableEnd: firstEnd, availableHours: [firstWindow, secondWindow].filter(Boolean).join(', ') });
+                      }}
+                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none"
+                      placeholder="e.g. 6:00 PM"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-400">Second start time <span className="text-slate-500">(optional)</span></label>
+                    <input
+                      type="text"
+                      value={formData.availableStart2}
+                      onChange={(e) => {
+                        const secondStart = e.target.value;
+                        const firstWindow = formData.availableStart && formData.availableEnd ? `${formData.availableStart} - ${formData.availableEnd}` : '';
+                        const secondWindow = secondStart && formData.availableEnd2 ? `${secondStart} - ${formData.availableEnd2}` : '';
+                        setFormData({ ...formData, availableStart2: secondStart, availableHours: [firstWindow, secondWindow].filter(Boolean).join(', ') });
+                      }}
+                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none"
+                      placeholder="e.g. 7:00 PM"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-400">Second end time <span className="text-slate-500">(optional)</span></label>
+                    <input
+                      type="text"
+                      value={formData.availableEnd2}
+                      onChange={(e) => {
+                        const secondEnd = e.target.value;
+                        const firstWindow = formData.availableStart && formData.availableEnd ? `${formData.availableStart} - ${formData.availableEnd}` : '';
+                        const secondWindow = formData.availableStart2 && secondEnd ? `${formData.availableStart2} - ${secondEnd}` : '';
+                        setFormData({ ...formData, availableEnd2: secondEnd, availableHours: [firstWindow, secondWindow].filter(Boolean).join(', ') });
+                      }}
+                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none"
+                      placeholder="e.g. 9:00 PM"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -475,6 +562,10 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
                     consultationFee: '',
                     availableDays: [],
                     availableHours: '',
+                    availableStart: '',
+                    availableEnd: '',
+                    availableStart2: '',
+                    availableEnd2: '',
                     status: 'active'
                   });
                 }}

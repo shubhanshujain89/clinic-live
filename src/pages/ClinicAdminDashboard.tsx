@@ -39,6 +39,28 @@ const getPackPrice = (plan: FeaturePlan): number => {
   return parseFloat(numericPrice) || 0;
 };
 
+const isValidImageDataUrl = (value: string) => /^data:image\/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(value) && value.length <= 65000;
+
+const normalizeSpecializations = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.flatMap((item) => normalizeSpecializations(item));
+  if (typeof value !== 'string') return [];
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+  if (trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return normalizeSpecializations(parsed);
+    } catch {
+      // Fall through to comma-separated parsing.
+    }
+  }
+  return trimmed
+    .replace(/^['"]|['"]$/g, '')
+    .split(',')
+    .map((part) => part.trim().replace(/^['"]|['"]$/g, ''))
+    .filter(Boolean);
+};
+
 const parseDashboardDate = (value: unknown): Date | null => {
   if (!value) return null;
   if (typeof value === 'object' && value !== null && 'toDate' in value && typeof value.toDate === 'function') {
@@ -279,7 +301,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
             address: item.address || '',
             phone: item.phone || '+91 ',
             email: item.email || '',
-            specializations: Array.isArray(item.specializations) ? item.specializations : (typeof item.specializations === 'string' ? item.specializations.split(',').map((part: string) => part.trim()).filter(Boolean) : (typeof item.specialty === 'string' && item.specialty ? [item.specialty] : [])),
+            specializations: normalizeSpecializations(item.specializations || item.specialty),
             operatingHours: item.operatingHours || item.operating_hours || HOURS_OPTIONS[0],
             featurePlan,
             subscriptionStatus: getEffectiveSubscriptionStatus(item.subscriptionStatus || item.subscription_status || packRecord.status, packRecord.expiryDate),
@@ -458,7 +480,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
           address: item.address || '',
           phone: item.phone || '+91 ',
           email: item.email || '',
-          specializations: Array.isArray(item.specializations) ? item.specializations : (typeof item.specializations === 'string' ? item.specializations.split(',').map((part: string) => part.trim()).filter(Boolean) : (typeof item.specialty === 'string' && item.specialty ? [item.specialty] : [])),
+          specializations: normalizeSpecializations(item.specializations || item.specialty),
           operatingHours: item.operatingHours || item.operating_hours || HOURS_OPTIONS[0],
           featurePlan,
           subscriptionStatus: getEffectiveSubscriptionStatus(item.subscriptionStatus || item.subscription_status || packRecord.status, packRecord.expiryDate),
@@ -790,7 +812,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       const hasBillingRecord = editingClinic ? payments.some((payment) => payment.clinicId === editingClinic.id || payment.clinicName.toLowerCase() === editingClinic.name.toLowerCase()) : false;
       const subscriptionStartedAt = editingClinic?.subscriptionStartedAt || new Date().toISOString();
       const subscriptionPack = buildClinicPack(clinicPlan, subscriptionStartedAt, clinicPlan === 'TRIAL' || hasBillingRecord ? 'ACTIVE' : 'PAUSED');
-      const clinicPayload = {
+      const clinicPayload: Record<string, unknown> = {
         name: formData.name.trim(),
         address: formData.address.trim(),
         phone: formData.phone.trim(),
@@ -806,6 +828,9 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         qrCodeUrl: resolvedMode === 'site-admin' ? formData.qrCodeUrl.trim() : editingClinic?.qrCodeUrl || '',
         updatedAt: new Date().toISOString(),
       };
+      if (formData.logo && !isValidImageDataUrl(formData.logo)) {
+        delete clinicPayload.logo;
+      }
 
       console.log('Clinic payload:', clinicPayload);
 
@@ -975,7 +1000,25 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      setFormData((prev) => ({ ...prev, logo: String(reader.result || '') }));
+      const source = new Image();
+      source.onload = () => {
+        const maxDimension = 512;
+        const scale = Math.min(1, maxDimension / Math.max(source.width, source.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(source.width * scale));
+        canvas.height = Math.max(1, Math.round(source.height * scale));
+        const context = canvas.getContext('2d');
+        if (!context) return;
+        context.drawImage(source, 0, 0, canvas.width, canvas.height);
+        let quality = 0.72;
+        let compressedLogo = canvas.toDataURL('image/jpeg', quality);
+        while (compressedLogo.length > 65000 && quality > 0.3) {
+          quality -= 0.08;
+          compressedLogo = canvas.toDataURL('image/jpeg', quality);
+        }
+        setFormData((prev) => ({ ...prev, logo: compressedLogo }));
+      };
+      source.src = String(reader.result || '');
     };
     reader.readAsDataURL(file);
   };
@@ -1170,12 +1213,13 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         const totalRevenue = paidPayments.reduce((sum, payment) => sum + payment.amount, 0);
         
         const dashboardPendingPayments = pendingPayments.length;
-        const expiringSubscriptions = clinics.filter((clinic) => {
-          const expiryDate = clinic.subscriptionPack?.expiryDate;
+        const expiringClinics = clinics.filter((clinic) => {
+          const expiryDate = getClinicPayment(clinic)?.expiryDate || clinic.subscriptionPack?.expiryDate || clinic.subscriptionExpiresAt;
           if (!expiryDate) return false;
           const expiry = parseDashboardDate(expiryDate)?.getTime();
           return getClinicSubscriptionStatus(clinic) === 'ACTIVE' && expiry !== undefined && expiry >= Date.now() && expiry <= Date.now() + 7 * 24 * 60 * 60 * 1000;
-        }).length;
+        });
+        const expiringSubscriptions = expiringClinics.length;
         const activeSubscriptionsPercent = clinics.length ? Math.round((activeClinicsCount / clinics.length) * 100) : 0;
         
         return (
@@ -1230,7 +1274,9 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                 <button onClick={() => setActiveTab('security')} className="rounded-2xl border border-slate-700 bg-slate-900/70 p-5 text-left hover:border-violet-400/50 hover:bg-slate-800/70 transition">
                   <div className="text-[10px] uppercase tracking-[0.18em] text-cyan-400">Expires within 7 days</div>
                   <div className="mt-3 text-4xl font-black text-white">{expiringSubscriptions}</div>
-                  <p className="mt-2 text-xs text-slate-500">Subscription renewal alerts</p>
+                  <p className="mt-2 truncate text-xs text-slate-500" title={expiringClinics.map((clinic) => clinic.name).join(', ') || 'No upcoming expiries'}>
+                    {expiringClinics.length > 0 ? expiringClinics.map((clinic) => clinic.name).join(', ') : 'No upcoming expiries'}
+                  </p>
                 </button>
                 <button onClick={() => setActiveTab('security')} className="rounded-2xl border border-slate-700 bg-slate-900/70 p-5 text-left hover:border-violet-400/50 hover:bg-slate-800/70 transition">
                   <div className="text-[10px] uppercase tracking-[0.18em] text-violet-400">Monthly revenue</div>
@@ -1242,6 +1288,37 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                   <div className="mt-3 text-4xl font-black text-white">{expiredSubscriptions}</div>
                   <p className="mt-2 text-xs text-slate-500">Renewal required</p>
                 </button>
+              </div>
+              <div className="mt-4 rounded-2xl border border-slate-700 bg-slate-900/70 p-5">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-base font-bold text-white">Recent payments</h4>
+                    <p className="mt-1 text-xs text-slate-500">Latest subscription and billing activity</p>
+                  </div>
+                  <button onClick={() => setActiveTab('billing')} className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:border-violet-400 hover:text-white">
+                    View all
+                  </button>
+                </div>
+                {payments.length === 0 ? (
+                  <p className="text-sm text-slate-400">No payments recorded yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {payments.slice(0, 3).map((payment) => (
+                      <div key={payment.id} className="flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-800/60 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-white">{payment.clinicName || 'Unnamed clinic'}</p>
+                          <p className="mt-1 text-xs text-slate-400">{payment.pack} • Paid {formatDashboardDate(payment.paidAt)} • Expires {formatDashboardDate(payment.expiryDate)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${isExpiredDate(payment.expiryDate) ? 'bg-rose-500/15 text-rose-300' : payment.status === 'PAID' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}`}>
+                            {isExpiredDate(payment.expiryDate) ? 'Expired' : payment.status}
+                          </span>
+                          <span className="text-sm font-bold text-emerald-300">₹{Number(payment.amount).toLocaleString('en-IN')}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -2330,7 +2407,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                   onChange={handleLogoUpload}
                   className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white file:mr-4 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-500 file:text-white"
                 />
-                {formData.logo && (
+                {formData.logo && isValidImageDataUrl(formData.logo) && (
                   <img src={formData.logo} alt="Clinic preview" className="mt-3 h-20 w-20 object-cover rounded-lg border border-slate-600" />
                 )}
               </div>
