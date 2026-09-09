@@ -23,6 +23,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
   onClose,
   onAdded,
 }) => {
+  const isBasicPlan = clinic.featurePlan === 'BASIC';
   const [patientName, setPatientName] = useState('');
   const [patientPhone, setPatientPhone] = useState('');
   const [patientAge, setPatientAge] = useState('42');
@@ -52,14 +53,13 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
         throw new Error('No active doctor is configured for this clinic.');
       }
 
-      const formattedWeight = weight.trim() ? `${weight.trim()} kg` : undefined;
-      const formattedTemp = temperature.trim() ? `${temperature.trim()} °F` : undefined;
-      const formattedBp =
-        bpSystolic.trim() && bpDiastolic.trim()
+      const formattedWeight = !isBasicPlan && weight.trim() ? `${weight.trim()} kg` : undefined;
+      const formattedTemp = !isBasicPlan && temperature.trim() ? `${temperature.trim()} °F` : undefined;
+      const formattedBp = !isBasicPlan && (bpSystolic.trim() || bpDiastolic.trim())
+        ? bpSystolic.trim() && bpDiastolic.trim()
           ? `${bpSystolic.trim()}/${bpDiastolic.trim()} mmHg`
-          : bpSystolic.trim()
-          ? `${bpSystolic.trim()} mmHg`
-          : undefined;
+          : `${bpSystolic.trim() || bpDiastolic.trim()} mmHg`
+        : undefined;
 
       const response = await fetch(`/api/staff/queue/${encodeURIComponent(clinic.id)}/walk-in`, {
         method: 'POST',
@@ -200,7 +200,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
           </div>
 
           {/* Optional Vitals Section (Weight, Temperature, Blood Pressure) */}
-          <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-3">
+          {!isBasicPlan && <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-teal-400 flex items-center gap-1.5">
                 <Activity className="w-3.5 h-3.5 text-teal-400" />
@@ -286,7 +286,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
                 </div>
               </div>
             </div>
-          </div>
+          </div>}
 
           <div className="bg-rose-950/20 border border-rose-500/30 rounded-2xl p-3 flex items-center justify-between">
             <div className="flex items-center space-x-2">

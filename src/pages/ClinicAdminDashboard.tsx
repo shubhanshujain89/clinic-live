@@ -39,6 +39,40 @@ const getPackPrice = (plan: FeaturePlan): number => {
   return parseFloat(numericPrice) || 0;
 };
 
+const parseDashboardDate = (value: unknown): Date | null => {
+  if (!value) return null;
+  if (typeof value === 'object' && value !== null && 'toDate' in value && typeof value.toDate === 'function') {
+    const date = value.toDate();
+    return date instanceof Date && !Number.isNaN(date.getTime()) ? date : null;
+  }
+  if (typeof value === 'string') {
+    const slashDate = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+    if (slashDate) {
+      const [, day, month, yearValue] = slashDate;
+      const year = yearValue.length === 2 ? 2000 + Number(yearValue) : Number(yearValue);
+      const date = new Date(year, Number(month) - 1, Number(day));
+      return date.getFullYear() === year && date.getMonth() === Number(month) - 1 && date.getDate() === Number(day) ? date : null;
+    }
+  }
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const isExpiredDate = (value: unknown) => {
+  const date = parseDashboardDate(value);
+  return Boolean(date && date.getTime() <= Date.now());
+};
+
+const getEffectiveSubscriptionStatus = (status: unknown, expiryDate: unknown): 'ACTIVE' | 'EXPIRED' | 'PAUSED' => {
+  if (status === 'PAUSED') return 'PAUSED';
+  return isExpiredDate(expiryDate) ? 'EXPIRED' : 'ACTIVE';
+};
+
+const formatDashboardDate = (value: unknown) => {
+  const date = parseDashboardDate(value);
+  return date ? date.toLocaleDateString('en-GB') : 'Unknown date';
+};
+
 const buildClinicPack = (plan: FeaturePlan, startDate = new Date().toISOString(), status: 'ACTIVE' | 'EXPIRED' | 'PAUSED' = 'ACTIVE') => {
   const meta = getPackMeta(plan);
   const start = new Date(startDate);
@@ -248,12 +282,12 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
             specializations: Array.isArray(item.specializations) ? item.specializations : (typeof item.specializations === 'string' ? item.specializations.split(',').map((part: string) => part.trim()).filter(Boolean) : (typeof item.specialty === 'string' && item.specialty ? [item.specialty] : [])),
             operatingHours: item.operatingHours || item.operating_hours || HOURS_OPTIONS[0],
             featurePlan,
-            subscriptionStatus: item.subscriptionStatus || item.subscription_status || packRecord.status,
+            subscriptionStatus: getEffectiveSubscriptionStatus(item.subscriptionStatus || item.subscription_status || packRecord.status, packRecord.expiryDate),
             subscriptionStartedAt: item.subscriptionStartedAt || item.subscription_started_at || packRecord.startDate,
             subscriptionExpiresAt: item.subscriptionExpiresAt || item.subscription_expires_at || packRecord.expiryDate,
             maxDoctors: Number(item.maxDoctors || item.max_doctors || (featurePlan === 'TRIAL' ? 1 : featurePlan === 'BASIC' ? 3 : 10)),
             maxStaffUsers: Number(item.maxStaffUsers || item.max_staff_users || (featurePlan === 'TRIAL' ? 2 : featurePlan === 'BASIC' ? 10 : 25)),
-            subscriptionPack: packRecord,
+            subscriptionPack: { ...packRecord, status: getEffectiveSubscriptionStatus(item.subscriptionStatus || item.subscription_status || packRecord.status, packRecord.expiryDate) },
             logo: item.logo || '',
             createdAt: item.createdAt || item.created_at || new Date().toISOString(),
           } as Clinic;
@@ -427,12 +461,12 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
           specializations: Array.isArray(item.specializations) ? item.specializations : (typeof item.specializations === 'string' ? item.specializations.split(',').map((part: string) => part.trim()).filter(Boolean) : (typeof item.specialty === 'string' && item.specialty ? [item.specialty] : [])),
           operatingHours: item.operatingHours || item.operating_hours || HOURS_OPTIONS[0],
           featurePlan,
-          subscriptionStatus: item.subscriptionStatus || item.subscription_status || packRecord.status,
+          subscriptionStatus: getEffectiveSubscriptionStatus(item.subscriptionStatus || item.subscription_status || packRecord.status, packRecord.expiryDate),
           subscriptionStartedAt: item.subscriptionStartedAt || item.subscription_started_at || packRecord.startDate,
           subscriptionExpiresAt: item.subscriptionExpiresAt || item.subscription_expires_at || packRecord.expiryDate,
           maxDoctors: Number(item.maxDoctors || item.max_doctors || (featurePlan === 'TRIAL' ? 1 : featurePlan === 'BASIC' ? 3 : 10)),
           maxStaffUsers: Number(item.maxStaffUsers || item.max_staff_users || (featurePlan === 'TRIAL' ? 2 : featurePlan === 'BASIC' ? 10 : 25)),
-          subscriptionPack: packRecord,
+          subscriptionPack: { ...packRecord, status: getEffectiveSubscriptionStatus(item.subscriptionStatus || item.subscription_status || packRecord.status, packRecord.expiryDate) },
           logo: item.logo || '',
           createdAt: item.createdAt || item.created_at || new Date().toISOString(),
         } as Clinic;
@@ -1008,6 +1042,11 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     Denied: clinics.filter((clinic) => clinicAccess[clinic.id] === 'Denied').length,
   };
   const clinicHasBilling = (clinic: Clinic) => payments.some((payment) => payment.clinicId === clinic.id || payment.clinicName.toLowerCase() === clinic.name.toLowerCase());
+  const getClinicPayment = (clinic: Clinic) => payments.find((payment) => payment.clinicId === clinic.id || payment.clinicName.toLowerCase() === clinic.name.toLowerCase());
+  const getClinicSubscriptionStatus = (clinic: Clinic) => {
+    const payment = getClinicPayment(clinic);
+    return getEffectiveSubscriptionStatus(clinic.subscriptionStatus, payment?.expiryDate || clinic.subscriptionPack?.expiryDate);
+  };
   const openClinicBilling = (clinic: Clinic, payment?: (typeof payments)[number]) => {
     const pack = payment?.pack || clinic.featurePlan || 'TRIAL';
     setEditingPaymentId(payment?.id || null);
@@ -1117,7 +1156,8 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'dashboard':
-        const activeClinicsCount = clinics.filter((clinic) => clinicHasBilling(clinic) && (clinicAccess[clinic.id] || 'Granted') === 'Granted').length;
+        const activeClinicsCount = clinics.filter((clinic) => clinicHasBilling(clinic) && getClinicSubscriptionStatus(clinic) === 'ACTIVE' && (clinicAccess[clinic.id] || 'Granted') === 'Granted').length;
+        const expiredSubscriptions = clinics.filter((clinic) => getClinicSubscriptionStatus(clinic) === 'EXPIRED').length;
         
         const pendingClinicsCount = Math.max(0, clinics.length - activeClinicsCount);
         
@@ -1133,8 +1173,8 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
         const expiringSubscriptions = clinics.filter((clinic) => {
           const expiryDate = clinic.subscriptionPack?.expiryDate;
           if (!expiryDate) return false;
-          const expiry = new Date(expiryDate).getTime();
-          return expiry >= Date.now() && expiry <= Date.now() + 7 * 24 * 60 * 60 * 1000;
+          const expiry = parseDashboardDate(expiryDate)?.getTime();
+          return getClinicSubscriptionStatus(clinic) === 'ACTIVE' && expiry !== undefined && expiry >= Date.now() && expiry <= Date.now() + 7 * 24 * 60 * 60 * 1000;
         }).length;
         const activeSubscriptionsPercent = clinics.length ? Math.round((activeClinicsCount / clinics.length) * 100) : 0;
         
@@ -1176,7 +1216,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                 <h3 className="text-xl font-bold text-white">Payments & Billing</h3>
                 <span className="rounded-full bg-violet-500/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-200">Overview</span>
               </div>
-              <div className="grid gap-4 md:grid-cols-4">
+              <div className="grid gap-4 md:grid-cols-5">
                 <button onClick={() => setActiveTab('security')} className="rounded-2xl border border-slate-700 bg-slate-900/70 p-5 text-left hover:border-violet-400/50 hover:bg-slate-800/70 transition">
                   <div className="text-[10px] uppercase tracking-[0.18em] text-amber-400">Payment pending</div>
                   <div className="mt-3 text-4xl font-black text-white">₹{pendingPayments.reduce((sum, payment) => sum + payment.amount, 0).toLocaleString('en-IN')}</div>
@@ -1196,6 +1236,11 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                   <div className="text-[10px] uppercase tracking-[0.18em] text-violet-400">Monthly revenue</div>
                   <div className="mt-3 text-4xl font-black text-white">₹{(totalRevenue).toLocaleString('en-IN')}</div>
                   <p className="mt-2 text-xs text-slate-500">Current MRR</p>
+                </button>
+                <button onClick={() => setActiveTab('clinics')} className="rounded-2xl border border-slate-700 bg-slate-900/70 p-5 text-left hover:border-rose-400/50 hover:bg-slate-800/70 transition">
+                  <div className="text-[10px] uppercase tracking-[0.18em] text-rose-400">Expired subscriptions</div>
+                  <div className="mt-3 text-4xl font-black text-white">{expiredSubscriptions}</div>
+                  <p className="mt-2 text-xs text-slate-500">Renewal required</p>
                 </button>
               </div>
             </div>
@@ -1975,14 +2020,16 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                 {payments.length === 0 ? <div className="py-6 text-center text-sm text-slate-400">No payments recorded yet.</div> : <div className="space-y-3">
                   {payments.map((payment) => {
                     const paymentClinic = clinics.find((clinic) => clinic.id === payment.clinicId || clinic.name.toLowerCase() === payment.clinicName.toLowerCase());
+                    const paymentExpired = isExpiredDate(payment.expiryDate);
                     return (
                     <div key={payment.id} className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-800/70 p-4 md:flex-row md:items-center md:justify-between">
                       <div>
                         <div className="text-base font-semibold text-white">{payment.clinicName || 'Unnamed clinic'}</div>
-                        <div className="mt-1 text-xs text-slate-400">{payment.pack} • {payment.durationDays} days • {new Date(payment.paidAt).toLocaleDateString()}</div>
+                        <div className="mt-1 text-xs text-slate-400">{payment.pack} • {payment.durationDays} days • Paid {formatDashboardDate(payment.paidAt)} • Expires {formatDashboardDate(payment.expiryDate)}</div>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="rounded-full bg-slate-700 px-2 py-1 text-[10px] uppercase tracking-[0.14em] text-slate-200">{payment.status}</span>
+                        {paymentExpired && <span className="rounded-full bg-rose-500/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-300">Expired</span>}
                         <span className="text-lg font-bold text-emerald-300">₹{Number(payment.amount).toLocaleString('en-IN')}</span>
                         {paymentClinic && <button onClick={() => openClinicBilling(paymentClinic, payment)} className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-violet-400">Edit</button>}
                         <button onClick={() => handleDeletePayment(payment)} className="rounded-lg bg-red-500/15 px-3 py-2 text-xs font-semibold text-red-200 hover:bg-red-500/25">Delete</button>

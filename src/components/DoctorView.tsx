@@ -211,9 +211,8 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
       : token.status === 'COMPLETED' ? total + Number(clinic.consultationFee || 0)
       : total
   ), 0);
-  const totalRevenue = Number.isFinite(Number(clinic.revenueToday))
-    ? Number(clinic.revenueToday)
-    : tokenRevenue;
+  const reportedRevenue = Number(clinic.revenueToday || 0);
+  const totalRevenue = Math.max(Number.isFinite(reportedRevenue) ? reportedRevenue : 0, tokenRevenue);
 
   // Active consultation duration timer
   useEffect(() => {

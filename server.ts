@@ -445,26 +445,29 @@ app.get('/api/staff/queue/:clinicId', async (req, res) => {
     const scopedActiveDoctors = context.role === 'DOCTOR'
       ? activeDoctors.filter((doctor) => doctor.id === context.doctorId)
       : activeDoctors;
+    const displayedDoctor = context.role === 'DOCTOR'
+      ? scopedDoctors[0]
+      : scopedActiveDoctors[0];
     const tokens = session
       ? (await Promise.all(scopedDoctors.map((doctor) => repositories.tokens.findByDoctorAndSession(doctor.id, session.id)))).flat()
       : [];
-    const clinicRevenue = session
-      ? await repositories.tokens.getCollectedRevenueByClinicAndSession(requestedClinicId, session.id)
+    const clinicRevenue = todaySession
+      ? await repositories.tokens.getCollectedRevenueByClinicAndSession(requestedClinicId, todaySession.id)
       : 0;
 
     res.status(200).json({
       clinic: {
         id: clinic.id,
         name: clinic.name,
-        doctorId: scopedActiveDoctors[0]?.id || '',
-        doctorName: clinic.doctorName || '',
-        specialty: clinic.specialty || '',
+        doctorId: context.role === 'DOCTOR' ? context.doctorId || '' : scopedActiveDoctors[0]?.id || '',
+        doctorName: displayedDoctor?.name || clinic.doctorName || '',
+        specialty: displayedDoctor?.specialization || clinic.specialty || '',
         cabinNumber: clinic.cabinNumber || '',
         doctorStatus: clinic.doctorStatus,
         delayMinutes: clinic.delayMinutes || 0,
         delayReason: clinic.delayReason || '',
         avgConsultationMinutes: clinic.avgConsultationMinutes || 0,
-        consultationFee: scopedActiveDoctors[0]?.consultationFee ?? clinic.consultationFee ?? 0,
+        consultationFee: displayedDoctor?.consultationFee ?? clinic.consultationFee ?? 0,
         activeSessionId: clinic.activeSessionId || session?.id || '',
         totalPatientsToday: clinic.totalPatientsToday || 0,
         revenueToday: clinicRevenue,

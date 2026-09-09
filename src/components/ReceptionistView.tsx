@@ -371,14 +371,14 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5 sm:gap-4">
       {/* Patient currently in the cabin */}
-      <div className="col-span-2 min-h-20 rounded-2xl border border-teal-500/30 bg-teal-950/20 p-4 sm:col-span-4 sm:p-5 lg:col-span-1 lg:flex lg:items-center lg:justify-center">
-        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
+      <div className="col-span-2 min-h-20 min-w-0 overflow-hidden rounded-2xl border border-teal-500/30 bg-teal-950/20 p-4 sm:col-span-4 sm:p-5 lg:col-span-1 lg:flex lg:items-center lg:justify-center">
+        <div className="flex min-w-0 w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 flex-1 overflow-hidden">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-teal-300">In cabin now</p>
             {activeToken ? (
               <>
                 <h2 className="mt-1 truncate text-lg font-bold text-white">{activeToken.patientName}</h2>
-                <p className="mt-1 break-words text-xs text-slate-400">
+                <p className="mt-1 truncate whitespace-nowrap text-xs text-slate-400" title={`${activeToken.patientPhone}${activeToken.patientAge ? ` · ${activeToken.patientAge} years` : ''}${activeToken.patientGender ? ` · ${activeToken.patientGender}` : ''}`}>
                   {activeToken.patientPhone}
                   {activeToken.patientAge ? ` · ${activeToken.patientAge} years` : ''}
                   {activeToken.patientGender ? ` · ${activeToken.patientGender}` : ''}
@@ -545,7 +545,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
                 <th className="py-3 px-4">Type</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4">Payment</th>
-                <th className="py-3 px-4">Vitals</th>
+                {!isBasicPlan && <th className="py-3 px-4">Vitals</th>}
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -623,7 +623,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
                       </td>
 
                       {/* Vitals */}
-                      <td className="py-3.5 px-4 max-w-xs">
+                      {!isBasicPlan && <td className="py-3.5 px-4 max-w-xs">
                         <div>
                           {/* Vitals Badges */}
                           {(token.weight || token.temperature || token.bloodPressure || token.preConsultationNotes?.weight || token.preConsultationNotes?.feverTemp || token.preConsultationNotes?.bloodPressure) && (
@@ -646,7 +646,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
                             </div>
                           )}
                         </div>
-                      </td>
+                      </td>}
 
                       {/* Action Buttons */}
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
@@ -664,13 +664,13 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
                           )}
 
                           {/* Record / Edit Vitals */}
-                          <button
-                            onClick={() => openVitalsModal(token)}
-                            title="Record / Edit Patient Vitals (Weight, Temp, BP, Triage Note)"
-                            className="p-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/20 transition-colors"
-                          >
-                            <Activity className="w-3.5 h-3.5 text-teal-400" />
-                          </button>
+                          {!isBasicPlan && <button
+                              onClick={() => openVitalsModal(token)}
+                              title="Record / Edit Patient Vitals (Weight, Temp, BP, Triage Note)"
+                              className="p-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/20 transition-colors"
+                            >
+                              <Activity className="w-3.5 h-3.5 text-teal-400" />
+                            </button>}
 
                           {!token.isEmergency && !isCompleted && (
                             <button
@@ -711,7 +711,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
       </div>
 
       {/* Vitals intake modal */}
-      {vitalsToken && (
+      {vitalsToken && !isBasicPlan && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-5">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
