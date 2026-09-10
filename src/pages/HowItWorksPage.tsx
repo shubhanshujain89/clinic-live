@@ -5,11 +5,17 @@ interface Props {
   onNavigate: (page: string) => void;
 }
 
+const receptionRows = [
+  { token: 'A-204', patient: 'Maya Patel', contact: '98765 43210', type: 'Walk-in', status: 'Waiting', payment: 'Paid', vitals: 'Normal', action: 'View' },
+  { token: 'A-205', patient: 'Alex Singh', contact: '98765 12345', type: 'Repeat', status: 'Serving', payment: 'Pending', vitals: 'Stable', action: 'Update' },
+  { token: 'A-206', patient: 'Noah Kim', contact: '98765 67890', type: 'Priority', status: 'On Hold', payment: 'Paid', vitals: 'Review', action: 'Resume' },
+  { token: 'A-207', patient: 'Riya Shah', contact: '98765 90909', type: 'Booked', status: 'Waiting', payment: 'Paid', vitals: 'Normal', action: 'View' },
+];
+
 const workflows = [
   {
     role: 'PATIENT',
-    title: 'From scan to turn',
-    description: 'A patient can join the right queue in a few clear steps.',
+    subtitle: 'Simple booking and live queue tracking.',
     steps: ['Scan QR / Open Link', 'Book', 'Get Token', 'Track Turn'],
     preview: {
       label: 'PATIENT TOKEN',
@@ -21,9 +27,8 @@ const workflows = [
   },
   {
     role: 'RECEPTION',
-    title: 'Keep the queue moving',
-    description: 'The front desk sees the whole room and always knows what happens next.',
-    steps: ['See Queue', 'Call Next', 'Manage Priority', 'Keep Queue Moving'],
+    subtitle: 'Manage appointments and walk-ins, call the next patient, and keep the queue moving.',
+    steps: ['See Queue', 'Add Patient', 'Call Next', 'Manage Flow'],
     preview: {
       label: 'RECEPTION DESK',
       title: 'Queue control center',
@@ -34,8 +39,7 @@ const workflows = [
   },
   {
     role: 'DOCTOR',
-    title: 'A focused consultation flow',
-    description: 'The doctor controls the active queue without extra steps around care.',
+    subtitle: 'Stay focused on the active consultation.',
     steps: ['IN', 'Call / Serve', 'Complete', 'OUT'],
     preview: {
       label: 'DOCTOR VIEW',
@@ -46,9 +50,8 @@ const workflows = [
     },
   },
   {
-    role: 'TV',
-    title: 'One calm view for everyone',
-    description: 'A simple display keeps patients informed without exposing private details.',
+    role: 'TV DISPLAY',
+    subtitle: 'Keep the waiting room informed.',
     steps: ['Now Serving', 'Next Tokens', 'Queue Status'],
     preview: {
       label: 'TV DISPLAY',
@@ -62,69 +65,40 @@ const workflows = [
 
 export const HowItWorksPage: React.FC<Props> = ({ onNavigate }) => (
   <div className="public-light-page">
-    <main className="w-full px-4 pb-20 pt-12 sm:px-6 sm:pt-16 lg:px-8">
-      <section className="border-b border-slate-200 pb-8">
-        <div className="flex flex-col items-center gap-6">
-          <p className="public-kicker self-start">How NEXTQ works</p>
-          <h1 className="public-page-title max-w-4xl text-center">One clear flow for every part of the clinic.</h1>
+    <main className="w-full px-4 pb-8 pt-0 sm:px-6 sm:pt-0 lg:px-8">
+      <section className="pb-3">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <h1 className="how-it-works-headline public-page-title w-full text-center">One clear flow for every part of the clinic.</h1>
+          <p className="public-page-lede w-full text-center">From booking to consultation, NEXTQ keeps every step connected and visible.</p>
         </div>
       </section>
 
       <section className="workflow-list" aria-label="How NEXTQ works">
-        {workflows.map((workflow) => {
-          const previewClass = workflow.role === 'RECEPTION'
-            ? 'flow-dashboard flow-dashboard-reception'
-            : workflow.role === 'DOCTOR'
-              ? 'flow-dashboard flow-dashboard-doctor'
-              : workflow.role === 'TV'
-                ? 'flow-dashboard flow-dashboard-tv'
-                : 'flow-dashboard';
-
-          return (
-            <article key={workflow.role} className="workflow-row">
-              <div className="workflow-row-content">
-                <section className="workflow-copy">
-                  <div className="workflow-role">{workflow.role}</div>
-                  <h3>{workflow.title}</h3>
-                  <p>{workflow.description}</p>
-
-                  <div className="workflow-steps">
-                    {workflow.steps.map((step, stepIndex) => (
-                      <div className="workflow-step-item" key={step}>
-                        {stepIndex > 0 && <ArrowRight className="workflow-step-arrow" aria-hidden="true" />}
-                        <span className="workflow-step-card">
-                          <span className="workflow-step-number">{String(stepIndex + 1).padStart(2, '0')}</span>
-                          <span>{step}</span>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <aside className={previewClass}>
-                  <div className="flow-dashboard-topbar">
-                    <span>{workflow.preview.label}</span>
-                    <span className="flow-dashboard-live"><span />Live</span>
-                  </div>
-                  <h4>{workflow.preview.title}</h4>
-                  <div className="flow-dashboard-metrics">
-                    {workflow.preview.metrics.map(([label, value]) => (
-                      <div key={label}>
-                        <span>{label}</span>
-                        <strong>{value}</strong>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flow-dashboard-focus">{workflow.preview.focus}</div>
-                  <div className="flow-dashboard-action">
-                    <button type="button" className="landing-secondary-cta small-cta" onClick={() => onNavigate('contact')}>{workflow.preview.action}</button>
-                  </div>
-                </aside>
-              </div>
-            </article>
-          );
-        })}
+        {workflows.map((workflow) => (
+          <article key={workflow.role} className="workflow-row">
+            <div className="workflow-row-content">
+              <section className="workflow-copy">
+                <div className="workflow-role">{workflow.role}</div>
+                <div className="workflow-subtitle">{workflow.subtitle}</div>
+                <div className="workflow-steps">
+                  {workflow.steps.map((step) => (
+                    <div className="workflow-step-item" key={step}>
+                      <span className="workflow-step-card">{step}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          </article>
+        ))}
       </section>
+
+      <div className="premium-benefits-cta-wrap">
+        <button className="premium-contact-demo-cta premium-benefits-cta" onClick={() => onNavigate('landing')}>
+          <p>Ready to simplify your clinic flow?</p>
+          <span>Start with NEXTQ <ArrowRight className="h-4 w-4" /></span>
+        </button>
+      </div>
     </main>
   </div>
 );

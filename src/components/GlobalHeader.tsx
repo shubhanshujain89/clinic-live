@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { LogOut } from 'lucide-react';
 import { useSiteConfig } from '../lib/siteConfig';
 
@@ -20,6 +20,8 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   userName
 }) => {
   const { settings } = useSiteConfig();
+  const [isMobileHeaderHidden, setIsMobileHeaderHidden] = useState(false);
+  const lastScrollYRef = useRef(0);
   const navTabs = [
     { key: 'landing', label: 'Home' },
     { key: 'what-we-provide', label: 'What We Provide' },
@@ -29,16 +31,51 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
     { key: 'contact', label: 'Contact Us' },
   ];
 
+  useEffect(() => {
+    const handleScroll = () => {
+      const mobileViewport = window.innerWidth < 768;
+      const currentScrollY = window.scrollY;
+
+      if (!mobileViewport) {
+        setIsMobileHeaderHidden(false);
+        lastScrollYRef.current = currentScrollY;
+        return;
+      }
+
+      if (currentScrollY > lastScrollYRef.current && currentScrollY > 32) {
+        setIsMobileHeaderHidden(true);
+      } else if (currentScrollY < lastScrollYRef.current) {
+        setIsMobileHeaderHidden(false);
+      }
+
+      lastScrollYRef.current = currentScrollY;
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   return (
-    <nav className="site-header sticky top-0 z-50 border-b border-slate-200 bg-white">
+    <nav className={`site-header sticky top-0 z-50 border-b border-slate-200 bg-white transition-transform duration-300 ease-in-out ${isMobileHeaderHidden ? '-translate-y-full md:translate-y-0' : 'translate-y-0'}`}>
       <div className="mx-auto max-w-none px-2 py-3 sm:px-4 lg:px-5">
         <div className="relative flex items-center justify-between gap-4">
-          <button
-            onClick={() => onNavigate('landing')}
-            className="group flex min-w-0 items-center"
-          >
-            <img src="/nextq-logo.png" alt="NEXTQ logo" className="h-14 w-24 shrink-0 object-contain object-left" />
-          </button>
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              onClick={() => onNavigate('landing')}
+              className="group flex min-w-0 items-center"
+            >
+              <img src="/nextq-logo.png" alt="NEXTQ logo" className="h-14 w-24 shrink-0 object-contain object-left" />
+            </button>
+            <div className="site-tagline-wrap block min-w-0">
+              <span className="site-tagline block text-[10px] font-black uppercase tracking-[0.24em] text-emerald-700">
+                {settings.siteTagline}
+              </span>
+            </div>
+          </div>
 
           <div className="absolute left-1/2 hidden -translate-x-1/2 items-center justify-center gap-1 xl:flex">
             {navTabs.map((tab) => (
@@ -60,7 +97,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
             <button
               type="button"
               onClick={() => onNavigate('contact')}
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700"
+              className="rounded-[10px] border border-[#1d9d8b] bg-transparent px-5 py-2.5 text-sm font-semibold text-[#0f766e] shadow-none"
             >
               Request a Demo →
             </button>

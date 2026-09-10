@@ -15,7 +15,7 @@ const workflows = [
   },
   {
     role: 'RECEPTION',
-    title: 'Keep the queue moving',
+    title: 'Manage appointments and walk-ins, call the next patient, and keep the queue moving.',
     description: 'The front desk sees the whole room and always knows what happens next.',
     steps: ['See Queue', 'Call Next', 'Manage Priority', 'Keep Queue Moving'],
     preview: { label: 'RECEPTION DESK', title: 'Queue control center', metrics: [['Waiting', '12'], ['Served', '38'], ['Priority', '2']], focus: 'Next in line: A-104', action: 'Call next patient' },
@@ -38,26 +38,21 @@ const workflows = [
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => (
   <div className="landing-page-shell min-h-screen text-slate-900">
-    <main className="landing-main px-4 pb-20 sm:px-6 lg:px-8">
+    <main className="landing-main px-4 sm:px-6 lg:px-8">
       <section className="landing-hero">
         <div className="landing-hero-grid">
           <div className="landing-hero-copy">
-            <p className="landing-kicker">NEXTQ · Clinic queue management software</p>
             <h1 className="landing-title">Smart Queue. Less Waiting.</h1>
             <p className="landing-subtitle">Clinic appointment management and live patient queue tracking for modern clinics.</p>
-            <p className="landing-note">No app. No signup. Just scan, book, track live tokens, and reduce waiting room crowding.</p>
-
-            <div className="landing-hero-actions">
-              <button type="button" className="landing-primary-cta" onClick={() => onNavigate('booking')}>
-                Start with NEXTQ <ArrowRight aria-hidden="true" />
-              </button>
-              <button type="button" className="landing-secondary-cta" onClick={() => onNavigate('contact')}>
-                Talk to our team
-              </button>
-            </div>
-
-            <div className="landing-proof">
-              <span><strong>1</strong><small>Clinic flow</small></span>
+            <p className="landing-note">No app. No signup. Scan, book, get your token and track your turn live.</p>
+            <div className="premium-contact-demo-cta" onClick={() => onNavigate('booking')} role="button" tabIndex={0} onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onNavigate('booking');
+              }
+            }}>
+              <p>Ready to simplify your clinic flow?</p>
+              <span>Start with NEXTQ <ArrowRight className="h-4 w-4" /></span>
             </div>
           </div>
 
@@ -71,7 +66,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => (
             </div>
             <div className="dashboard-preview-heading">
               <div>
-                <span className="dashboard-preview-label">SMART QUEUE</span>
+                <span className="dashboard-preview-label">Queue dashboard</span>
                 <h3>Today’s flow</h3>
               </div>
               <ArrowRight aria-hidden="true" />
@@ -113,24 +108,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => (
       </section>
 
       <section className="landing-experiences" aria-labelledby="experiences-heading">
-        <div>
+        <div className="landing-experiences-header">
           <p className="landing-kicker">Built around the clinic</p>
-          <h2 id="experiences-heading">One clinic. Four simple experiences.</h2>
+          <h2 id="experiences-heading">One Clinic. Four simple experiences.</h2>
         </div>
-        <p>
-          Patients get clarity. Reception gets control. Doctors get focus. The waiting room gets one shared, reliable picture of what is happening now.
-        </p>
+
+        <div className="landing-experience-cards" aria-label="Four NEXTQ experiences">
+          <div className="landing-experience-card">
+            <span>PATIENTS</span>
+          </div>
+          <div className="landing-experience-card">
+            <span>RECEPTION</span>
+          </div>
+          <div className="landing-experience-card">
+            <span>DOCTORS</span>
+          </div>
+          <div className="landing-experience-card">
+            <span>TV Display</span>
+          </div>
+        </div>
       </section>
 
       <section className="landing-cta" aria-labelledby="cta-heading">
         <div>
           <p className="landing-kicker">Ready when your clinic is</p>
-          <h2 id="cta-heading">Simplify clinic appointment and queue management.</h2>
+          <h2 id="cta-heading">Simplify Clinic appointment and queue management.</h2>
         </div>
-        <button type="button" onClick={() => onNavigate('booking')}>
-          Start with NEXTQ
-          <ArrowRight aria-hidden="true" />
-        </button>
       </section>
     </main>
   </div>

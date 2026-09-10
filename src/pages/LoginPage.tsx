@@ -48,20 +48,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) 
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white flex items-center justify-center p-4 py-6">
+    <div className="flex flex-1 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white items-start justify-center p-3 pt-4 pb-0">
       <div className="w-full max-w-md">
         <button
           onClick={onBack}
-          className="mb-6 flex items-center gap-2 text-slate-400 hover:text-white transition"
+          className="mb-3 flex items-center gap-2 text-slate-400 hover:text-white transition"
         >
           ← Back
         </button>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/75 p-6 shadow-2xl shadow-slate-950/40">
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-4">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/75 p-5 shadow-2xl shadow-slate-950/40">
+          <div className="text-center mb-5">
+            <div className="mb-3 flex items-center justify-center">
               <img src="/nextq-logo.png" alt="NEXTQ" className="h-24 w-64 object-contain" />
-              <h1 className="text-3xl font-bold">NEXTQ</h1>
             </div>
             <p className="text-slate-400">Smart Queue. Less Waiting.</p>
           </div>
@@ -75,9 +74,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) 
           <form onSubmit={(e) => {
             e.preventDefault();
             void handleEmailLogin(e);
-          }} className="space-y-4" noValidate>
+          }} className="space-y-3" noValidate>
             <div>
-                <label className="block text-sm font-semibold mb-2">Email or username</label>
+                <label className="block text-sm font-semibold mb-1.5">Email or username</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
                 <input
@@ -92,7 +91,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) 
             </div>
 
             <div>
-              <label className="block text-sm font-semibold mb-2">Password</label>
+              <label className="block text-sm font-semibold mb-1.5">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
                 <input
@@ -117,7 +116,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) 
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-lg font-bold text-slate-950 hover:shadow-lg hover:shadow-emerald-500/50 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full px-6 py-3 rounded-xl border border-emerald-400/40 bg-emerald-500 text-slate-950 font-extrabold shadow-[0_10px_24px_rgba(16,185,129,0.22)] transition hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>

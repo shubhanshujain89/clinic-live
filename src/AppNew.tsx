@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useState, useEffect } from 'react';
+import { LogIn, Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { auth, onAuthStateChanged, User, signInWithEmailAndPassword, signOut } from './lib/firebase';
 import { GlobalHeader } from './components/GlobalHeader';
 import { useSiteConfig } from './lib/siteConfig';
@@ -78,6 +79,8 @@ export default function App() {
   const [selectedClinicName, setSelectedClinicName] = useState<string>('');
   const [siteAdminLogin, setSiteAdminLogin] = useState({ username: '', password: '' });
   const [siteAdminError, setSiteAdminError] = useState('');
+  const [siteAdminShowPassword, setSiteAdminShowPassword] = useState(false);
+  const [siteAdminLoading, setSiteAdminLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileForm, setProfileForm] = useState({ displayName: '', photoURL: '', password: '', confirmPassword: '' });
@@ -362,7 +365,7 @@ export default function App() {
       )}
 
       {/* Page Content */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 flex flex-col">
         <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-400">Loading NEXTQ...</div>}>
         {/* Landing Page */}
         {currentPage === 'landing' && (
@@ -399,56 +402,100 @@ export default function App() {
 
         {/* Site Admin Login */}
         {currentPage === 'site-admin' && !userSession && (
-          <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
-            <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900/80 p-8 shadow-2xl">
-              <div className="mb-6 text-center">
-                <div className="text-4xl mb-3">👑</div>
-                <h2 className="text-2xl font-bold">Site Admin</h2>
-                <p className="text-slate-400">Manage the website, hero content, and access controls</p>
-              </div>
+          <div className="flex flex-1 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white items-start justify-center p-3 pt-4 pb-0">
+            <div className="w-full max-w-md">
+              <button
+                onClick={() => handleNavigate('landing')}
+                className="mb-3 flex items-center gap-2 text-slate-400 transition hover:text-white"
+              >
+                ← Back
+              </button>
 
-              {siteAdminError && (
-                <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-                  {siteAdminError}
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/75 p-5 shadow-2xl shadow-slate-950/40">
+                <div className="mb-5 text-center">
+                  <div className="mb-3 flex items-center justify-center gap-2">
+                    <img src="/nextq-logo.png" alt="NEXTQ" className="h-24 w-64 object-contain" />
+                    <h1 className="text-3xl font-bold">NEXTQ</h1>
+                  </div>
+                  <p className="text-slate-400">Smart Queue. Less Waiting.</p>
                 </div>
-              )}
 
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Username</label>
-                  <input
-                    type="text"
-                    value={siteAdminLogin.username}
-                    onChange={(e) => setSiteAdminLogin({ ...siteAdminLogin, username: e.target.value })}
-                    className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:border-emerald-400"
-                    placeholder="admin"
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Password</label>
-                  <input
-                    type="password"
-                    value={siteAdminLogin.password}
-                    onChange={(e) => setSiteAdminLogin({ ...siteAdminLogin, password: e.target.value })}
-                    className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:border-emerald-400"
-                    placeholder="Enter password"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      const result = await signInWithEmailAndPassword(auth, siteAdminLogin.username, siteAdminLogin.password, 'SUPER_ADMIN');
-                      handleLoginSuccess(result.user.uid, result.user.role || 'SUPER_ADMIN');
+                {siteAdminError && (
+                  <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                    {siteAdminError}
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold">Username</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+                      <input
+                        type="text"
+                        value={siteAdminLogin.username}
+                        onChange={(e) => setSiteAdminLogin({ ...siteAdminLogin, username: e.target.value })}
+                        className="w-full rounded-lg border border-slate-700 bg-slate-800 py-2 pl-10 pr-4 text-white placeholder-slate-500 outline-none transition focus:border-emerald-400"
+                        placeholder="admin"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold">Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+                      <input
+                        type={siteAdminShowPassword ? 'text' : 'password'}
+                        value={siteAdminLogin.password}
+                        onChange={(e) => setSiteAdminLogin({ ...siteAdminLogin, password: e.target.value })}
+                        className="w-full rounded-lg border border-slate-700 bg-slate-800 py-2 pl-10 pr-10 text-white placeholder-slate-500 outline-none transition focus:border-emerald-400"
+                        placeholder="••••••••"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSiteAdminShowPassword((value) => !value)}
+                        className="absolute right-3 top-3 text-slate-400 transition hover:text-white"
+                        aria-label="Toggle password visibility"
+                      >
+                        {siteAdminShowPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
                       setSiteAdminError('');
-                    } catch {
-                      setSiteAdminError('Invalid site admin credentials.');
-                    }
-                  }}
-                  className="w-full rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-3 font-bold text-slate-950"
-                >
-                  Access Admin Panel
-                </button>
+                      setSiteAdminLoading(true);
+
+                      try {
+                        const result = await signInWithEmailAndPassword(auth, siteAdminLogin.username, siteAdminLogin.password, 'SUPER_ADMIN');
+                        handleLoginSuccess(result.user.uid, result.user.role || 'SUPER_ADMIN');
+                      } catch {
+                        setSiteAdminError('Invalid site admin credentials.');
+                      } finally {
+                        setSiteAdminLoading(false);
+                      }
+                    }}
+                    disabled={siteAdminLoading}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500 px-6 py-3 font-extrabold text-slate-950 shadow-[0_10px_24px_rgba(16,185,129,0.22)] transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {siteAdminLoading ? (
+                      <>
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-900/30 border-t-slate-900" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <LogIn className="h-5 w-5" />
+                        Access Admin Panel
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -546,23 +593,28 @@ export default function App() {
       )}
 
       {!isTvDisplay && <footer className="site-footer border-t border-slate-200 bg-white">
-        <div className="site-footer-content flex flex-col items-start justify-between gap-3 px-2 py-4 text-left text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 sm:flex-row sm:items-center sm:px-4 lg:px-5">
-          <div>
-            <span className="block">{content.footerText}</span>
-            <span className="mt-1 block text-[9px] tracking-[0.12em] text-slate-400">© {settings.siteName}. All rights reserved.</span>
+        <div className="site-footer-content">
+          <div className="site-footer-brand">
+            <img src="/nextq-logo.png" alt="NEXTQ" className="site-footer-brand-logo" />
+            <div className="site-footer-brand-copy-block">
+              <span className="site-footer-brand-name">NEXTQ</span>
+              <span className="site-footer-brand-tagline">Smart Queue. Less Waiting.</span>
+              <span className="site-footer-brand-copy">© 2026 NEXTQ. All rights reserved.</span>
+            </div>
           </div>
-          <a
-            href="https://ybgp.in"
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-3 text-right normal-case tracking-normal transition-opacity hover:opacity-80"
-          >
-            <span>
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Looking to Grow Your Business?</span>
-              <span className="block text-sm font-bold text-slate-800">YBGP — Your Business Growth Partner <span aria-hidden="true">→</span></span>
-            </span>
-            <img src="/ybgp-logo.png" alt="YBGP" className="h-10 w-auto shrink-0 object-contain" />
-          </a>
+
+          <div className="site-footer-growth">
+            <span className="site-footer-growth-label">Looking to grow your business?</span>
+            <a
+              href="https://ybgp.in"
+              target="_blank"
+              rel="noreferrer"
+              className="site-footer-ybgp"
+            >
+              <span className="site-footer-ybgp-text">YBGP  — Your Business Growth Partner <span aria-hidden="true">→</span></span>
+              <img src="/ybgp-logo.png" alt="YBGP" className="site-footer-ybgp-logo" />
+            </a>
+          </div>
         </div>
       </footer>}
     </div>

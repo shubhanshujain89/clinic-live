@@ -1,91 +1,67 @@
 import React from 'react';
-import { Heart, Users, ChevronRight, Sparkles, Stethoscope } from 'lucide-react';
-import { useSiteConfig } from '../lib/siteConfig';
+import { ArrowRight } from 'lucide-react';
 
 interface Props {
   onNavigate: (page: string) => void;
 }
 
 export const BenefitsPage: React.FC<Props> = ({ onNavigate }) => {
-  const { content } = useSiteConfig();
-  const clinics = [
-    'Streamline operations with smart queue orchestration',
-    'Manage multi-clinic workflows from one unified dashboard',
-    'Track performance with real-time analytics and reports',
-    'Reduce no-shows with clear queue status updates'
-  ];
-
-  const patients = [
-    'Book appointments anytime without login friction',
-    'Receive transparent queue updates and accurate wait-time estimates',
-    'Get instant appointment status notifications through the queue',
-    'Reduce unnecessary travel time and improve clinic experience'
+  const benefitCards = [
+    {
+      label: 'PATIENTS',
+      title: 'Book without an app.',
+      detail: 'Get a token and track your turn live.',
+    },
+    {
+      label: 'RECEPTION',
+      title: 'Keep the queue moving.',
+      detail: 'Manage appointments, tokens and priority from one place.',
+    },
+    {
+      label: 'DOCTORS',
+      title: 'Stay focused on consultations.',
+      detail: "See what's next and complete visits easily.",
+    },
+    {
+      label: 'WAITING ROOM',
+      title: 'Keep everyone informed.',
+      detail: 'Show now-serving and upcoming tokens on the TV.',
+    },
   ];
 
   return (
     <div className="public-light-page">
-      <section className="premium-benefits-section mx-auto max-w-7xl px-4 pt-6 pb-16 sm:px-6 lg:px-8">
+      <section className="premium-benefits-section">
         <div className="premium-benefits-header">
           <div className="premium-benefits-heading">
-            <p className="public-kicker premium-kicker">Benefits</p>
-            <h1 className="premium-benefits-title">{content.benefitsTitle}</h1>
+            <h1 className="premium-benefits-title">Benefits for your whole clinic</h1>
             <p className="premium-benefits-summary">
-              From appointment scheduling to live tracking and waiting room visibility, NEXTQ turns healthcare queue management into a calmer, faster patient flow experience.
+              Help patients spend less time waiting while your team keeps the clinic moving.
             </p>
           </div>
-          <div className="premium-benefits-aside">
-            <span className="premium-benefits-aside-small">NEXTQ impact</span>
-            <span className="premium-benefits-aside-score">360°</span>
-          </div>
         </div>
 
-        <div className="premium-benefits-grid">
-          <article className="premium-benefit-card premium-benefit-card-clinic">
-            <div className="premium-benefit-card-top">
-              <span className="premium-benefit-icon premium-benefit-icon-clinic">
-                <Heart className="h-5 w-5" />
-              </span>
-              <span className="premium-benefit-tag">Clinic OS</span>
-            </div>
-            <h2 className="premium-benefit-card-title">For Clinics & Hospitals</h2>
-            <ul className="premium-benefit-list">
-              {clinics.map((item) => (
-                <li key={item}>
-                  <ChevronRight className="premium-benefit-icon-arrow" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </article>
-
-          <article className="premium-benefit-card premium-benefit-card-patient">
-            <div className="premium-benefit-card-top">
-              <span className="premium-benefit-icon premium-benefit-icon-patient">
-                <Users className="h-5 w-5" />
-              </span>
-              <span className="premium-benefit-tag">Patient Flow</span>
-            </div>
-            <h2 className="premium-benefit-card-title">For Patients</h2>
-            <ul className="premium-benefit-list">
-              {patients.map((item) => (
-                <li key={item}>
-                  <ChevronRight className="premium-benefit-icon-arrow" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </article>
+        <div className="premium-benefits-compact-grid">
+          {benefitCards.map(({ label, title, detail }) => (
+            <article className="premium-benefit-simple-card" key={label}>
+              <div className="premium-benefit-simple-label">{label}</div>
+              <h2>{title}</h2>
+              <p>{detail}</p>
+            </article>
+          ))}
         </div>
 
-        <div className="premium-benefits-footer">
-          <span className="premium-benefits-footer-chip">
-            <Sparkles className="h-4 w-4" />
-            Healthcare experience built for clarity
-          </span>
-          <span className="premium-benefits-footer-chip">
-            <Stethoscope className="h-4 w-4" />
-            Smart queue operational flow
-          </span>
+        <div className="premium-benefits-standout">
+          <span>Less waiting.</span>
+          <span>Clearer queues.</span>
+          <span>A smoother clinic day.</span>
+        </div>
+
+        <div className="premium-benefits-cta-wrap">
+          <button className="premium-contact-demo-cta premium-benefits-cta" onClick={() => onNavigate('landing')}>
+            <p>Ready to simplify your clinic flow?</p>
+            <span>Start with NEXTQ <ArrowRight className="h-4 w-4" /></span>
+          </button>
         </div>
       </section>
     </div>
