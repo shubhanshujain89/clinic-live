@@ -75,6 +75,55 @@ export interface QueueTokenActionResult {
   priority: number;
 }
 
+export const calculateConsultationDurationSeconds = (
+  calledAt: Date | string | number | null | undefined,
+  completedAt: Date | string | number | null | undefined,
+): number => {
+  const calledMs = calledAt ? new Date(calledAt).getTime() : Number.NaN;
+  const completedMs = completedAt ? new Date(completedAt).getTime() : Number.NaN;
+
+  if (!Number.isFinite(calledMs) || !Number.isFinite(completedMs)) {
+    return 480;
+  }
+
+  const elapsedSeconds = Math.floor((completedMs - calledMs) / 1000);
+  return Math.min(Math.max(1, elapsedSeconds), 60 * 60);
+};
+
+export const calculateAverageConsultationMinutes = (durationsSeconds: Array<number | string>): number => {
+  const normalized = durationsSeconds
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value) && value > 0)
+    .map((value) => value / 60);
+
+  if (!normalized.length) return 10;
+
+  const total = normalized.reduce((sum, value) => sum + value, 0);
+  return Number((total / normalized.length).toFixed(1));
+};
+
+export const estimateQueueWaitMinutes = ({
+  patientsAhead,
+  activeTokenElapsedMinutes,
+  averageConsultationMinutes,
+  delayMinutes,
+  status,
+}: {
+  patientsAhead: number;
+  activeTokenElapsedMinutes: number;
+  averageConsultationMinutes: number;
+  delayMinutes: number;
+  status: string;
+}): number => {
+  if (status === 'COMPLETED') return 0;
+
+  const activeRemaining = ['CALLED', 'IN_CONSULTATION', 'SERVING'].includes(status)
+    ? Math.max(0, averageConsultationMinutes - activeTokenElapsedMinutes)
+    : 0;
+
+  return Math.max(0, Math.round(activeRemaining + (patientsAhead * averageConsultationMinutes) + delayMinutes));
+};
+
 export class QueueService {
   /**
    * Get all tokens for a doctor/session with details
@@ -249,7 +298,7 @@ export class QueueService {
 
       const elapsedSeconds = Number(token.elapsed_seconds);
       const consultationDurationSeconds = Number.isFinite(elapsedSeconds) && elapsedSeconds >= 0
-        ? Math.max(1, Math.floor(elapsedSeconds))
+        ? calculateConsultationDurationSeconds(token.called_at, new Date())
         : 480;
       const [updateResult] = await connection.execute(
         `UPDATE \`tokens\`
@@ -268,10 +317,8 @@ export class QueueService {
          ORDER BY completed_at DESC LIMIT 5`,
         [clinicId, token.session_id, token.doctor_id]
       );
-      const durations = (durationRows as any[]).map((row) => Number(row.consultation_duration_seconds) / 60);
-      const rollingAverage = durations.length
-        ? Number((durations.reduce((sum, value) => sum + value, 0) / durations.length).toFixed(1))
-        : 8;
+      const durations = (durationRows as any[]).map((row) => Number(row.consultation_duration_seconds));
+      const rollingAverage = calculateAverageConsultationMinutes(durations);
 
       const [nextRows] = await connection.execute(
         `SELECT id, token_number

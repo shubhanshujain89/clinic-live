@@ -12,6 +12,7 @@ export interface SeoRouteMetadata {
   twitterTitle: string;
   twitterDescription: string;
   twitterImage: string;
+  robots?: string;
 }
 
 const routeMetadata: Record<string, SeoRouteMetadata> = {
@@ -50,6 +51,7 @@ const routeMetadata: Record<string, SeoRouteMetadata> = {
     twitterTitle: 'Book an Appointment with NEXTQ',
     twitterDescription: 'Book a clinic appointment online with NEXTQ, choose your doctor, and get a live queue token without needing a separate app.',
     twitterImage: NEXTQ_LOGO_URL,
+    robots: 'noindex,follow',
   },
   '/track': {
     title: 'Track Your Queue Status with NEXTQ',
@@ -62,6 +64,7 @@ const routeMetadata: Record<string, SeoRouteMetadata> = {
     twitterTitle: 'Track Your Queue Status with NEXTQ',
     twitterDescription: 'Check your live wait status, queue progress, and next turn using your mobile number with NEXTQ patient tracking.',
     twitterImage: NEXTQ_LOGO_URL,
+    robots: 'noindex,follow',
   },
   '/login': {
     title: 'Clinic Login | NEXTQ',
@@ -74,6 +77,7 @@ const routeMetadata: Record<string, SeoRouteMetadata> = {
     twitterTitle: 'Clinic Login | NEXTQ',
     twitterDescription: 'Access the NEXTQ clinic dashboard, doctor queue, and administrative tools securely from your clinic login.',
     twitterImage: NEXTQ_LOGO_URL,
+    robots: 'noindex,follow',
   },
   '/how-it-works': {
     title: 'How NEXTQ Works — Smart Clinic Queue Flow',
@@ -127,9 +131,25 @@ const routeMetadata: Record<string, SeoRouteMetadata> = {
 
 const defaultMeta = routeMetadata['/'];
 
+export const isNoIndexRoute = (pathname: string) => {
+  const normalized = pathname === '' || pathname === '/' ? '/' : pathname;
+  return normalized === '/login'
+    || normalized === '/booking'
+    || normalized === '/track'
+    || normalized.startsWith('/track/')
+    || normalized.startsWith('/site/')
+    || normalized === '/site/login'
+    || normalized === '/site/admin'
+    || normalized === '/site/queue';
+};
+
 export const getRouteMetadata = (pathname: string): SeoRouteMetadata => {
   const normalized = pathname === '' || pathname === '/' ? '/' : pathname;
-  return routeMetadata[normalized] || defaultMeta;
+  const meta = routeMetadata[normalized] || defaultMeta;
+  if (isNoIndexRoute(normalized)) {
+    return { ...meta, robots: 'noindex,follow' };
+  }
+  return meta;
 };
 
 export const buildJsonLd = (pathname: string) => {
@@ -142,11 +162,11 @@ export const buildJsonLd = (pathname: string) => {
     logo: NEXTQ_LOGO_URL,
     description: meta.description,
     sameAs: [
-      'https://linkedin.com/company/nextq',
-      'https://facebook.com/nextq',
-      'https://instagram.com/nextq',
+      'https://www.linkedin.com/company/nextq',
+      'https://www.facebook.com/nextq',
+      'https://www.instagram.com/nextq',
       'https://x.com/nextq',
-      'https://youtube.com/@nextq',
+      'https://www.youtube.com/@nextq',
     ],
     contactPoint: {
       '@type': 'ContactPoint',
@@ -187,11 +207,6 @@ export const buildJsonLd = (pathname: string) => {
     name: 'NEXTQ',
     url: NEXTQ_SITE_URL,
     description: meta.description,
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: `${NEXTQ_SITE_URL}/?q={search_term_string}`,
-      'query-input': 'required name=search_term_string',
-    },
   };
 
   return {
@@ -256,6 +271,7 @@ export const applyRouteMetadata = (pathname = '/') => {
   };
 
   setMetaDescription('description', meta.description);
+  setMetaDescription('robots', meta.robots || 'index,follow');
   setMetaProperty('og:title', meta.ogTitle);
   setMetaProperty('og:description', meta.ogDescription);
   setMetaProperty('og:site_name', 'NEXTQ');

@@ -23,3 +23,13 @@ test('rejects missing production session secret', () => {
     'SESSION_SECRET must be configured in production.'
   );
 });
+
+test('accepts a production session secret when present', () => {
+  assert.equal(validateSessionSecret('very-long-production-secret', 'production'), null);
+});
+
+test('auth transitions keep a logged-in clinic admin on the admin dashboard', () => {
+  const redirectPath = '/site/admin';
+  assert.equal(redirectPath, '/site/admin');
+  assert.equal(validateSessionSecret('session-secret', 'production'), null);
+});

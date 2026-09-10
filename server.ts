@@ -9,6 +9,7 @@ import { services } from './server/db/services/index.js';
 import { getClinicPlanSnapshot, getPlanLimits } from './server/db/services/planService.js';
 import { getClinicBusinessDate } from './server/db/services/clinicTime.js';
 import { validateSessionSecret, validateSuperAdminBootstrapPassword } from './server/bootstrap.js';
+import { canAccessRecord, canMutateGenericRecord, prepareDatabaseMutation, requireDatabaseAccess, sanitizeDatabaseRecord } from './server/auth/authorization.js';
 
 dotenv.config();
 
@@ -73,7 +74,7 @@ app.use((_req, res, next) => {
   next();
 });
 
-const checkRateLimit = async (key: string, max = RATE_LIMIT_MAX): Promise<boolean> => {
+const checkRateLimit = async (key: string, max = RATE_LIMIT_MAX): Promise<{ allowed: boolean; status: 'ok' | 'rate_limited' | 'unavailable' }> => {
   try {
     await rateLimitTableReady;
     await executeQueryOne(
@@ -88,11 +89,27 @@ const checkRateLimit = async (key: string, max = RATE_LIMIT_MAX): Promise<boolea
       'SELECT request_count FROM rate_limits WHERE rate_key = ?',
       [key]
     );
-    return Number(record?.request_count || 0) <= max;
+    const requestCount = Number(record?.request_count || 0);
+    return requestCount > max
+      ? { allowed: false, status: 'rate_limited' }
+      : { allowed: true, status: 'ok' };
   } catch (error) {
     console.error('Rate limit storage unavailable:', error instanceof Error ? error.message : error);
+    return { allowed: false, status: 'unavailable' };
+  }
+};
+
+const enforceRateLimit = async (res: express.Response, key: string, max = RATE_LIMIT_MAX): Promise<boolean> => {
+  const result = await checkRateLimit(key, max);
+  if (result.status === 'unavailable') {
+    res.status(503).json({ error: 'Rate limit service temporarily unavailable. Please try again later.' });
     return false;
   }
+  if (result.status === 'rate_limited') {
+    res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    return false;
+  }
+  return true;
 };
 
 const cookieValue = (req: express.Request, name: string) => {
@@ -223,74 +240,10 @@ const secureEqual = (left: string, right: string) => {
   return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
 };
 
-const canAccessRecord = (context: AuthContext, record: Record<string, any>, table: string) => {
-  if (context.role === 'SUPER_ADMIN') return true;
-  if (context.role === 'DOCTOR' && !['doctors', 'tokens', 'appointments', 'queue_events', 'doctor_status'].includes(table)) return false;
-  const recordClinicId = table === 'clinics' ? record.id : (record.clinicId || record.clinic_id);
-  if (!recordClinicId) return false;
-  if (recordClinicId && recordClinicId !== context.clinicId) return false;
-  if (context.role === 'DOCTOR' && table === 'doctors') {
-    return (record.id || record.doctorId) === context.doctorId;
-  }
-  if (context.role === 'DOCTOR' && record.doctorId && record.doctorId !== context.doctorId) return false;
-  return recordClinicId === context.clinicId;
-};
-
-const canMutateGenericRecord = (context: AuthContext, table: string) => {
-  if (context.role === 'SUPER_ADMIN') return true;
-  if (context.role !== 'CLINIC_ADMIN') return false;
-  return !['clinics', 'sessions', 'queue_events', 'doctor_status'].includes(table);
-};
-
-const prepareDatabaseMutation = (
-  context: AuthContext,
-  table: string,
-  value: Record<string, any>,
-  current?: Record<string, any> | null,
-) => {
-  if (context.role === 'SUPER_ADMIN') return value;
-  if (table !== 'staff_users') return value;
-  if (context.role !== 'CLINIC_ADMIN') {
-    throw new Error('This role cannot modify staff users.');
-  }
-
-  const next = { ...value };
-  if (current) {
-    if (current.clinicId !== context.clinicId && current.clinic_id !== context.clinicId) {
-      throw new Error('Access denied.');
-    }
-    delete next.passwordHash;
-    delete next.password_hash;
-  }
-  if (next.role && !['CLINIC_ADMIN', 'DOCTOR', 'STAFF'].includes(String(next.role).toUpperCase())) {
-    throw new Error('Invalid staff role.');
-  }
-  if (next.clinicId !== undefined && next.clinicId !== context.clinicId) {
-    throw new Error('A clinic admin cannot assign another clinic.');
-  }
-  if (next.clinic_id !== undefined && next.clinic_id !== context.clinicId) {
-    throw new Error('A clinic admin cannot assign another clinic.');
-  }
-  next.clinicId = context.clinicId;
-  delete next.clinic_id;
-  delete next.passwordReset;
-  delete next.password_reset;
-  delete next.accessStatus;
-  delete next.access_status;
-  return next;
-};
-
-const sanitizeDatabaseRecord = (table: string, record: Record<string, any>) => {
-  if (table !== 'staff_users') return record;
-  const { passwordHash, password_hash, passwordReset, password_reset, ...safeRecord } = record;
-  return safeRecord;
-};
-
-const requireDatabaseAccess = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const requireDatabaseAccessMiddleware = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const context = await authContext(req);
   const requestedPath = String(req.query.path || req.body?.path || '');
-  if (!context) {
-    res.status(401).json({ error: 'Authentication required.' });
+  if (!requireDatabaseAccess(context, res)) {
     return;
   }
   (req as express.Request & { auth?: AuthContext }).auth = context;
@@ -371,8 +324,7 @@ const parseSpecializationList = (value: unknown): string[] => {
 app.get('/api/clinics', async (req, res) => {
   try {
     const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
-    if (!(await checkRateLimit(`public-clinics:${clientIp}`, 60))) {
-      res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    if (!(await enforceRateLimit(res, `public-clinics:${clientIp}`, 60))) {
       return;
     }
     const clinics = await repositories.clinics.findActive();
@@ -394,8 +346,7 @@ app.get('/api/clinics', async (req, res) => {
 app.get('/api/clinics/:clinicId/doctors', async (req, res) => {
   try {
     const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
-    if (!(await checkRateLimit(`public-doctors:${clientIp}`, 60))) {
-      res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    if (!(await enforceRateLimit(res, `public-doctors:${clientIp}`, 60))) {
       return;
     }
     const { clinicId } = req.params;
@@ -777,8 +728,7 @@ app.delete('/api/staff/queue/:tokenId/cancel', async (req, res) => {
 app.post('/api/patient/book', async (req, res) => {
   try {
     const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
-    if (!(await checkRateLimit(`booking:${clientIp}`, 10))) {
-      res.status(429).json({ error: 'Too many booking attempts. Please try again later.' });
+    if (!(await enforceRateLimit(res, `booking:${clientIp}`, 10))) {
       return;
     }
     const { clinicId, doctorId, patientName, phone, age, reason } = req.body || {};
@@ -790,8 +740,7 @@ app.post('/api/patient/book', async (req, res) => {
       res.status(400).json({ error: 'Clinic, doctor, patient name, and mobile number are required.' });
       return;
     }
-    if (!(await checkRateLimit(`booking-phone:${normalizedPhone}`, 3))) {
-      res.status(429).json({ error: 'Too many bookings for this mobile number. Please try again later.' });
+    if (!(await enforceRateLimit(res, `booking-phone:${normalizedPhone}`, 3))) {
       return;
     }
     if (normalizedPatientName.length > 120 || normalizedPhone.length > 30 || normalizedReason.length > 500) {
@@ -871,8 +820,7 @@ app.post('/api/staff/queue/:clinicId/walk-in', async (req, res) => {
 app.post('/api/patient/track', async (req, res) => {
   try {
     const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
-    if (!(await checkRateLimit(`patient-track-ip:${clientIp}`, 30))) {
-      res.status(429).json({ error: 'Too many tracking attempts. Please try again later.' });
+    if (!(await enforceRateLimit(res, `patient-track-ip:${clientIp}`, 30))) {
       return;
     }
     res.setHeader('Cache-Control', 'no-store');
@@ -882,8 +830,7 @@ app.post('/api/patient/track', async (req, res) => {
       return;
     }
     const phoneKey = crypto.createHash('sha256').update(mobile).digest('hex');
-    if (!(await checkRateLimit(`patient-track-phone:${phoneKey}`, 10))) {
-      res.status(429).json({ error: 'Too many tracking attempts for this mobile number. Please try again later.' });
+    if (!(await enforceRateLimit(res, `patient-track-phone:${phoneKey}`, 10))) {
       return;
     }
     const tracking = await services.tracking.getPublicTrackingByPhone(mobile);
@@ -903,8 +850,7 @@ app.post('/api/patient/track', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
-    if (!(await checkRateLimit(`login:${clientIp}`, 10))) {
-      res.status(429).json({ error: 'Too many login attempts. Please try again later.' });
+    if (!(await enforceRateLimit(res, `login:${clientIp}`, 10))) {
       return;
     }
     const { email = '', password = '', role: requestedRole = '' } = req.body || {};
@@ -1189,7 +1135,7 @@ app.get('/api/db/health', async (_req, res) => {
   }
 });
 
-app.use('/api/db', requireDatabaseAccess);
+app.use('/api/db', requireDatabaseAccessMiddleware);
 
 app.get('/api/db/doc', async (req, res) => {
   try {
