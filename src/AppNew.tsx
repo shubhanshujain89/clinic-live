@@ -417,6 +417,9 @@ export default function App() {
                     <img src="/nextq-logo.png" alt="NEXTQ" className="h-24 w-64 object-contain" />
                     <h1 className="text-3xl font-bold">NEXTQ</h1>
                   </div>
+                  <div className="mb-2 inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-300">
+                    Super Admin
+                  </div>
                   <p className="text-slate-400">Smart Queue. Less Waiting.</p>
                 </div>
 

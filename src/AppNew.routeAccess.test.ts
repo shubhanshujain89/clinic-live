@@ -46,6 +46,15 @@ test('how it works route opens a dedicated public page', () => {
   assert.equal(resolveAppPageForRoute('/how-it-works', null), 'how-it-works');
 });
 
+test('booking and tracking pages have public SEO metadata coverage', () => {
+  const routeMetadata = new URL('./lib/seo.ts', import.meta.url);
+  const seoSource = readFileSync(routeMetadata, 'utf8');
+
+  assert.ok(seoSource.includes("'/booking':"));
+  assert.ok(seoSource.includes("'/track':"));
+  assert.ok(seoSource.includes("'/login':"));
+});
+
 test('contact page WhatsApp link carries a configurable prefilled message that mirrors the settings model', () => {
   const siteConfigSource = readFileSync(new URL('./lib/siteConfig.ts', import.meta.url), 'utf8');
   const contactPageSource = readFileSync(new URL('./pages/ContactPage.tsx', import.meta.url), 'utf8');

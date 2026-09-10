@@ -239,6 +239,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
                 experience: '',
                 phone: '',
                 email: '',
+                photo: '',
                 bio: '',
                 consultationFee: '',
                 availableDays: [],

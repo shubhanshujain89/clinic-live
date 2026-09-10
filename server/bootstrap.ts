@@ -6,3 +6,10 @@ export const validateSuperAdminBootstrapPassword = (password: string, nodeEnv: s
   }
   return null;
 };
+
+export const validateSessionSecret = (secret: string | undefined, nodeEnv: string | undefined): string | null => {
+  if (nodeEnv === 'production' && (!secret || secret.trim().length === 0)) {
+    return 'SESSION_SECRET must be configured in production.';
+  }
+  return null;
+};

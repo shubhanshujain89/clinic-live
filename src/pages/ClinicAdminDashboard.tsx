@@ -4,7 +4,7 @@ import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot,
 import { defaultContentSections, defaultSiteSettings, loadContentSections, loadSiteSettings, saveContentSections, saveSiteSettings, initializeSiteConfig, loadSiteSettingsFromDatabase, loadContentSectionsFromDatabase } from '../lib/siteConfig';
 import { FeaturePlan } from '../types/queue';
 import { PhoneInput } from '../components/PhoneInput';
-import { DashboardMode, getDashboardTabs } from './clinicAdminDashboardLogic';
+import { DashboardMode, DashboardTabKey, getDashboardTabs } from './clinicAdminDashboardLogic';
 
 const normalizeDashboardMode = (value?: string): DashboardMode => value === 'site-admin' ? 'site-admin' : 'clinic-admin';
 
@@ -181,7 +181,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   const [siteSettings, setSiteSettings] = useState(loadSiteSettings());
   const [savedSiteSettings, setSavedSiteSettings] = useState(loadSiteSettings());
   const [showSiteSettings, setShowSiteSettings] = useState(resolvedMode === 'site-admin');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'clinic-summary' | 'content' | 'clinics' | 'users' | 'security' | 'billing' | 'audit' | 'recent-activity'>('dashboard');
+  const [activeTab, setActiveTab] = useState<DashboardTabKey>('dashboard');
   const [contentSections, setContentSections] = useState(loadContentSections());
   const [savedContentSections, setSavedContentSections] = useState(loadContentSections());
   const [formData, setFormData] = useState({

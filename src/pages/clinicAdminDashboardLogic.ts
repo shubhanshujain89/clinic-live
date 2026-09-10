@@ -1,7 +1,9 @@
 export type DashboardMode = 'site-admin' | 'clinic-admin';
+export type DashboardTabKey = 'dashboard' | 'clinic-summary' | 'content' | 'clinics' | 'users' | 'security' | 'billing' | 'audit' | 'recent-activity';
+export type DashboardTab = { key: DashboardTabKey; label: string };
 
-export const getDashboardTabs = (mode: DashboardMode) => {
-  const commonTabs = [
+export const getDashboardTabs = (mode: DashboardMode): DashboardTab[] => {
+  const commonTabs: DashboardTab[] = [
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'clinic-summary', label: 'Clinic Wise Summary' },
     { key: 'clinics', label: 'Clinics' },
@@ -10,7 +12,7 @@ export const getDashboardTabs = (mode: DashboardMode) => {
     { key: 'billing', label: 'Billing & Packs' },
     { key: 'audit', label: 'Audit Trail' },
     { key: 'recent-activity', label: 'Recent Activity' },
-  ] as const;
+  ];
 
   if (mode === 'site-admin') {
     return [

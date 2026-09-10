@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateSuperAdminBootstrapPassword } from './bootstrap.js';
+import { validateSessionSecret, validateSuperAdminBootstrapPassword } from './bootstrap.js';
 
 test('rejects short production Super Admin bootstrap passwords', () => {
   assert.equal(
@@ -15,4 +15,11 @@ test('accepts 12-character production Super Admin bootstrap passwords', () => {
 
 test('does not apply the production minimum outside production', () => {
   assert.equal(validateSuperAdminBootstrapPassword('short-pass', 'development'), null);
+});
+
+test('rejects missing production session secret', () => {
+  assert.equal(
+    validateSessionSecret('', 'production'),
+    'SESSION_SECRET must be configured in production.'
+  );
 });

@@ -8,7 +8,7 @@ import { repositories } from './server/db/repositories/index.js';
 import { services } from './server/db/services/index.js';
 import { getClinicPlanSnapshot, getPlanLimits } from './server/db/services/planService.js';
 import { getClinicBusinessDate } from './server/db/services/clinicTime.js';
-import { validateSuperAdminBootstrapPassword } from './server/bootstrap.js';
+import { validateSessionSecret, validateSuperAdminBootstrapPassword } from './server/bootstrap.js';
 
 dotenv.config();
 
@@ -18,6 +18,11 @@ app.set('trust proxy', process.env.TRUST_PROXY === 'true' ? 1 : false);
 const PORT = Number(process.env.BACKEND_PORT || process.env.PORT || 4000);
 const SESSION_TTL_SECONDS = Number(process.env.SESSION_MAX_AGE || 8 * 60 * 60);
 const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === 'development' ? 'nextq-development-session-secret' : '');
+
+const sessionSecretError = validateSessionSecret(SESSION_SECRET, process.env.NODE_ENV);
+if (sessionSecretError) {
+  throw new Error(sessionSecretError);
+}
 
 const databaseReady = getDatabase();
 const rateLimitTableReady = databaseReady.then(async () => {
