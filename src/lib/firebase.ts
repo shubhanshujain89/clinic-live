@@ -255,15 +255,18 @@ export const onAuthStateChanged = (_auth: unknown, callback: (user: User | null)
   const requestVersion = authRequestVersion;
   fetch('/api/auth/me', { credentials: 'include' })
     .then(async (response) => {
-      if (requestVersion !== authRequestVersion) return auth.currentUser;
-      if (!response.ok) return auth.currentUser;
-      return (await response.json()).user;
-    })
-    .then((user) => {
+      if (requestVersion !== authRequestVersion) return null;
+      if (!response.ok) return null;
+      const payload = await response.json().catch(() => ({}));
+      const user = payload?.user ?? null;
       auth.currentUser = user;
       callback(user);
+      return user;
     })
-    .catch(() => callback(auth.currentUser));
+    .catch(() => {
+      auth.currentUser = null;
+      callback(null);
+    });
   return () => undefined;
 };
 

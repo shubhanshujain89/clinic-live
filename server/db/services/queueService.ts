@@ -239,13 +239,23 @@ export const getPublicTrackingEstimatedWaitMinutes = ({
   operatingHours,
   queueWaitMinutes,
   now = new Date(),
+  patientsAhead,
+  averageConsultationMinutes,
+  delayMinutes,
 }: {
   doctorStatus?: string;
   status?: string;
   operatingHours?: string;
   queueWaitMinutes: number;
   now?: Date;
+  patientsAhead?: number;
+  averageConsultationMinutes?: number;
+  delayMinutes?: number;
 }): number => {
+  void patientsAhead;
+  void averageConsultationMinutes;
+  void delayMinutes;
+
   const isConsultationActive = doctorStatus === 'IN' && ['CALLED', 'IN_CONSULTATION', 'SERVING'].includes(String(status || ''));
 
   if (!isConsultationActive) {

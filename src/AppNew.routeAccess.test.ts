@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolveAppPageForRoute } from './AppNew';
 import { buildTrackingHref } from './lib/trackingLink';
 import { getRouteMetadata, isNoIndexRoute } from './lib/seo';
+import { auth, onAuthStateChanged } from './lib/firebase';
 import { canAccessRecord, canMutateGenericRecord, prepareDatabaseMutation } from '../server/auth/authorization';
 
 test('site admin route is blocked for clinic admins', () => {
@@ -170,6 +171,27 @@ test('browser back/forward after auth change resolves the correct page for the s
   for (const step of browserHistorySequence) {
     assert.equal(resolveAppPageForRoute(step.route, step.role), step.expected);
   }
+});
+
+test('stale cached auth user is cleared if the auth check fails', async () => {
+  const originalFetch = globalThis.fetch;
+  const callbackValues: Array<any | null> = [];
+  auth.currentUser = { uid: 'cached-user', email: 'user@example.com', role: 'CLINIC_ADMIN' };
+
+  globalThis.fetch = (async () => {
+    throw new Error('Auth check failed');
+  }) as typeof fetch;
+
+  await new Promise<void>((resolve) => {
+    onAuthStateChanged({}, (user) => {
+      callbackValues.push(user);
+      resolve();
+    });
+  });
+
+  globalThis.fetch = originalFetch;
+  assert.deepEqual(callbackValues, [null]);
+  assert.equal(auth.currentUser, null);
 });
 
 test('db authorization prevents cross-clinic access and restricts doctors to scoped records', () => {
