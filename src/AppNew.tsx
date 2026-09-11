@@ -349,7 +349,8 @@ export default function App() {
   const isAdminArea = currentPage === 'site-admin' || currentPage === 'clinic-admin' || currentPage === 'doctor-management';
   const isTvDisplay = currentPage === 'clinic-queue' && new URLSearchParams(window.location.search).get('view') === 'tv';
   const isClinicQueue = currentPage === 'clinic-queue';
-  const showPublicHeader = !isAdminArea && !isClinicQueue && !isTvDisplay;
+  const isPublicBookingOrTracking = currentPage === 'patient-booking' || currentPage === 'patient-tracking';
+  const showPublicHeader = !isAdminArea && !isClinicQueue && !isTvDisplay && !isPublicBookingOrTracking;
 
   return (
     <div className="app-root min-h-screen flex flex-col">

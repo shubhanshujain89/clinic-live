@@ -29,6 +29,7 @@ import { db, doc, updateDoc, collection, setDoc } from '../lib/firebase';
 import type { User } from '../lib/firebase';
 import { soundManager } from '../lib/audio';
 import { getDoctorQueueAction } from './doctorQueueLogic';
+import { getAverageWaitSummary } from './waitMetrics';
 
 interface DoctorViewProps {
   clinic: Clinic;
@@ -222,13 +223,8 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   const completedTokens = tokens.filter(t => t.status === 'COMPLETED');
   const holdTokens = tokens.filter(t => t.status === 'HOLD');
 
-  const averageWaitMinutes = waitingTokens.length
-    ? Number((waitingTokens.reduce((sum, token) => {
-        const tokenCreatedAt = token.createdAt ? new Date(token.createdAt).getTime() : Date.now();
-        const elapsedMinutes = Math.max(0, (Date.now() - tokenCreatedAt) / 60000);
-        return sum + elapsedMinutes;
-      }, 0) / waitingTokens.length).toFixed(1))
-    : 0;
+  const averageWaitSummary = getAverageWaitSummary(clinic.doctorStatus, waitingTokens);
+  const averageWaitMinutes = averageWaitSummary.averageWaitMinutes;
 
   const currentPatients = tokens.filter(t => t.status !== 'CANCELLED' && t.status !== 'NO_SHOW');
   const totalPatientsToday = currentPatients.length;
@@ -478,10 +474,12 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
             </div>
           </div>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl sm:text-3xl font-black text-white">{averageWaitMinutes}</span>
-            <span className="text-xs text-slate-400">mins</span>
+            <span className="text-2xl sm:text-3xl font-black text-white">
+              {averageWaitSummary.label}
+            </span>
+            {averageWaitSummary.suffix ? <span className="text-xs text-slate-400">{averageWaitSummary.suffix}</span> : null}
           </div>
-          <div className="mt-2 text-xs text-slate-500">Queue pacing</div>
+          <div className="mt-2 text-xs text-slate-500">{clinic.doctorStatus === 'IN' ? 'Queue pacing' : 'Doctor not in yet'}</div>
         </div>
 
         {/* Metric 4: Today's Revenue */}

@@ -25,6 +25,7 @@ import {
 import { Clinic, TokenItem, QueueSession } from '../types/queue';
 import { db, doc, updateDoc } from '../lib/firebase';
 import { soundManager } from '../lib/audio';
+import { getAverageWaitSummary } from './waitMetrics';
 
 interface ReceptionistViewProps {
   clinic: Clinic;
@@ -145,13 +146,8 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
   });
   const holdTokens = tokens.filter(t => t.status === 'HOLD');
   const completedTokens = tokens.filter(t => t.status === 'COMPLETED');
-  const averageWaitMinutes = waitingTokens.length
-    ? Number((waitingTokens.reduce((sum, token) => {
-        const tokenCreatedAt = token.createdAt ? new Date(token.createdAt).getTime() : Date.now();
-        const elapsedMinutes = Math.max(0, (Date.now() - tokenCreatedAt) / 60000);
-        return sum + elapsedMinutes;
-      }, 0) / waitingTokens.length).toFixed(1))
-    : 0;
+  const averageWaitSummary = getAverageWaitSummary(clinic.doctorStatus, waitingTokens);
+  const averageWaitMinutes = averageWaitSummary.averageWaitMinutes;
 
   // Filter list
   const filteredTokens = tokens.filter(token => {

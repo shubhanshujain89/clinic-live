@@ -124,6 +124,115 @@ export const estimateQueueWaitMinutes = ({
   return Math.max(0, Math.round(activeRemaining + (patientsAhead * averageConsultationMinutes) + delayMinutes));
 };
 
+export const shouldAutoMarkDoctorOut = ({
+  operatingHours,
+  hasQueuePatients,
+  now = new Date(),
+}: {
+  operatingHours?: string;
+  hasQueuePatients: boolean;
+  now?: Date;
+}): boolean => {
+  if (hasQueuePatients) return false;
+
+  const matches = Array.from(
+    String(operatingHours || '').matchAll(/(\d{1,2}:\d{2})\s*(AM|PM)?\s*-\s*(\d{1,2}:\d{2})\s*(AM|PM)?/gi)
+  );
+  if (!matches.length) return false;
+
+  const lastMatch = matches[matches.length - 1];
+  if (!lastMatch) return false;
+
+  const parseTime = (time: string, meridiem?: string) => {
+    const match = time.match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) return 0;
+
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const normalizedMeridiem = String(meridiem || '').toUpperCase();
+
+    if (normalizedMeridiem === 'PM' && hours < 12) hours += 12;
+    if (normalizedMeridiem === 'AM' && hours === 12) hours = 0;
+
+    return hours * 60 + minutes;
+  };
+
+  const openMinutes = parseTime(lastMatch[1], lastMatch[2]);
+  const closeMinutes = parseTime(lastMatch[3], lastMatch[4]);
+  const normalizedClose = closeMinutes <= openMinutes ? closeMinutes + (24 * 60) : closeMinutes;
+  const minuteOfDay = now.getHours() * 60 + now.getMinutes();
+
+  return minuteOfDay >= normalizedClose;
+};
+
+const parseTimeStringToMinutes = (timeText: string, meridiem?: string): number => {
+  const normalized = String(timeText || '').trim();
+  if (!normalized) return 0;
+
+  const match = normalized.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return 0;
+
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const suffix = String(meridiem || '').toUpperCase();
+
+  if (suffix === 'PM' && hours < 12) hours += 12;
+  if (suffix === 'AM' && hours === 12) hours = 0;
+
+  return hours * 60 + minutes;
+};
+
+const parseClinicOperatingWindow = (operatingHours?: string): { openMinutes: number; closeMinutes: number } | null => {
+  if (!operatingHours || /24\s*hours/i.test(operatingHours) || /open\s*24/i.test(operatingHours)) {
+    return null;
+  }
+
+  const matches = Array.from(
+    operatingHours.matchAll(/(\d{1,2}:\d{2})\s*(AM|PM)?\s*-\s*(\d{1,2}:\d{2})\s*(AM|PM)?/gi)
+  );
+
+  if (!matches.length) return null;
+
+  const lastMatch = matches[matches.length - 1];
+  const openMinutes = parseTimeStringToMinutes(lastMatch[1], lastMatch[2]);
+  const closeMinutes = parseTimeStringToMinutes(lastMatch[3], lastMatch[4]);
+
+  if (!openMinutes && !closeMinutes) return null;
+
+  return {
+    openMinutes,
+    closeMinutes: closeMinutes <= openMinutes ? closeMinutes + (24 * 60) : closeMinutes,
+  };
+};
+
+export const adjustWaitForClinicSchedule = ({
+  queueWaitMinutes,
+  operatingHours,
+  now = new Date(),
+}: {
+  queueWaitMinutes: number;
+  operatingHours?: string;
+  now?: Date;
+}): number => {
+  const parsedWindow = parseClinicOperatingWindow(operatingHours);
+  if (!parsedWindow) return Math.max(0, Math.round(queueWaitMinutes));
+
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const openMinutes = parsedWindow.openMinutes;
+  const closeMinutes = parsedWindow.closeMinutes;
+
+  if (nowMinutes < openMinutes) {
+    return Math.max(0, Math.round(queueWaitMinutes + (openMinutes - nowMinutes)));
+  }
+
+  if (nowMinutes >= closeMinutes) {
+    const nextOpenMinutes = openMinutes + 24 * 60;
+    return Math.max(0, Math.round(queueWaitMinutes + (nextOpenMinutes - nowMinutes)));
+  }
+
+  return Math.max(0, Math.round(queueWaitMinutes));
+};
+
 export class QueueService {
   /**
    * Get all tokens for a doctor/session with details
@@ -337,6 +446,8 @@ export class QueueService {
         [rollingAverage, clinicId]
       );
 
+      await this.syncDoctorStatusForEmptyQueue(clinicId, doctorId, new Date());
+
       return {
         id: token.id,
         clinicId: token.clinic_id,
@@ -349,6 +460,37 @@ export class QueueService {
         nextTokenNumber: nextToken?.token_number,
       };
     });
+  }
+
+  async syncDoctorStatusForEmptyQueue(clinicId: string, doctorId?: string, now = new Date()): Promise<boolean> {
+    const clinic = await executeQueryOne<{ operating_hours: string; doctor_status: string }>(
+      `SELECT operating_hours, doctor_status FROM clinics WHERE id = ?`,
+      [clinicId]
+    );
+    if (!clinic || ['OUT', 'ON_BREAK', 'EMERGENCY'].includes(clinic.doctor_status)) {
+      return false;
+    }
+
+    const queueQuery = `
+      SELECT COUNT(*) AS total
+      FROM tokens
+      WHERE clinic_id = ?
+        AND status IN ('WAITING', 'CALLED', 'IN_CONSULTATION', 'SERVING')
+        ${doctorId ? 'AND doctor_id = ?' : ''}
+    `;
+    const params = doctorId ? [clinicId, doctorId] : [clinicId];
+    const queueResult = await executeQueryOne<{ total: number }>(queueQuery, params);
+    const hasQueuePatients = Number(queueResult?.total || 0) > 0;
+
+    if (!shouldAutoMarkDoctorOut({ operatingHours: clinic.operating_hours, hasQueuePatients, now })) {
+      return false;
+    }
+
+    await executeQuery(
+      `UPDATE clinics SET doctor_status = 'OUT', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND doctor_status <> 'OUT'`,
+      [clinicId]
+    );
+    return true;
   }
 
   async cancelTokenForClinic(

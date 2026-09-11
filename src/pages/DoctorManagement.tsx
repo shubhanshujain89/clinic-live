@@ -287,7 +287,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold group-hover:text-emerald-400 transition">Dr. {doctor.name}</h3>
+                      <h3 className="text-xl font-bold group-hover:text-emerald-400 transition">{doctor.name}</h3>
                       <p className="text-sm text-emerald-400">{doctor.specialization}</p>
                     </div>
                     <div className="flex gap-2">
@@ -348,7 +348,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
-                    placeholder="Dr. John Doe"
+                    placeholder="John Doe"
                   />
                 </div>
 

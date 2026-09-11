@@ -6,6 +6,7 @@
 import { repositories } from '../repositories/index.js';
 import { executeQuery, executeQueryOne } from '../connection.js';
 import { getClinicBusinessDate } from './clinicTime.js';
+import { adjustWaitForClinicSchedule, QueueService } from './queueService.js';
 
 export interface TrackingResult {
   clinic: string;
@@ -42,6 +43,7 @@ export class TrackingService {
         c.doctor_status,
         c.delay_minutes,
         c.avg_consultation_minutes,
+        c.operating_hours,
         t.session_id,
         t.clinic_id,
         t.doctor_id,
@@ -61,6 +63,8 @@ export class TrackingService {
       getClinicBusinessDate(new Date(candidate.session_date), candidate.timezone) === getClinicBusinessDate(new Date(), candidate.timezone)
     );
     if (!result) return null;
+
+    await new QueueService().syncDoctorStatusForEmptyQueue(result.clinic_id, result.doctor_id, new Date());
 
     // Calculate patients ahead (waiting tokens with lower sequence number)
     const waitingStates = ['WAITING'];
@@ -100,9 +104,15 @@ export class TrackingService {
       ? Math.max(0, averageMinutes - elapsedMinutes) 
       : 0;
 
-    const estimatedWaitMinutes = Math.max(0, Math.round(
+    const rawEstimatedWaitMinutes = Math.max(0, Math.round(
       currentRemaining + (patientsAhead * averageMinutes) + (Number(result.delay_minutes) || 0)
     ));
+
+    const estimatedWaitMinutes = adjustWaitForClinicSchedule({
+      queueWaitMinutes: rawEstimatedWaitMinutes,
+      operatingHours: result.operating_hours,
+      now: new Date(),
+    });
 
     // Map status for public display
     const publicStatus = result.status === 'SERVING' ? 'IN_CONSULTATION' : result.status;

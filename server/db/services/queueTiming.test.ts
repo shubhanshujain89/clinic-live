@@ -5,6 +5,8 @@ import {
   calculateConsultationDurationSeconds,
   calculateAverageConsultationMinutes,
   estimateQueueWaitMinutes,
+  adjustWaitForClinicSchedule,
+  shouldAutoMarkDoctorOut,
 } from './queueService.js';
 
 test('queue consultation lifecycle yields a sensible duration and ETA update', () => {
@@ -51,4 +53,42 @@ test('queue consultation lifecycle yields a sensible duration and ETA update', (
   });
 
   assert.equal(completedEta, 0);
+});
+
+test('queue wait includes time until clinic opens when the clinic is not yet open', () => {
+  const beforeOpening = adjustWaitForClinicSchedule({
+    queueWaitMinutes: 12,
+    operatingHours: '9:00 AM - 6:00 PM',
+    now: new Date('2025-01-01T08:30:00+05:30'),
+  });
+
+  assert.equal(beforeOpening, 42);
+
+  const duringOpeningHours = adjustWaitForClinicSchedule({
+    queueWaitMinutes: 12,
+    operatingHours: '9:00 AM - 6:00 PM',
+    now: new Date('2025-01-01T10:30:00+05:30'),
+  });
+
+  assert.equal(duringOpeningHours, 12);
+});
+
+test('doctor auto-outs when the clinic is past closing time and the queue is empty', () => {
+  assert.equal(
+    shouldAutoMarkDoctorOut({
+      operatingHours: '9:00 AM - 6:00 PM',
+      hasQueuePatients: false,
+      now: new Date('2025-01-01T18:05:00+05:30'),
+    }),
+    true
+  );
+
+  assert.equal(
+    shouldAutoMarkDoctorOut({
+      operatingHours: '9:00 AM - 6:00 PM',
+      hasQueuePatients: true,
+      now: new Date('2025-01-01T18:05:00+05:30'),
+    }),
+    false
+  );
 });
