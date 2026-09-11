@@ -233,6 +233,32 @@ export const adjustWaitForClinicSchedule = ({
   return Math.max(0, Math.round(queueWaitMinutes));
 };
 
+export const getPublicTrackingEstimatedWaitMinutes = ({
+  doctorStatus,
+  status,
+  operatingHours,
+  queueWaitMinutes,
+  now = new Date(),
+}: {
+  doctorStatus?: string;
+  status?: string;
+  operatingHours?: string;
+  queueWaitMinutes: number;
+  now?: Date;
+}): number => {
+  const isConsultationActive = doctorStatus === 'IN' && ['CALLED', 'IN_CONSULTATION', 'SERVING'].includes(String(status || ''));
+
+  if (!isConsultationActive) {
+    return adjustWaitForClinicSchedule({
+      queueWaitMinutes: Math.max(0, Math.round(queueWaitMinutes)),
+      operatingHours,
+      now,
+    });
+  }
+
+  return Math.max(0, Math.round(queueWaitMinutes));
+};
+
 export class QueueService {
   /**
    * Get all tokens for a doctor/session with details

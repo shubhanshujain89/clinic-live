@@ -228,6 +228,9 @@ const fallbackDoctorsByClinic: Record<string, Doctor[]> = {
 
 const getDemoDoctorsForClinic = (clinicId: string) => fallbackDoctorsByClinic[clinicId] || [];
 
+export const isDuplicateBookingError = (message: string = '') =>
+  /already registered for this mobile number today|already.*booked.*this.*mobile.*number|duplicate.*mobile.*number/i.test(message);
+
 export const resolveLinkedBookingSelection = (
   linkedClinicId: string,
   linkedDoctorId: string,
@@ -459,10 +462,19 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
       setStep('confirm');
     } catch (error) {
       console.error('Error booking appointment:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unable to book appointment.';
+
+      if (isDuplicateBookingError(errorMessage)) {
+        setGeneratedTokenNumber('');
+        setStep('booking');
+        alert(errorMessage);
+        return;
+      }
+
       const fallbackTokenNumber = `NEXTQ-${String(Date.now()).slice(-6)}`;
       setGeneratedTokenNumber(fallbackTokenNumber);
       setStep('confirm');
-      alert(error instanceof Error ? `${error.message}. Booking saved in demo mode.` : 'Booking saved in demo mode.');
+      alert(`${errorMessage}. Booking saved in demo mode.`);
     }
   };
 
@@ -904,7 +916,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-base font-bold text-slate-900">1. Track your queue live</p>
                   <p className="mt-2 text-slate-600">Use your mobile number to check your current position and estimated wait time.</p>
-                  <a className="mt-3 inline-flex items-center gap-1 font-semibold text-emerald-700" href={`http://localhost:3000/track?mobile=${encodeURIComponent(bookingData.phone)}`}>
+                  <a className="mt-3 inline-flex items-center gap-1 font-semibold text-emerald-700" href={buildTrackingHref(bookingData.phone)}>
                     Track My Queue <span aria-hidden="true">→</span>
                   </a>
                 </div>
@@ -912,7 +924,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-base font-bold text-slate-900">2. Visit the clinic when your turn is approaching</p>
                   <p className="mt-2 text-slate-600">You don't need to wait at the clinic from the beginning. Track your queue and arrive at the right time.</p>
-                  <a className="mt-3 inline-flex items-center gap-1 font-semibold text-emerald-700" href={`http://localhost:3000/track?mobile=${encodeURIComponent(bookingData.phone)}`}>
+                  <a className="mt-3 inline-flex items-center gap-1 font-semibold text-emerald-700" href={buildTrackingHref(bookingData.phone)}>
                     Track My Appointment <span aria-hidden="true">→</span>
                   </a>
                 </div>

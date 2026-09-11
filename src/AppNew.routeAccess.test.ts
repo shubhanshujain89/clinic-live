@@ -98,6 +98,12 @@ test('booking confirmation can point users to a prefilled live tracking URL', ()
   assert.equal(buildTrackingHref('9876543210'), '/track?mobile=9876543210');
 });
 
+test('booking confirmation uses the app tracking route instead of a hardcoded localhost URL', () => {
+  const bookingPageSource = readFileSync(new URL('./pages/PatientBooking.tsx', import.meta.url), 'utf8');
+  assert.ok(!bookingPageSource.includes('http://localhost:3000/track'));
+  assert.ok(!bookingPageSource.includes('http://localhost:5173/track'));
+});
+
 test('stale login response after logout resolves the user back to login-safe routes', () => {
   const staleStateSequence = [
     { route: '/site/admin', role: 'CLINIC_ADMIN', expected: 'clinic-admin' },

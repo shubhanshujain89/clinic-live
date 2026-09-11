@@ -7,6 +7,7 @@ import {
   estimateQueueWaitMinutes,
   adjustWaitForClinicSchedule,
   shouldAutoMarkDoctorOut,
+  getPublicTrackingEstimatedWaitMinutes,
 } from './queueService.js';
 
 test('queue consultation lifecycle yields a sensible duration and ETA update', () => {
@@ -91,4 +92,32 @@ test('doctor auto-outs when the clinic is past closing time and the queue is emp
     }),
     false
   );
+});
+
+test('public tracking uses clinic timing before doctor is in or consultation starts', () => {
+  const beforeDoctorStarts = getPublicTrackingEstimatedWaitMinutes({
+    doctorStatus: 'OUT',
+    status: 'WAITING',
+    operatingHours: '9:00 AM - 6:00 PM',
+    queueWaitMinutes: 0,
+    patientsAhead: 4,
+    averageConsultationMinutes: 12,
+    delayMinutes: 0,
+    now: new Date('2025-01-01T08:30:00+05:30'),
+  });
+
+  assert.equal(beforeDoctorStarts, 30);
+
+  const whileConsulting = getPublicTrackingEstimatedWaitMinutes({
+    doctorStatus: 'IN',
+    status: 'IN_CONSULTATION',
+    operatingHours: '9:00 AM - 6:00 PM',
+    queueWaitMinutes: 24,
+    patientsAhead: 2,
+    averageConsultationMinutes: 12,
+    delayMinutes: 0,
+    now: new Date('2025-01-01T10:00:00+05:30'),
+  });
+
+  assert.equal(whileConsulting, 24);
 });

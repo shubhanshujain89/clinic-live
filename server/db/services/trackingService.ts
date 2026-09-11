@@ -6,7 +6,7 @@
 import { repositories } from '../repositories/index.js';
 import { executeQuery, executeQueryOne } from '../connection.js';
 import { getClinicBusinessDate } from './clinicTime.js';
-import { adjustWaitForClinicSchedule, QueueService } from './queueService.js';
+import { getPublicTrackingEstimatedWaitMinutes, QueueService } from './queueService.js';
 
 export interface TrackingResult {
   clinic: string;
@@ -108,9 +108,11 @@ export class TrackingService {
       currentRemaining + (patientsAhead * averageMinutes) + (Number(result.delay_minutes) || 0)
     ));
 
-    const estimatedWaitMinutes = adjustWaitForClinicSchedule({
-      queueWaitMinutes: rawEstimatedWaitMinutes,
+    const estimatedWaitMinutes = getPublicTrackingEstimatedWaitMinutes({
+      doctorStatus: result.doctor_status,
+      status: result.status,
       operatingHours: result.operating_hours,
+      queueWaitMinutes: rawEstimatedWaitMinutes,
       now: new Date(),
     });
 
