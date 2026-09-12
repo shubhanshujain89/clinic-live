@@ -204,20 +204,14 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
                 {tracking.delayMinutes > 0 && <p className="text-amber-700">Current delay: +{tracking.delayMinutes} min</p>}
               </div>
 
-              <div className="flex flex-col gap-2 pt-1 sm:flex-row">
+              <div className="pt-1">
                 <button
                   type="button"
                   onClick={() => void findBooking()}
-                  className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
                 >
                   Refresh Status
                 </button>
-                <a
-                  href="/"
-                  className="flex-1 rounded-xl bg-[linear-gradient(135deg,#059669_0%,#10b981_100%)] px-4 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:translate-y-[-1px] hover:shadow-[0_14px_24px_rgba(16,185,129,0.26)]"
-                >
-                  View Clinic
-                </a>
               </div>
             </div>
           )}
