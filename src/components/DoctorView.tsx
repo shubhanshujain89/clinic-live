@@ -380,12 +380,12 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="mx-auto max-w-7xl space-y-6 px-3 pb-6 sm:px-4 lg:px-0">
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-5">
 
         {/* Doctor Profile */}
-        <div className="relative min-w-0 overflow-hidden rounded-2xl border border-teal-500/25 bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950/30 p-4 shadow-lg">
+        <div className="relative min-w-0 overflow-hidden rounded-2xl border border-teal-500/25 bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950/30 p-4 shadow-lg sm:col-span-2 lg:col-span-1">
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-teal-400 via-emerald-400 to-transparent" />
           <div className="flex min-w-0 items-start gap-3 pt-1">
             <div className="flex aspect-square h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-950 p-0.5 text-teal-400 ring-1 ring-teal-400/50">
