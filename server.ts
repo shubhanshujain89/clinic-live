@@ -3,7 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { getDatabase, readDoc, listQuery, writeDoc, updateDoc, deleteDoc, findUserByEmail, verifyPassword, createPublicBooking, resetUserPassword, extractTableName } from './server/db.js';
-import { executeQueryOne } from './server/db/connection.js';
+import { executeQuery, executeQueryOne } from './server/db/connection.js';
 import { repositories } from './server/db/repositories/index.js';
 import { services } from './server/db/services/index.js';
 import { getClinicPlanSnapshot, getPlanLimits } from './server/db/services/planService.js';
@@ -25,7 +25,16 @@ if (sessionSecretError) {
   throw new Error(sessionSecretError);
 }
 
-const databaseReady = getDatabase().then(() => undefined).catch((error) => {
+const databaseReady = getDatabase().then(async () => {
+  try {
+    await executeQuery('ALTER TABLE appointments ADD COLUMN scheduled_slot VARCHAR(100) NULL AFTER token_sequence');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes('Duplicate column') && !message.includes('already exists')) {
+      console.warn('Appointment timing migration could not be applied at startup:', message);
+    }
+  }
+}).catch((error) => {
   console.warn('Database unavailable at startup; continuing in degraded mode.', error instanceof Error ? error.message : error);
   return undefined;
 });
