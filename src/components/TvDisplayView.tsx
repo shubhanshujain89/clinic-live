@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Clinic, TokenItem, QueueSession } from '../types/queue';
 import { soundManager } from '../lib/audio';
+import { formatDoctorName } from '../lib/doctorName';
 
 interface TvDisplayViewProps {
   clinic: Clinic;
@@ -89,7 +90,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
             <div className="mt-1 flex items-center space-x-2 truncate text-xs text-slate-400 sm:space-x-3 sm:text-sm">
               <span className="truncate font-black text-2xl text-white sm:text-3xl lg:text-4xl">{clinic.name}</span>
               <span className="text-slate-500">•</span>
-              <span className="text-teal-300 font-black text-xl sm:text-2xl lg:text-3xl">{clinic.doctorName}</span>
+              <span className="text-teal-300 font-black text-xl sm:text-2xl lg:text-3xl">{formatDoctorName(clinic.doctorName)}</span>
               <span className="text-slate-500">•</span>
               <span className="text-slate-300 font-semibold text-sm sm:text-base">{clinic.cabinNumber}</span>
             </div>

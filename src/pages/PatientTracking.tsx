@@ -13,6 +13,7 @@ interface TrackingData {
   status: string;
   patientsAhead: number;
   estimatedWaitMinutes: number;
+  estimatedConsultationTime: string;
   doctorStatus: string;
   delayMinutes: number;
   estimatedConsultationMinutes: number;
@@ -209,8 +210,9 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
                   <p className="mt-3 text-2xl font-black text-slate-900">Token #{tracking.patientsAhead > 0 ? Math.max(1, tracking.patientsAhead) : '1'}</p>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50/40">
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Estimated wait</p>
-                  <p className="mt-3 text-2xl font-black text-slate-900">~{tracking.estimatedWaitMinutes} min</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Estimated consultation</p>
+                  <p className="mt-3 text-2xl font-black text-slate-900">{tracking.estimatedConsultationTime}</p>
+                  <p className="mt-1 text-xs text-slate-500">Wait: ~{tracking.estimatedWaitMinutes} min</p>
                 </div>
               </div>
 
@@ -221,7 +223,7 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
 
               <div className="space-y-3 border-t border-slate-200 pt-4 text-sm text-slate-600">
                 <p className="font-medium text-slate-700">Doctor status: {tracking.doctorStatus}</p>
-                <p>Estimated consultation: about {tracking.estimatedConsultationMinutes} min</p>
+                <p>Average consultation duration: about {tracking.estimatedConsultationMinutes} min</p>
                 {tracking.delayMinutes > 0 && <p className="text-amber-700">Current delay: +{tracking.delayMinutes} min</p>}
               </div>
 

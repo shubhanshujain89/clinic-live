@@ -24,10 +24,8 @@ export const WhatWeProvidePage: React.FC<Props> = ({ onNavigate }) => (
     <main className="what-we-provide-page">
       <section className="what-we-provide-hero">
         <h1 className="public-page-title mx-auto mt-0 max-w-4xl">Digital Appointment & Live Queue Management</h1>
-        <p className="public-page-lede mx-auto mt-1 max-w-3xl">
-          Everything your clinic needs to manage appointments,
-          <br />
-          tokens and patient flow in one simple system.
+        <p className="public-page-lede mx-auto mt-0 max-w-full">
+          Everything your clinic needs to manage appointments, tokens and patient flow in one simple system.
         </p>
       </section>
 

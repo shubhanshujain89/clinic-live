@@ -6,6 +6,7 @@
 import { repositories } from '../repositories/index.js';
 import type { Token } from '../repositories/tokens.js';
 import { executeQuery, executeQueryOne, executeTransaction } from '../connection.js';
+import { getClinicTimezone } from './clinicTime.js';
 
 export interface QueueStats {
   waiting: number;
@@ -205,19 +206,32 @@ const parseClinicOperatingWindow = (operatingHours?: string): { openMinutes: num
   };
 };
 
+const getMinutesInTimezone = (now: Date, timezone?: string): number => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: getClinicTimezone(timezone),
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return Number(values.hour || 0) * 60 + Number(values.minute || 0);
+};
+
 export const adjustWaitForClinicSchedule = ({
   queueWaitMinutes,
   operatingHours,
   now = new Date(),
+  timezone,
 }: {
   queueWaitMinutes: number;
   operatingHours?: string;
   now?: Date;
+  timezone?: string;
 }): number => {
   const parsedWindow = parseClinicOperatingWindow(operatingHours);
   if (!parsedWindow) return Math.max(0, Math.round(queueWaitMinutes));
 
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const nowMinutes = getMinutesInTimezone(now, timezone);
   const openMinutes = parsedWindow.openMinutes;
   const closeMinutes = parsedWindow.closeMinutes;
 
@@ -239,6 +253,7 @@ export const getPublicTrackingEstimatedWaitMinutes = ({
   operatingHours,
   queueWaitMinutes,
   now = new Date(),
+  timezone,
   patientsAhead,
   averageConsultationMinutes,
   delayMinutes,
@@ -248,6 +263,7 @@ export const getPublicTrackingEstimatedWaitMinutes = ({
   operatingHours?: string;
   queueWaitMinutes: number;
   now?: Date;
+  timezone?: string;
   patientsAhead?: number;
   averageConsultationMinutes?: number;
   delayMinutes?: number;
@@ -263,6 +279,7 @@ export const getPublicTrackingEstimatedWaitMinutes = ({
       queueWaitMinutes: Math.max(0, Math.round(queueWaitMinutes)),
       operatingHours,
       now,
+      timezone,
     });
   }
 

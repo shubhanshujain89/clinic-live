@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Plus, Edit, Trash2, Search, Upload } from 'lucide-react';
 import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, recordAuditEvent } from '../lib/firebase';
 import { PhoneInput } from '../components/PhoneInput';
+import { formatDoctorName } from '../lib/doctorName';
 
 interface Doctor {
   id: string;
@@ -287,7 +288,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold group-hover:text-emerald-400 transition">{doctor.name}</h3>
+                      <h3 className="text-xl font-bold group-hover:text-emerald-400 transition">{formatDoctorName(doctor.name)}</h3>
                       <p className="text-sm text-emerald-400">{doctor.specialization}</p>
                     </div>
                     <div className="flex gap-2">

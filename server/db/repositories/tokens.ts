@@ -35,6 +35,7 @@ export interface Token {
   preConsultationNotes?: any;
   weight?: string;
   temperature?: string;
+  oxygenSaturation?: string;
   bloodPressure?: string;
   triageNotes?: string;
   doctorNotes?: string;
@@ -79,6 +80,7 @@ export class TokenRepository extends BaseRepository<Token> {
         : undefined,
       weight: row.weight,
       temperature: row.temperature,
+      oxygenSaturation: row.oxygen_saturation,
       bloodPressure: row.blood_pressure,
       triageNotes: row.triage_notes,
       doctorNotes: row.doctor_notes,
@@ -116,6 +118,7 @@ export class TokenRepository extends BaseRepository<Token> {
     if (entity.preConsultationNotes !== undefined) columns.pre_consultation_notes = JSON.stringify(entity.preConsultationNotes);
     if (entity.weight !== undefined) columns.weight = entity.weight;
     if (entity.temperature !== undefined) columns.temperature = entity.temperature;
+    if (entity.oxygenSaturation !== undefined) columns.oxygen_saturation = entity.oxygenSaturation;
     if (entity.bloodPressure !== undefined) columns.blood_pressure = entity.bloodPressure;
     if (entity.triageNotes !== undefined) columns.triage_notes = entity.triageNotes;
     if (entity.doctorNotes !== undefined) columns.doctor_notes = entity.doctorNotes;

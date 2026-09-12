@@ -15,6 +15,7 @@ export interface TrackingResult {
   status: string;
   patientsAhead: number;
   estimatedWaitMinutes: number;
+  estimatedConsultationTime: string;
   estimatedConsultationMinutes: number;
   doctorStatus: string;
   delayMinutes: number;
@@ -114,7 +115,13 @@ export class TrackingService {
       operatingHours: result.operating_hours,
       queueWaitMinutes: rawEstimatedWaitMinutes,
       now: new Date(),
+      timezone: result.timezone,
     });
+    const estimatedConsultationTime = new Intl.DateTimeFormat('en-IN', {
+      timeZone: result.timezone || 'Asia/Kolkata',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(new Date(Date.now() + estimatedWaitMinutes * 60 * 1000));
 
     // Map status for public display
     const publicStatus = result.status === 'SERVING' ? 'IN_CONSULTATION' : result.status;
@@ -128,6 +135,7 @@ export class TrackingService {
       status: publicStatus,
       patientsAhead,
       estimatedWaitMinutes,
+      estimatedConsultationTime,
       estimatedConsultationMinutes: Math.max(1, Math.round(averageMinutes)),
       doctorStatus: result.doctor_status,
       delayMinutes: Number(result.delay_minutes) || 0,

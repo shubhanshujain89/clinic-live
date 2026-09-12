@@ -34,6 +34,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
   // Optional Vitals & Reception Notes (with predefined units)
   const [weight, setWeight] = useState('');
   const [temperature, setTemperature] = useState('');
+  const [oxygenSaturation, setOxygenSaturation] = useState('');
   const [bpSystolic, setBpSystolic] = useState('');
   const [bpDiastolic, setBpDiastolic] = useState('');
 
@@ -55,6 +56,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
 
       const formattedWeight = !isBasicPlan && weight.trim() ? `${weight.trim()} kg` : undefined;
       const formattedTemp = !isBasicPlan && temperature.trim() ? `${temperature.trim()} °F` : undefined;
+      const formattedSpO2 = !isBasicPlan && oxygenSaturation.trim() ? `${oxygenSaturation.trim()}%` : undefined;
       const formattedBp = !isBasicPlan && (bpSystolic.trim() || bpDiastolic.trim())
         ? bpSystolic.trim() && bpDiastolic.trim()
           ? `${bpSystolic.trim()}/${bpDiastolic.trim()} mmHg`
@@ -98,6 +100,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
         createdAt: new Date().toISOString(),
         weight: formattedWeight,
         temperature: formattedTemp,
+        oxygenSaturation: formattedSpO2,
         bloodPressure: formattedBp,
       };
 
@@ -209,7 +212,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
               <span className="text-[10px] text-slate-400 font-medium">Reception Pre-Check</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               {/* Weight with predefined kg */}
               <div>
                 <label className="text-[11px] text-slate-400 font-medium block mb-1 flex items-center gap-1">
@@ -248,6 +251,27 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({
                   />
                   <span className="absolute right-3 text-xs font-bold text-amber-400 select-none pointer-events-none">
                     °F
+                  </span>
+                </div>
+              </div>
+
+              {/* Oxygen Saturation */}
+              <div>
+                <label className="text-[11px] text-slate-400 font-medium block mb-1 flex items-center gap-1">
+                  <Activity className="w-3 h-3 text-cyan-400" />
+                  SpO₂
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="98"
+                    value={oxygenSaturation}
+                    onChange={(e) => setOxygenSaturation(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 pl-3 pr-10 text-xs text-white placeholder-slate-600 focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono"
+                  />
+                  <span className="absolute right-3 text-xs font-bold text-cyan-400 select-none pointer-events-none">
+                    %
                   </span>
                 </div>
               </div>

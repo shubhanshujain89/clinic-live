@@ -30,6 +30,7 @@ import type { User } from '../lib/firebase';
 import { soundManager } from '../lib/audio';
 import { getDoctorQueueAction } from './doctorQueueLogic';
 import { getAverageWaitSummary } from './waitMetrics';
+import { formatDoctorName } from '../lib/doctorName';
 
 interface DoctorViewProps {
   clinic: Clinic;
@@ -67,6 +68,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   const [editPainScale, setEditPainScale] = useState(3);
   const [editAllergies, setEditAllergies] = useState('');
   const [editTemp, setEditTemp] = useState('');
+  const [editSpO2, setEditSpO2] = useState('');
   const [editBpSys, setEditBpSys] = useState('');
   const [editBpDia, setEditBpDia] = useState('');
   const [editWeight, setEditWeight] = useState('');
@@ -122,6 +124,9 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
     const rawTemp = token.temperature || preNotes?.temperature || preNotes?.feverTemp || '';
     setEditTemp(rawTemp.replace(/[^\d.]/g, ''));
 
+    const rawSpO2 = token.oxygenSaturation || preNotes?.oxygenSaturation || preNotes?.spo2 || '';
+    setEditSpO2(String(rawSpO2 || '').replace(/[^\d.]/g, ''));
+
     const rawBp = token.bloodPressure || preNotes?.bloodPressure || preNotes?.bpReading || '';
     if (rawBp.includes('/')) {
       const parts = rawBp.split('/');
@@ -168,6 +173,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
     try {
       const formattedWeight = editWeight.trim() ? `${editWeight.trim()} kg` : undefined;
       const formattedTemp = editTemp.trim() ? `${editTemp.trim()} °F` : undefined;
+      const formattedSpO2 = editSpO2.trim() ? `${editSpO2.trim()}%` : undefined;
       const formattedBp =
         editBpSys.trim() && editBpDia.trim()
           ? `${editBpSys.trim()}/${editBpDia.trim()} mmHg`
@@ -184,6 +190,8 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
         allergies: editAllergies.trim() || undefined,
         temperature: formattedTemp,
         feverTemp: formattedTemp,
+        oxygenSaturation: formattedSpO2,
+        spo2: formattedSpO2,
         bloodPressure: formattedBp,
         bpReading: formattedBp,
         weight: formattedWeight,
@@ -200,6 +208,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
         patientGender: editGender,
         weight: formattedWeight,
         temperature: formattedTemp,
+        oxygenSaturation: formattedSpO2,
         bloodPressure: formattedBp,
         triageNotes: editNotes.trim() || undefined,
         preConsultationNotes: updatedPreNotes,
@@ -380,7 +389,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
               {clinic.doctorPhoto ? <img src={clinic.doctorPhoto} alt={clinic.doctorName || 'Doctor'} className="h-full w-full rounded-xl object-cover" /> : <Stethoscope className="h-6 w-6" />}
             </div>
             <div className="min-w-0">
-              <h2 className="break-words text-sm font-bold leading-tight text-white">{clinic.doctorName || 'Doctor'}</h2>
+              <h2 className="break-words text-sm font-bold leading-tight text-white">{formatDoctorName(clinic.doctorName)}</h2>
               <p className="mt-0.5 break-words text-[11px] leading-snug text-slate-400">{clinic.specialty || 'General Practice'}</p>
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <span className="break-words text-[10px] font-mono leading-snug text-slate-500">
@@ -856,7 +865,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
               </div>
 
               {/* Vitals with predefined units */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 {/* Weight with predefined kg */}
                 <div>
                   <label className="text-[11px] text-slate-400 font-medium block mb-1 flex items-center gap-1">
@@ -895,6 +904,27 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                     />
                     <span className="absolute right-3 text-xs font-bold text-amber-400 select-none pointer-events-none">
                       Â°F
+                    </span>
+                  </div>
+                </div>
+
+                {/* Oxygen saturation */}
+                <div>
+                  <label className="text-[11px] text-slate-400 font-medium block mb-1 flex items-center gap-1">
+                    <Activity className="w-3 h-3 text-cyan-400" />
+                    SpO₂
+                  </label>
+                  <div className="relative flex items-center">
+                    <input
+                      type="number"
+                      step="0.1"
+                      placeholder="98"
+                      value={editSpO2}
+                      onChange={(e) => setEditSpO2(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-3 pr-10 text-xs text-white placeholder-slate-600 focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono"
+                    />
+                    <span className="absolute right-3 text-xs font-bold text-cyan-400 select-none pointer-events-none">
+                      %
                     </span>
                   </div>
                 </div>

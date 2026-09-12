@@ -124,9 +124,11 @@ export class BookingService {
          JOIN \`tokens\` t ON t.patient_id = p.id
          JOIN \`sessions\` s ON s.id = t.session_id
          WHERE p.phone IN (?, ?, ?)
+           AND p.clinic_id = ?
+           AND t.clinic_id = ?
            AND s.date = ?
          LIMIT 1`,
-        [...phoneVariants, businessDate]
+        [...phoneVariants, input.clinicId, input.clinicId, businessDate]
       );
       if ((existingPatientRows as any[]).length > 0) {
         throw new Error('A booking is already registered for this mobile number today.');

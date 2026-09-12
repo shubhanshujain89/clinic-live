@@ -1,6 +1,7 @@
 import React from 'react';
 import { Printer, X, QrCode } from 'lucide-react';
 import { Clinic, TokenItem } from '../types/queue';
+import { formatDoctorName } from '../lib/doctorName';
 
 interface PrintTokenModalProps {
   clinic: Clinic;
@@ -35,7 +36,7 @@ export const PrintTokenModal: React.FC<PrintTokenModalProps> = ({
         <div className="bg-white text-slate-950 p-6 rounded-2xl font-mono text-center space-y-3 shadow-inner border border-slate-300">
           <div className="border-b-2 border-dashed border-slate-300 pb-2">
             <h4 className="font-bold text-sm uppercase tracking-tight">{clinic.name}</h4>
-            <p className="text-[10px] text-slate-600 mt-0.5">{clinic.doctorName}</p>
+            <p className="text-[10px] text-slate-600 mt-0.5">{formatDoctorName(clinic.doctorName)}</p>
             <p className="text-[10px] text-slate-500">{clinic.cabinNumber}</p>
           </div>
 

@@ -33,6 +33,8 @@ export interface PreConsultationNotes {
   allergies?: string;
   feverTemp?: string;
   temperature?: string;
+  oxygenSaturation?: string; // e.g. "98%"
+  spo2?: string;
   bpReading?: string;
   bloodPressure?: string;
   weight?: string; // in kg
@@ -72,6 +74,7 @@ export interface TokenItem {
   // Optional Vitals recorded at Reception
   weight?: string; // e.g. "68 kg"
   temperature?: string; // e.g. "98.6 °F"
+  oxygenSaturation?: string; // e.g. "98%"
   bloodPressure?: string; // e.g. "120/80 mmHg"
   triageNotes?: string; // Receptionist observation note
   doctorNotes?: string;

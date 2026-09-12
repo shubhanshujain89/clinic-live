@@ -52,6 +52,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
   const [vitalsToken, setVitalsToken] = useState<TokenItem | null>(null);
   const [vitalsWeight, setVitalsWeight] = useState('');
   const [vitalsTemp, setVitalsTemp] = useState('');
+  const [vitalsSpO2, setVitalsSpO2] = useState('');
   const [vitalsBpSys, setVitalsBpSys] = useState('');
   const [vitalsBpDia, setVitalsBpDia] = useState('');
   const [isSavingVitals, setIsSavingVitals] = useState(false);
@@ -66,6 +67,9 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
     // Parse temp clean number
     const rawTemp = token.temperature || token.preConsultationNotes?.temperature || token.preConsultationNotes?.feverTemp || '';
     setVitalsTemp(rawTemp.replace(/[^\d.]/g, ''));
+
+    const rawSpO2 = token.oxygenSaturation || token.preConsultationNotes?.oxygenSaturation || token.preConsultationNotes?.spo2 || '';
+    setVitalsSpO2(String(rawSpO2 || '').replace(/[^\d.]/g, ''));
 
     // Parse BP into Systolic and Diastolic
     const rawBp = token.bloodPressure || token.preConsultationNotes?.bloodPressure || token.preConsultationNotes?.bpReading || '';
@@ -95,6 +99,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
 
       const formattedWeight = vitalsWeight.trim() ? `${vitalsWeight.trim()} kg` : undefined;
       const formattedTemp = vitalsTemp.trim() ? `${vitalsTemp.trim()} °F` : undefined;
+      const formattedSpO2 = vitalsSpO2.trim() ? `${vitalsSpO2.trim()}%` : undefined;
       const formattedBp =
         vitalsBpSys.trim() && vitalsBpDia.trim()
           ? `${vitalsBpSys.trim()}/${vitalsBpDia.trim()} mmHg`
@@ -107,6 +112,8 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
         weight: formattedWeight,
         temperature: formattedTemp,
         feverTemp: formattedTemp,
+        oxygenSaturation: formattedSpO2,
+        spo2: formattedSpO2,
         bloodPressure: formattedBp,
         bpReading: formattedBp,
         lastEditedBy: 'RECEPTIONIST' as const,
@@ -115,6 +122,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
       await updateDoc(doc(db, 'tokens', vitalsToken.id), {
         weight: formattedWeight,
         temperature: formattedTemp,
+        oxygenSaturation: formattedSpO2,
         bloodPressure: formattedBp,
         preConsultationNotes: updatedPreNotes,
       });
@@ -615,7 +623,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
                       {!isBasicPlan && <td className="py-3.5 px-4 max-w-xs">
                         <div>
                           {/* Vitals Badges */}
-                          {(token.weight || token.temperature || token.bloodPressure || token.preConsultationNotes?.weight || token.preConsultationNotes?.feverTemp || token.preConsultationNotes?.bloodPressure) && (
+                          {(token.weight || token.temperature || token.oxygenSaturation || token.bloodPressure || token.preConsultationNotes?.weight || token.preConsultationNotes?.feverTemp || token.preConsultationNotes?.oxygenSaturation || token.preConsultationNotes?.spo2 || token.preConsultationNotes?.bloodPressure) && (
                             <div className="flex flex-wrap items-center gap-1 mt-1.5 text-[10px]">
                               {(token.weight || token.preConsultationNotes?.weight) && (
                                 <span className="bg-teal-950/60 text-teal-300 border border-teal-500/20 px-1.5 py-0.5 rounded font-mono">
@@ -625,6 +633,11 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
                               {(token.temperature || token.preConsultationNotes?.temperature || token.preConsultationNotes?.feverTemp) && (
                                 <span className="bg-amber-950/60 text-amber-300 border border-amber-500/20 px-1.5 py-0.5 rounded font-mono">
                                   🌡️ {token.temperature || token.preConsultationNotes?.temperature || token.preConsultationNotes?.feverTemp}
+                                </span>
+                              )}
+                              {(token.oxygenSaturation || token.preConsultationNotes?.oxygenSaturation || token.preConsultationNotes?.spo2) && (
+                                <span className="bg-cyan-950/60 text-cyan-300 border border-cyan-500/20 px-1.5 py-0.5 rounded font-mono">
+                                  O₂ {token.oxygenSaturation || token.preConsultationNotes?.oxygenSaturation || token.preConsultationNotes?.spo2}
                                 </span>
                               )}
                               {(token.bloodPressure || token.preConsultationNotes?.bloodPressure || token.preConsultationNotes?.bpReading) && (
@@ -727,7 +740,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
             </div>
 
             <form onSubmit={handleSaveVitals} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 {/* Weight with predefined kg */}
                 <div>
                   <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-1 flex items-center gap-1">
@@ -766,6 +779,27 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
                     />
                     <span className="absolute right-3 text-xs font-bold text-amber-400 select-none pointer-events-none">
                       °F
+                    </span>
+                  </div>
+                </div>
+
+                {/* Oxygen saturation */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-1 flex items-center gap-1">
+                    <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                    SpO₂
+                  </label>
+                  <div className="relative flex items-center">
+                    <input
+                      type="number"
+                      step="0.1"
+                      placeholder="98"
+                      value={vitalsSpO2}
+                      onChange={(e) => setVitalsSpO2(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-3 pr-10 text-xs text-white placeholder-slate-600 focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono"
+                    />
+                    <span className="absolute right-3 text-xs font-bold text-cyan-400 select-none pointer-events-none">
+                      %
                     </span>
                   </div>
                 </div>

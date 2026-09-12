@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Clinic, TokenItem } from '../types/queue';
+import { formatDoctorName } from '../lib/doctorName';
 import { PaymentGatewayPage } from './PaymentGatewayPage';
 
 interface BookingViewProps {
@@ -213,7 +214,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
               Book Doctor Consultation
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              Doctor: <span className="text-slate-200 font-semibold">{clinic.doctorName}</span> • {clinic.specialty} • {clinic.cabinNumber}
+              Doctor: <span className="text-slate-200 font-semibold">{formatDoctorName(clinic.doctorName)}</span> • {clinic.specialty} • {clinic.cabinNumber}
             </p>
           </div>
 

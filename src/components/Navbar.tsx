@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { UserRole, Clinic, DoctorStatus } from '../types/queue';
 import { User, auth, signOut } from '../lib/firebase';
+import { formatDoctorName } from '../lib/doctorName';
 import { LiveClock } from './LiveClock';
 
 interface NavbarProps {
@@ -54,7 +55,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </div>
               <p className="hidden items-center gap-1.5 text-[11px] text-slate-400 sm:flex">
-                <span>{clinic?.doctorName || 'Clinic staff'}</span>
+                <span>{formatDoctorName(clinic?.doctorName)}</span>
                 <span>•</span>
                 <span className="text-slate-300">{clinic?.cabinNumber || 'Clinic'}</span>
               </p>

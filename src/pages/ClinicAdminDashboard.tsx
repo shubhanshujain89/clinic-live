@@ -16,14 +16,51 @@ export const isAllowedUserCreationRole = (role: string) => {
 
 const displayUserRole = (role: string) => String(role || '').toUpperCase() === 'CLINIC_ADMIN' || String(role || '').toLowerCase() === 'clinic admin' ? 'Clinic' : role;
 
+const DEFAULT_OPERATING_HOURS = '9:00 AM - 6:00 PM';
+
 const HOURS_OPTIONS = [
-  '9:00 AM - 6:00 PM',
+  DEFAULT_OPERATING_HOURS,
   '9:30 AM - 7:00 PM',
   '10:00 AM - 7:00 PM',
   '8:00 AM - 5:00 PM',
   '24 Hours',
   'Custom Hours'
 ];
+
+const parseOperatingHoursParts = (value?: string) => {
+  const safeValue = String(value || '').trim();
+  const match = safeValue.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+
+  if (!match) {
+    return {
+      startHour: '9',
+      startMinute: '00',
+      startMeridian: 'AM',
+      endHour: '6',
+      endMinute: '00',
+      endMeridian: 'PM',
+    };
+  }
+
+  const [, startHour, startMinute, startMeridian, endHour, endMinute, endMeridian] = match;
+  return {
+    startHour,
+    startMinute,
+    startMeridian: String(startMeridian).toUpperCase(),
+    endHour,
+    endMinute,
+    endMeridian: String(endMeridian).toUpperCase(),
+  };
+};
+
+const formatOperatingHours = (parts: ReturnType<typeof parseOperatingHoursParts>) => {
+  const startHour = Number(parts.startHour || 9);
+  const endHour = Number(parts.endHour || 6);
+  const normalizedStartHour = startHour === 0 ? 12 : (startHour > 12 ? startHour % 12 : startHour);
+  const normalizedEndHour = endHour === 0 ? 12 : (endHour > 12 ? endHour % 12 : endHour);
+
+  return `${normalizedStartHour}:${parts.startMinute || '00'} ${parts.startMeridian} - ${normalizedEndHour}:${parts.endMinute || '00'} ${parts.endMeridian}`;
+};
 
 const PACK_OPTIONS = [
   { value: 'TRIAL', label: 'Trial Pack', validityDays: 30, price: '₹0' },
@@ -184,13 +221,14 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   const [activeTab, setActiveTab] = useState<DashboardTabKey>('dashboard');
   const [contentSections, setContentSections] = useState(loadContentSections());
   const [savedContentSections, setSavedContentSections] = useState(loadContentSections());
+  const [customOperatingHours, setCustomOperatingHours] = useState(parseOperatingHoursParts(DEFAULT_OPERATING_HOURS));
   const [formData, setFormData] = useState({
     name: '',
     address: '',
     phone: '+91 ',
     email: '',
     specializations: '',
-    operatingHours: HOURS_OPTIONS[0],
+    operatingHours: DEFAULT_OPERATING_HOURS,
     featurePlan: 'TRIAL' as FeaturePlan,
     logo: '',
     qrCodeUrl: ''
@@ -797,6 +835,15 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     setShowUserModal(true);
   };
 
+  const updateCustomOperatingHours = (field: keyof ReturnType<typeof parseOperatingHoursParts>, value: string) => {
+    const nextValue = { ...customOperatingHours, [field]: value };
+    setCustomOperatingHours(nextValue);
+    setFormData((prev) => ({
+      ...prev,
+      operatingHours: formatOperatingHours(nextValue),
+    }));
+  };
+
   const handleSaveClinic = async () => {
     try {
       // Validate required fields
@@ -858,7 +905,8 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       }
       setShowAddModal(false);
       setEditingClinic(null);
-      setFormData({ name: '', address: '', phone: '+91 ', email: '', specializations: '', operatingHours: HOURS_OPTIONS[0], featurePlan: 'TRIAL', logo: '', qrCodeUrl: '' });
+      setCustomOperatingHours(parseOperatingHoursParts(DEFAULT_OPERATING_HOURS));
+      setFormData({ name: '', address: '', phone: '+91 ', email: '', specializations: '', operatingHours: DEFAULT_OPERATING_HOURS, featurePlan: 'TRIAL', logo: '', qrCodeUrl: '' });
       fetchClinics();
     } catch (error) {
       console.error('Error saving clinic:', error);
@@ -990,13 +1038,15 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
   const handleEditClinic = (clinic: Clinic) => {
     setEditingClinic(clinic);
+    const parsedHours = parseOperatingHoursParts(clinic.operatingHours || DEFAULT_OPERATING_HOURS);
+    setCustomOperatingHours(parsedHours);
     setFormData({
       name: clinic.name,
       address: clinic.address,
       phone: clinic.phone || '+91 ',
       email: clinic.email || '',
       specializations: Array.isArray(clinic.specializations) ? clinic.specializations.join(', ') : (typeof clinic.specializations === 'string' ? clinic.specializations : ''),
-      operatingHours: clinic.operatingHours || HOURS_OPTIONS[0],
+      operatingHours: clinic.operatingHours || DEFAULT_OPERATING_HOURS,
       featurePlan: clinic.featurePlan || 'TRIAL',
       logo: clinic.logo || '',
       qrCodeUrl: clinic.qrCodeUrl || ''
@@ -1621,7 +1671,8 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                 <button
                   onClick={() => {
                     setEditingClinic(null);
-                    setFormData({ name: '', address: '', phone: '+91 ', email: '', specializations: '', operatingHours: HOURS_OPTIONS[0], featurePlan: 'TRIAL', logo: '', qrCodeUrl: '' });
+                    setCustomOperatingHours(parseOperatingHoursParts(DEFAULT_OPERATING_HOURS));
+                    setFormData({ name: '', address: '', phone: '+91 ', email: '', specializations: '', operatingHours: DEFAULT_OPERATING_HOURS, featurePlan: 'TRIAL', logo: '', qrCodeUrl: '' });
                     setShowAddModal(true);
                   }}
                   className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-lg font-semibold hover:shadow-lg hover:shadow-emerald-500/50 flex items-center gap-2 transition"
@@ -2381,15 +2432,77 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
 
               <div>
                 <label className="block text-sm font-semibold mb-2">Operating Hours</label>
-                <select
-                  value={formData.operatingHours}
-                  onChange={(e) => setFormData({ ...formData, operatingHours: e.target.value })}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:border-emerald-400 focus:outline-none"
-                >
-                  {HOURS_OPTIONS.map((option) => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
+                <div className="rounded-xl border border-slate-600 bg-slate-700 p-3">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-300">Opening time</label>
+                      <div className="flex gap-2">
+                        <select
+                          value={customOperatingHours.startHour}
+                          onChange={(e) => updateCustomOperatingHours('startHour', e.target.value)}
+                          className="w-20 bg-slate-800 border border-slate-600 rounded-lg px-2 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                        >
+                          {Array.from({ length: 12 }, (_, index) => index + 1).map((hour) => (
+                            <option key={hour} value={String(hour)}>{hour}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={customOperatingHours.startMinute}
+                          onChange={(e) => updateCustomOperatingHours('startMinute', e.target.value)}
+                          className="w-20 bg-slate-800 border border-slate-600 rounded-lg px-2 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                        >
+                          {['00', '15', '30', '45'].map((minute) => (
+                            <option key={minute} value={minute}>{minute}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={customOperatingHours.startMeridian}
+                          onChange={(e) => updateCustomOperatingHours('startMeridian', e.target.value)}
+                          className="w-20 bg-slate-800 border border-slate-600 rounded-lg px-2 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                        >
+                          <option value="AM">AM</option>
+                          <option value="PM">PM</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-300">Closing time</label>
+                      <div className="flex gap-2">
+                        <select
+                          value={customOperatingHours.endHour}
+                          onChange={(e) => updateCustomOperatingHours('endHour', e.target.value)}
+                          className="w-20 bg-slate-800 border border-slate-600 rounded-lg px-2 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                        >
+                          {Array.from({ length: 12 }, (_, index) => index + 1).map((hour) => (
+                            <option key={hour} value={String(hour)}>{hour}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={customOperatingHours.endMinute}
+                          onChange={(e) => updateCustomOperatingHours('endMinute', e.target.value)}
+                          className="w-20 bg-slate-800 border border-slate-600 rounded-lg px-2 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                        >
+                          {['00', '15', '30', '45'].map((minute) => (
+                            <option key={minute} value={minute}>{minute}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={customOperatingHours.endMeridian}
+                          onChange={(e) => updateCustomOperatingHours('endMeridian', e.target.value)}
+                          className="w-20 bg-slate-800 border border-slate-600 rounded-lg px-2 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                        >
+                          <option value="AM">AM</option>
+                          <option value="PM">PM</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+                    Preview: <span className="font-semibold">{formData.operatingHours}</span>
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -2426,7 +2539,8 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                 onClick={() => {
                   setShowAddModal(false);
                   setEditingClinic(null);
-                  setFormData({ name: '', address: '', phone: '+91 ', email: '', specializations: '', operatingHours: HOURS_OPTIONS[0], featurePlan: 'TRIAL', logo: '', qrCodeUrl: '' });
+                  setCustomOperatingHours(parseOperatingHoursParts(DEFAULT_OPERATING_HOURS));
+                  setFormData({ name: '', address: '', phone: '+91 ', email: '', specializations: '', operatingHours: DEFAULT_OPERATING_HOURS, featurePlan: 'TRIAL', logo: '', qrCodeUrl: '' });
                 }}
                 className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition"
               >

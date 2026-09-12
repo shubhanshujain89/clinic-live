@@ -846,7 +846,6 @@ app.post('/api/patient/track', async (req, res) => {
     }
     res.status(200).json({
       ...tracking,
-      estimatedConsultationTime: tracking.estimatedConsultationMinutes,
     });
   } catch (error) {
     res.status(503).json({ error: 'Connection temporarily unavailable.' });

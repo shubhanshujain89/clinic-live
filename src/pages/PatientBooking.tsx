@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, Stethoscope, ChevronRight, Check, Heart } from 'lucide-react';
 import { PhoneInput } from '../components/PhoneInput';
 import { buildTrackingHref } from '../lib/trackingLink';
+import { formatDoctorName } from '../lib/doctorName';
 
 interface Clinic {
   id: string;
@@ -696,7 +697,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h3 className="text-xl font-bold group-hover:text-emerald-400 transition">{doctor.name}</h3>
+                        <h3 className="text-xl font-bold group-hover:text-emerald-400 transition">{formatDoctorName(doctor.name)}</h3>
                         <p className="text-emerald-400 text-sm">{doctor.specialization}</p>
                       </div>
                       <div className="text-right">
@@ -748,7 +749,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">
                   <Stethoscope className="h-4 w-4 text-emerald-600" />
-                  {selectedDoctor.name}
+                  {formatDoctorName(selectedDoctor.name)}
                 </span>
               </div>
             </div>

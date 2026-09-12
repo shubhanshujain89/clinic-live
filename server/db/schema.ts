@@ -207,6 +207,7 @@ CREATE TABLE IF NOT EXISTS tokens (
     pre_consultation_notes JSON,
     weight VARCHAR(20),
     temperature VARCHAR(20),
+    oxygen_saturation VARCHAR(20),
     blood_pressure VARCHAR(50),
     triage_notes TEXT,
     doctor_notes TEXT,
