@@ -540,6 +540,15 @@ export class QueueService {
     return true;
   }
 
+  async syncAllDoctorStatuses(now = new Date()): Promise<void> {
+    const clinics = await executeQuery<{ id: string }>(
+      `SELECT id FROM clinics WHERE doctor_status = 'IN'`
+    );
+    for (const clinic of clinics) {
+      await this.syncDoctorStatusForEmptyQueue(clinic.id, undefined, now);
+    }
+  }
+
   async cancelTokenForClinic(
     tokenId: string,
     clinicId: string,

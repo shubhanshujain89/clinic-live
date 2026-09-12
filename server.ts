@@ -34,6 +34,11 @@ const databaseReady = getDatabase().then(async () => {
       console.warn('Appointment timing migration could not be applied at startup:', message);
     }
   }
+  try {
+    await executeQuery(`ALTER TABLE clinics ALTER COLUMN doctor_status SET DEFAULT 'OUT'`);
+  } catch (error) {
+    console.warn('Doctor status default migration could not be applied at startup:', error instanceof Error ? error.message : error);
+  }
 }).catch((error) => {
   console.warn('Database unavailable at startup; continuing in degraded mode.', error instanceof Error ? error.message : error);
   return undefined;
@@ -57,6 +62,7 @@ const rateLimitTableReady = databaseReady.then(async () => {
 const runQueueRetention = async () => {
   try {
     await services.retention.removeExpiredQueueData();
+    await services.queue.syncAllDoctorStatuses();
   } catch (error) {
     console.error('Queue retention cleanup failed:', error);
   }

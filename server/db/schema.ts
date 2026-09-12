@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS clinics (
     doctor_name VARCHAR(255),
     specialty VARCHAR(255),
     cabin_number VARCHAR(100),
-    doctor_status ENUM('IN', 'OUT', 'ON_BREAK', 'EMERGENCY') DEFAULT 'IN',
+    doctor_status ENUM('IN', 'OUT', 'ON_BREAK', 'EMERGENCY') DEFAULT 'OUT',
     delay_minutes INT DEFAULT 0,
     delay_reason TEXT,
     avg_consultation_minutes DECIMAL(5,2) DEFAULT 12.00,

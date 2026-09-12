@@ -88,6 +88,9 @@ export async function runMigrations(): Promise<void> {
       if (!message.includes('Duplicate column') && !message.includes('already exists')) throw error;
     }
   };
+  const ensureDoctorStatusDefault = async () => {
+    await executeQuery(`ALTER TABLE clinics ALTER COLUMN doctor_status SET DEFAULT 'OUT'`);
+  };
   if (baseline.length > 0) {
     await ensureSubscriptionColumns();
     await ensureClinicTimezone();
@@ -122,6 +125,7 @@ export async function runMigrations(): Promise<void> {
   await ensureSubscriptionColumns();
   await ensureClinicTimezone();
   await ensureAppointmentSlot();
+  await ensureDoctorStatusDefault();
 
   await executeQuery(`ALTER TABLE tokens MODIFY token_type ENUM('ONLINE', 'WALK_IN', 'VIP', 'EMERGENCY') DEFAULT 'ONLINE'`);
   await executeQuery(`UPDATE tokens SET token_type = 'EMERGENCY' WHERE token_type = 'VIP'`);
