@@ -210,7 +210,7 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
               <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Live tracking</p>
-                  <p className="mt-1 text-sm text-slate-500">Token {tracking.token}</p>
+                  <p className="mt-1 text-sm text-slate-500">{tracking.clinic}</p>
                 </div>
                 <span className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] ${
                   tracking.status === 'COMPLETED'
@@ -254,9 +254,9 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
                   <p className="mt-2 text-xs text-slate-500">Approximate time based on your booking and clinic schedule.</p>
                 </div>
                 <div className="min-h-[148px] rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-emerald-200 hover:bg-emerald-50/40">
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Queue status</p>
-                  <p className="mt-3 text-2xl font-black text-slate-900">{tracking.doctorStatus === 'IN' ? 'Open' : 'Not started'}</p>
-                  <p className="mt-1 text-xs text-slate-500">{tracking.doctorStatus === 'IN' ? 'The doctor is accepting patients.' : 'Please wait for the doctor to check in.'}</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Doctor status</p>
+                  <p className="mt-3 text-2xl font-black text-slate-900">{tracking.doctorStatus === 'IN' ? 'Available' : 'Not started'}</p>
+                  <p className="mt-1 text-xs text-slate-500">{tracking.doctorStatus === 'IN' ? 'Queue is open.' : 'Waiting for check-in.'}</p>
                 </div>
               </div>
 
@@ -266,7 +266,6 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
               </div>
 
               <div className="space-y-2 border-t border-slate-200 pt-3 text-sm text-slate-600">
-                <p className="font-medium text-slate-700">Doctor status: {tracking.doctorStatus}</p>
                 <p>Average consultation duration: about {tracking.estimatedConsultationMinutes} min</p>
                 {tracking.delayMinutes > 0 && <p className="text-amber-700">Current delay: +{tracking.delayMinutes} min</p>}
               </div>
