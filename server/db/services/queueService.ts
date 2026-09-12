@@ -27,6 +27,10 @@ export interface TokenWithDetails {
   isEmergency: boolean;
   isHold: boolean;
   priority: number;
+  amountPaid: number;
+  paymentMode?: Token['paymentMode'];
+  paymentMethod?: Token['paymentMethod'];
+  paymentStatus: Token['paymentStatus'];
   createdAt: Date;
   calledAt?: Date;
   completedAt?: Date;
@@ -298,6 +302,10 @@ export class QueueService {
       isEmergency: t.isEmergency,
       isHold: t.isHold,
       priority: t.priority,
+      amountPaid: t.amountPaid,
+      paymentMode: t.paymentMode,
+      paymentMethod: t.paymentMethod,
+      paymentStatus: t.paymentStatus,
       createdAt: t.createdAt,
       calledAt: t.calledAt,
       completedAt: t.completedAt,
@@ -341,6 +349,10 @@ export class QueueService {
       isEmergency: token.isEmergency,
       isHold: token.isHold,
       priority: token.priority,
+      amountPaid: token.amountPaid,
+      paymentMode: token.paymentMode,
+      paymentMethod: token.paymentMethod,
+      paymentStatus: token.paymentStatus,
       createdAt: token.createdAt,
       calledAt: token.calledAt,
       completedAt: token.completedAt,
@@ -762,6 +774,10 @@ export class QueueService {
       isEmergency: updatedToken.isEmergency,
       isHold: updatedToken.isHold,
       priority: updatedToken.priority,
+      amountPaid: updatedToken.amountPaid,
+      paymentMode: updatedToken.paymentMode,
+      paymentMethod: updatedToken.paymentMethod,
+      paymentStatus: updatedToken.paymentStatus,
       createdAt: updatedToken.createdAt,
       calledAt: updatedToken.calledAt,
       completedAt: updatedToken.completedAt,
@@ -807,6 +823,10 @@ export class QueueService {
       isEmergency: updatedToken.isEmergency,
       isHold: updatedToken.isHold,
       priority: updatedToken.priority,
+      amountPaid: updatedToken.amountPaid,
+      paymentMode: updatedToken.paymentMode,
+      paymentMethod: updatedToken.paymentMethod,
+      paymentStatus: updatedToken.paymentStatus,
       createdAt: updatedToken.createdAt,
       calledAt: updatedToken.calledAt,
       completedAt: updatedToken.completedAt,
@@ -838,6 +858,10 @@ export class QueueService {
       isEmergency: token.isEmergency,
       isHold: token.isHold,
       priority: token.priority,
+      amountPaid: token.amountPaid,
+      paymentMode: token.paymentMode,
+      paymentMethod: token.paymentMethod,
+      paymentStatus: token.paymentStatus,
       createdAt: token.createdAt,
       calledAt: token.calledAt,
       completedAt: token.completedAt,
