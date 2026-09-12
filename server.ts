@@ -25,18 +25,24 @@ if (sessionSecretError) {
   throw new Error(sessionSecretError);
 }
 
-const databaseReady = getDatabase();
+const databaseReady = getDatabase().then(() => undefined).catch((error) => {
+  console.warn('Database unavailable at startup; continuing in degraded mode.', error instanceof Error ? error.message : error);
+  return undefined;
+});
+
 const rateLimitTableReady = databaseReady.then(async () => {
-  await executeQueryOne(`
-    CREATE TABLE IF NOT EXISTS rate_limits (
-      rate_key VARCHAR(255) PRIMARY KEY,
-      request_count INT NOT NULL DEFAULT 0,
-      reset_at TIMESTAMP NOT NULL,
-      INDEX idx_rate_limits_reset_at (reset_at)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  `);
-}).catch((error) => {
-  console.error('Rate limit table initialization failed:', error instanceof Error ? error.message : error);
+  try {
+    await executeQueryOne(`
+      CREATE TABLE IF NOT EXISTS rate_limits (
+        rate_key VARCHAR(255) PRIMARY KEY,
+        request_count INT NOT NULL DEFAULT 0,
+        reset_at TIMESTAMP NOT NULL,
+        INDEX idx_rate_limits_reset_at (reset_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+  } catch (error) {
+    console.warn('Rate limit table initialization skipped because the database is unavailable:', error instanceof Error ? error.message : error);
+  }
 });
 
 const runQueueRetention = async () => {

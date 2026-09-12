@@ -38,7 +38,7 @@ const workflows = [
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => (
   <div className="landing-page-shell min-h-screen text-slate-900">
-    <main className="landing-main px-4 sm:px-6 lg:px-8">
+    <main className="landing-main px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8 lg:pb-24">
       <section className="landing-hero">
         <div className="landing-hero-grid">
           <div className="landing-hero-copy">

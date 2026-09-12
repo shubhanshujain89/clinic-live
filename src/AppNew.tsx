@@ -87,6 +87,10 @@ export default function App() {
 
   // Monitor auth state
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setIsLoading(false);
+    }, 2500);
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAuthUser(user);
       if (!user) {
@@ -118,7 +122,11 @@ export default function App() {
       }
       setIsLoading(false);
     });
-    return () => unsubscribe();
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {

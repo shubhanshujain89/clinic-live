@@ -52,8 +52,24 @@ export const hashPassword = async (password: string, salt?: string): Promise<str
   return `${saltHex}:${hashHex}`;
 };
 
+const requestWithTimeout = async (input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = 5000): Promise<Response> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal, credentials: 'include' });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error(`Request timed out after ${timeoutMs}ms.`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 const api = async <T>(path: string, init?: RequestInit): Promise<T> => {
-  const response = await fetch(path, {
+  const response = await requestWithTimeout(path, {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     ...init,
@@ -214,7 +230,7 @@ export const signInWithEmailAndPassword = async (_auth: unknown, email: string, 
   const normalizedPassword = String(password || '');
   const requestVersion = ++authRequestVersion;
 
-  const response = await fetch('/api/auth/login', {
+  const response = await requestWithTimeout('/api/auth/login', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -247,13 +263,13 @@ export const createUserWithEmailAndPassword = async (_auth: unknown, email: stri
 
 export const signOut = async (_auth?: unknown) => {
   authRequestVersion++;
-  await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => undefined);
+  await requestWithTimeout('/api/auth/logout', { method: 'POST', credentials: 'include' }, 3000).catch(() => undefined);
   auth.currentUser = null;
 };
 
 export const onAuthStateChanged = (_auth: unknown, callback: (user: User | null) => void) => {
   const requestVersion = authRequestVersion;
-  fetch('/api/auth/me', { credentials: 'include' })
+  requestWithTimeout('/api/auth/me', { credentials: 'include' }, 4000)
     .then(async (response) => {
       if (requestVersion !== authRequestVersion) return null;
       if (!response.ok) return null;
@@ -264,6 +280,7 @@ export const onAuthStateChanged = (_auth: unknown, callback: (user: User | null)
       return user;
     })
     .catch(() => {
+      if (requestVersion !== authRequestVersion) return;
       auth.currentUser = null;
       callback(null);
     });
