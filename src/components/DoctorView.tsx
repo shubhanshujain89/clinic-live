@@ -647,6 +647,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                         <div className="text-sm font-semibold text-slate-200">{tok.patientName}</div>
                         <div className="text-xs text-slate-500">
                           {tok.tokenType} - {tok.patientAge ? `${tok.patientAge}y` : 'Adult'}
+                          <span className={tok.paymentStatus === 'PAID' ? 'text-emerald-400' : 'text-amber-300'}> - {tok.paymentStatus === 'PAID' ? 'Paid' : 'Payment pending'}</span>
                         </div>
                       </div>
                     </div>
