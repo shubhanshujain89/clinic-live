@@ -156,7 +156,11 @@ export class TokenRepository extends BaseRepository<Token> {
          CASE
            WHEN t.status IN ('CANCELLED', 'NO_SHOW') THEN 0
            WHEN t.payment_status = 'PAID' THEN
-             CASE WHEN t.payment_mode = 'PAY_NOW' THEN GREATEST(t.amount_paid - 25, 0) ELSE t.amount_paid END
+             CASE
+               WHEN t.amount_paid > 0 AND t.payment_mode = 'PAY_NOW' THEN GREATEST(t.amount_paid - 25, 0)
+               WHEN t.amount_paid > 0 THEN t.amount_paid
+               ELSE c.consultation_fee
+             END
            WHEN t.status = 'COMPLETED' THEN c.consultation_fee
            ELSE 0
          END

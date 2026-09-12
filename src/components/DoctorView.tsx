@@ -239,7 +239,9 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
   const totalPatientsToday = currentPatients.length;
   const tokenRevenue = tokens.reduce((total, token) => (
     token.paymentStatus === 'PAID' && token.status !== 'CANCELLED' && token.status !== 'NO_SHOW'
-      ? total + Number(token.amountPaid || 0) - (token.paymentMode === 'PAY_NOW' ? 25 : 0)
+      ? total + (Number(token.amountPaid || 0) > 0
+        ? Number(token.amountPaid || 0) - (token.paymentMode === 'PAY_NOW' ? 25 : 0)
+        : Number(clinic.consultationFee || 0))
       : token.status === 'COMPLETED' ? total + Number(clinic.consultationFee || 0)
       : total
   ), 0);
