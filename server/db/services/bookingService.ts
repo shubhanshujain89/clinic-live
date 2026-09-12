@@ -165,7 +165,7 @@ export class BookingService {
       await connection.execute(
         `INSERT INTO \`tokens\` 
          (id, clinic_id, session_id, doctor_id, token_number, sequence_number, patient_id, patient_name, patient_phone, patient_age, token_type, status, is_vip, is_hold, priority, amount_paid, payment_status, created_at, pre_consultation_notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           tokenId, input.clinicId, session.id, input.doctorId, tokenNumber, sequenceNumber,
           patientId, input.patientName.trim(), input.phone.trim(), input.age || null,
