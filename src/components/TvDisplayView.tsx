@@ -232,14 +232,14 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
           >
           <div>
             <span className="block text-xs font-black uppercase tracking-wider text-teal-400">
-              Scan to track your status
+              Scan to book an appointment
             </span>
           </div>
 
           <div className="flex aspect-square w-32 shrink-0 items-center justify-center rounded-2xl border border-teal-500/30 bg-teal-500/10 p-2 text-teal-300 sm:w-36 xl:mt-5 xl:w-full xl:max-w-[190px]">
             <img
               src={clinic.qrCodeUrl || generatedBookingQr}
-              alt="Scan to book an appointment"
+              alt="QR code to book an appointment"
               className="block h-full w-full rounded-xl bg-white object-contain p-1"
             />
           </div>
