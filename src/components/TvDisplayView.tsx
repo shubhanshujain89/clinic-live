@@ -150,7 +150,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
       <main className="tv-display-main my-4 grid min-h-0 flex-1 grid-cols-1 items-stretch gap-5 lg:grid-cols-12 lg:gap-6">
         
         {/* Now Serving Card */}
-        <div className="relative flex min-h-0 flex-col justify-center overflow-hidden rounded-[2rem] border-2 border-teal-400/50 bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950/50 p-5 text-center shadow-2xl sm:p-8 lg:col-span-6 lg:p-10 xl:col-span-5">
+        <div className="relative flex min-h-0 flex-col justify-center overflow-hidden rounded-[2rem] border-2 border-teal-400/50 bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950/50 p-4 text-center shadow-2xl sm:p-6 lg:col-span-6 lg:p-8 xl:col-span-5">
           <div className="absolute top-0 right-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
           {/* Serving Pill */}
@@ -179,7 +179,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
         <div className="h-full lg:col-span-6 xl:col-span-5">
           
           {/* Upcoming Tokens Box */}
-          <div className="flex h-full flex-col rounded-[2rem] border border-slate-700/80 bg-slate-900/90 p-4 shadow-xl sm:p-6">
+          <div className="flex h-full flex-col rounded-[2rem] border border-slate-700/80 bg-slate-900/90 p-3 shadow-xl sm:p-4">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <span className="text-sm sm:text-base font-black uppercase tracking-wider text-slate-300">
                 NEXT PATIENTS
@@ -224,7 +224,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
         </div>
 
         {/* Phone Tracking Side Card */}
-        <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-slate-700/80 bg-slate-900/90 p-4 shadow-xl sm:p-5 lg:col-span-12 xl:col-span-2 xl:flex-col xl:items-center xl:justify-center xl:text-center">
+        <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-slate-700/80 bg-slate-900/90 p-3 shadow-xl sm:p-4 lg:col-span-12 xl:col-span-2 xl:flex-col xl:items-center xl:justify-center xl:text-center">
           <a
             href={bookingHref}
             className="block"
@@ -236,7 +236,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
             </span>
           </div>
 
-          <div className="flex aspect-square w-32 shrink-0 items-center justify-center rounded-2xl border border-teal-500/30 bg-teal-500/10 p-2 text-teal-300 sm:w-36 xl:mt-5 xl:w-full xl:max-w-[190px]">
+          <div className="flex aspect-square w-36 shrink-0 items-center justify-center rounded-2xl border border-teal-500/30 bg-teal-500/10 p-2 text-teal-300 sm:w-40 xl:mt-5 xl:w-full xl:max-w-[220px]">
             <img
               src={clinic.qrCodeUrl || generatedBookingQr}
               alt="QR code to book an appointment"
