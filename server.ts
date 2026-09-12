@@ -580,7 +580,7 @@ const makeDoctorBookingQrCodeUrl = (req: express.Request, clinicId: string, doct
   const baseUrl = `${protocol}://${host}`;
   const bookingUrl = `${baseUrl}/booking?clinicId=${encodeURIComponent(clinicId)}&doctorId=${encodeURIComponent(doctorId)}`;
   const encodedBookingUrl = encodeURIComponent(bookingUrl);
-  return `https://chart.googleapis.com/chart?cht=qr&chs=220x220&chl=${encodedBookingUrl}`;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodedBookingUrl}`;
 };
 
 const queueMutationContext = async (req: express.Request, res: express.Response) => {

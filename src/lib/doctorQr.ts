@@ -5,7 +5,7 @@ export const makeDoctorBookingQrCodeUrl = (
 ): string => {
   const bookingUrl = `${baseUrl.replace(/\/$/, '')}/booking?clinicId=${encodeURIComponent(clinicId)}&doctorId=${encodeURIComponent(doctorId)}`;
   const encodedBookingUrl = encodeURIComponent(bookingUrl);
-  return `https://chart.googleapis.com/chart?cht=qr&chs=220x220&chl=${encodedBookingUrl}`;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodedBookingUrl}`;
 };
 
 export const extractBookingTokenNumber = (
