@@ -226,32 +226,37 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
               </div>
 
               <div className="text-center">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">{tracking.patientName}</p>
-                <h1 className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-900 sm:text-4xl">{tracking.doctor}</h1>
+                <h1 className="text-3xl font-black tracking-[-0.04em] text-slate-900 sm:text-4xl">{tracking.token}</h1>
+                <p className="mt-2 text-base font-semibold text-slate-800">{tracking.patientName}</p>
               </div>
 
               <div className="space-y-1 text-center text-sm text-slate-600">
+                <p className="font-semibold text-slate-800">{tracking.doctor}</p>
                 <p>{tracking.clinic}</p>
                 {tracking.appointmentSlot && <p className="font-medium text-emerald-700">Booked timing: {tracking.appointmentSlot}</p>}
               </div>
 
-              <div className="rounded-2xl border border-emerald-100 bg-[linear-gradient(180deg,#ecfdf5_0%,#f8fffd_100%)] p-4 text-center shadow-inner shadow-emerald-100/60">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Your Position</p>
-                <div className="mt-3 text-5xl font-black tracking-[-0.05em] text-slate-900">#{getQueuePosition(tracking)}</div>
-                <p className="mt-2 text-sm text-slate-600">in the queue</p>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50/40">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="min-h-[148px] rounded-2xl border border-emerald-100 bg-[linear-gradient(180deg,#ecfdf5_0%,#f8fffd_100%)] p-4 text-center shadow-inner shadow-emerald-100/60 transition hover:border-emerald-300">
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Your position</p>
+                  <div className="mt-3 text-5xl font-black tracking-[-0.05em] text-slate-900">#{getQueuePosition(tracking)}</div>
+                  <p className="mt-1 text-sm text-slate-600">in the queue</p>
+                </div>
+                <div className="min-h-[148px] rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50/40">
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Currently serving</p>
                   <p className="mt-3 text-2xl font-black text-slate-900">{tracking.currentlyServingToken || 'Not started'}</p>
                   <p className="mt-1 text-xs text-slate-500">{tracking.currentlyServingToken ? 'The doctor is with this patient.' : 'Waiting for the queue to begin.'}</p>
                 </div>
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 transition hover:border-emerald-300 hover:bg-emerald-50">
+                <div className="min-h-[148px] rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 transition hover:border-emerald-300 hover:bg-emerald-50">
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Estimated appointment</p>
                   <p className="mt-3 text-2xl font-black text-slate-900">Around {tracking.estimatedConsultationTime}</p>
                   <p className="mt-1 text-xs text-slate-500">Wait: ~{tracking.estimatedWaitMinutes} min</p>
                   <p className="mt-2 text-xs text-slate-500">Approximate time based on your booking and clinic schedule.</p>
+                </div>
+                <div className="min-h-[148px] rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-emerald-200 hover:bg-emerald-50/40">
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Queue status</p>
+                  <p className="mt-3 text-2xl font-black text-slate-900">{tracking.doctorStatus === 'IN' ? 'Open' : 'Not started'}</p>
+                  <p className="mt-1 text-xs text-slate-500">{tracking.doctorStatus === 'IN' ? 'The doctor is accepting patients.' : 'Please wait for the doctor to check in.'}</p>
                 </div>
               </div>
 
