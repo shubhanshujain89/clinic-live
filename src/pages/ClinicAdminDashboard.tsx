@@ -5,7 +5,8 @@ import { defaultContentSections, defaultSiteSettings, loadContentSections, loadS
 import { FeaturePlan } from '../types/queue';
 import { PhoneInput } from '../components/PhoneInput';
 import { DashboardMode, DashboardTabKey, getDashboardTabs } from './clinicAdminDashboardLogic';
-import { getCode39Bars, normalizeCode39Value } from '../lib/code39';
+import { normalizeCode39Value } from '../lib/code39';
+import { buildQrPublicUrl } from '../lib/qrInventory';
 
 interface BarcodeInventoryItem {
   id: string;
@@ -30,11 +31,13 @@ interface InventoryDoctor {
 }
 
 const BarcodePreview: React.FC<{ value: string }> = ({ value }) => {
-  const bars = getCode39Bars(value);
+  const qrUrl = buildQrPublicUrl(value);
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrUrl)}`;
+
   return (
     <div className="rounded-lg bg-white px-3 py-2">
-      <div className="flex h-14 items-stretch justify-center overflow-hidden">
-        {bars.map((isBar, index) => <span key={`${value}-${index}`} className={isBar ? 'bg-black' : 'bg-white'} style={{ width: isBar ? 2 : 1 }} />)}
+      <div className="flex h-40 items-center justify-center overflow-hidden">
+        <img src={qrImageUrl} alt={`QR code for ${qrUrl}`} className="h-40 w-40 object-contain" />
       </div>
       <div className="mt-1 text-center font-mono text-[10px] font-bold tracking-[0.18em] text-black">{normalizeCode39Value(value)}</div>
     </div>
