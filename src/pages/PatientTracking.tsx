@@ -231,9 +231,10 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
                   <p className="mt-3 text-2xl font-black text-slate-900">{tracking.currentlyServingToken || 'Not started'}</p>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50/40">
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Estimated consultation</p>
-                  <p className="mt-3 text-2xl font-black text-slate-900">{tracking.estimatedConsultationTime}</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Estimated appointment</p>
+                  <p className="mt-3 text-2xl font-black text-slate-900">Around {tracking.estimatedConsultationTime}</p>
                   <p className="mt-1 text-xs text-slate-500">Wait: ~{tracking.estimatedWaitMinutes} min</p>
+                  <p className="mt-2 text-xs text-slate-500">Approximate time based on your booking and clinic schedule.</p>
                 </div>
               </div>
 
