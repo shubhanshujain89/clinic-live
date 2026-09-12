@@ -44,6 +44,10 @@ export const createPublicBooking = async (input: {
   age?: number;
   reason?: string;
   appointmentSlot?: string;
+  amountPaid?: number;
+  paymentMode?: 'PAY_NOW' | 'PAY_AT_CLINIC';
+  paymentMethod?: string;
+  paymentStatus?: 'PENDING' | 'PAID';
 }) => {
   return services.booking.createPublicBooking(input);
 };

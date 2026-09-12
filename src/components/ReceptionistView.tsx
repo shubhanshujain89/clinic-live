@@ -542,7 +542,6 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
                 <th className="py-3 px-4">Type</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4">Payment</th>
-                {!isBasicPlan && <th className="py-3 px-4">Vitals</th>}
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -616,39 +615,10 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
                       {/* Payment */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         <span className="text-emerald-400 font-bold">₹{token.amountPaid}</span>
-                        <span className="text-slate-500 text-[10px] block">{token.paymentMethod}</span>
+                        <span className={`text-[10px] block font-semibold ${token.paymentStatus === 'PAID' ? 'text-emerald-400' : 'text-amber-300'}`}>
+                          {token.paymentStatus === 'PAID' ? 'Paid' : 'Payment pending'}
+                        </span>
                       </td>
-
-                      {/* Vitals */}
-                      {!isBasicPlan && <td className="py-3.5 px-4 max-w-xs">
-                        <div>
-                          {/* Vitals Badges */}
-                          {(token.weight || token.temperature || token.oxygenSaturation || token.bloodPressure || token.preConsultationNotes?.weight || token.preConsultationNotes?.feverTemp || token.preConsultationNotes?.oxygenSaturation || token.preConsultationNotes?.spo2 || token.preConsultationNotes?.bloodPressure) && (
-                            <div className="flex flex-wrap items-center gap-1 mt-1.5 text-[10px]">
-                              {(token.weight || token.preConsultationNotes?.weight) && (
-                                <span className="bg-teal-950/60 text-teal-300 border border-teal-500/20 px-1.5 py-0.5 rounded font-mono">
-                                  ⚖️ {token.weight || token.preConsultationNotes?.weight}
-                                </span>
-                              )}
-                              {(token.temperature || token.preConsultationNotes?.temperature || token.preConsultationNotes?.feverTemp) && (
-                                <span className="bg-amber-950/60 text-amber-300 border border-amber-500/20 px-1.5 py-0.5 rounded font-mono">
-                                  🌡️ {token.temperature || token.preConsultationNotes?.temperature || token.preConsultationNotes?.feverTemp}
-                                </span>
-                              )}
-                              {(token.oxygenSaturation || token.preConsultationNotes?.oxygenSaturation || token.preConsultationNotes?.spo2) && (
-                                <span className="bg-cyan-950/60 text-cyan-300 border border-cyan-500/20 px-1.5 py-0.5 rounded font-mono">
-                                  O₂ {token.oxygenSaturation || token.preConsultationNotes?.oxygenSaturation || token.preConsultationNotes?.spo2}
-                                </span>
-                              )}
-                              {(token.bloodPressure || token.preConsultationNotes?.bloodPressure || token.preConsultationNotes?.bpReading) && (
-                                <span className="bg-rose-950/60 text-rose-300 border border-rose-500/20 px-1.5 py-0.5 rounded font-mono">
-                                  💓 {token.bloodPressure || token.preConsultationNotes?.bloodPressure || token.preConsultationNotes?.bpReading}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </td>}
 
                       {/* Action Buttons */}
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
@@ -664,15 +634,6 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
                               <Play className="w-3.5 h-3.5" />
                             </button>
                           )}
-
-                          {/* Record / Edit Vitals */}
-                          {!isBasicPlan && <button
-                              onClick={() => openVitalsModal(token)}
-                              title="Record / Edit Patient Vitals (Weight, Temp, BP, Triage Note)"
-                              className="p-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/20 transition-colors"
-                            >
-                              <Activity className="w-3.5 h-3.5 text-teal-400" />
-                            </button>}
 
                           {!token.isEmergency && !isCompleted && (
                             <button
@@ -702,7 +663,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
                 })
               ) : (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center text-slate-500">
+                  <td colSpan={6} className="py-10 text-center text-slate-500">
                     No tokens found matching the selected filter.
                   </td>
                 </tr>

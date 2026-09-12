@@ -752,11 +752,14 @@ app.post('/api/patient/book', async (req, res) => {
     if (!(await enforceRateLimit(res, `booking:${clientIp}`, 10))) {
       return;
     }
-    const { clinicId, doctorId, patientName, phone, age, reason, appointmentSlot } = req.body || {};
+    const { clinicId, doctorId, patientName, phone, age, reason, appointmentSlot, amountPaid, paymentMode, paymentMethod, paymentStatus } = req.body || {};
     const normalizedPatientName = String(patientName || '').trim();
     const normalizedPhone = String(phone || '').trim();
     const normalizedReason = String(reason || '').trim();
     const normalizedAppointmentSlot = String(appointmentSlot || '').trim();
+    const normalizedPaymentStatus = paymentStatus === 'PAID' ? 'PAID' : 'PENDING';
+    const normalizedPaymentMode = paymentMode === 'PAY_NOW' ? 'PAY_NOW' : 'PAY_AT_CLINIC';
+    const normalizedAmountPaid = normalizedPaymentStatus === 'PAID' ? Math.max(0, Number(amountPaid) || 0) : 0;
     const normalizedAge = age === undefined || age === null || age === '' ? undefined : Number(age);
     if (!clinicId || !doctorId || !normalizedPatientName || !normalizedPhone) {
       res.status(400).json({ error: 'Clinic, doctor, patient name, and mobile number are required.' });
@@ -781,6 +784,10 @@ app.post('/api/patient/book', async (req, res) => {
       age: normalizedAge,
       reason: normalizedReason || undefined,
       appointmentSlot: normalizedAppointmentSlot || undefined,
+      amountPaid: normalizedAmountPaid,
+      paymentMode: normalizedPaymentMode,
+      paymentMethod: String(paymentMethod || '').trim() || undefined,
+      paymentStatus: normalizedPaymentStatus,
     });
     res.status(201).json({
       tokenId: booking.tokenId,

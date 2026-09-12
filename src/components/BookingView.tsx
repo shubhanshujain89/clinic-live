@@ -75,7 +75,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
     setTimeout(() => setCopiedUpi(false), 2500);
   };
 
-  const createOnlineToken = async () => {
+  const createOnlineToken = async (payment?: { amountPaid: number; paymentMode: 'PAY_NOW' | 'PAY_AT_CLINIC'; paymentMethod: string; paymentStatus: 'PENDING' | 'PAID' }) => {
     if (!clinic.doctorId) throw new Error('No active doctor is configured for this clinic.');
     const response = await fetch('/api/patient/book', {
       method: 'POST',
@@ -86,6 +86,10 @@ export const BookingView: React.FC<BookingViewProps> = ({
         patientName: patientName.trim(),
         phone: patientPhone.trim(),
         age: Number(patientAge) || undefined,
+        amountPaid: payment?.amountPaid || 0,
+        paymentMode: payment?.paymentMode || 'PAY_AT_CLINIC',
+        paymentMethod: payment?.paymentMethod || 'PAY_AT_CLINIC',
+        paymentStatus: payment?.paymentStatus || 'PENDING',
       }),
     });
     const payload = await response.json().catch(() => ({}));
@@ -120,7 +124,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
     setIsProcessingPayment(true);
     try {
       const newToken: TokenItem = {
-        ...await createOnlineToken(),
+        ...await createOnlineToken({ amountPaid: totalAmount, paymentMode: 'PAY_NOW', paymentMethod: details.paymentMethod || 'PAYMENT_GATEWAY', paymentStatus: 'PAID' }),
         amountPaid: totalAmount,
         paymentMode: 'PAY_NOW',
         paymentMethod: (details.paymentMethod as any) || 'PAYMENT_GATEWAY',
@@ -171,7 +175,7 @@ export const BookingView: React.FC<BookingViewProps> = ({
         const isPaidOnline = paymentMode === 'PAY_NOW';
 
         const newToken: TokenItem = {
-          ...await createOnlineToken(),
+          ...await createOnlineToken({ amountPaid: isPaidOnline ? totalAmount : 0, paymentMode, paymentMethod: isPaidOnline ? 'QR_BARCODE' : 'PAY_AT_CLINIC', paymentStatus: isPaidOnline ? 'PAID' : 'PENDING' }),
           amountPaid: isPaidOnline ? totalAmount : 0,
           paymentMode,
           paymentMethod: isPaidOnline ? 'QR_BARCODE' : 'PAY_AT_CLINIC',
