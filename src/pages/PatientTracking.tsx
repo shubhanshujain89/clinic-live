@@ -210,30 +210,18 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
               <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Live tracking</p>
+                  <p className="mt-2 text-sm font-semibold text-slate-800">{tracking.doctor}</p>
                   <p className="mt-1 text-sm text-slate-500">{tracking.clinic}</p>
+                  {tracking.appointmentSlot && <p className="mt-1 text-sm font-medium text-emerald-700">Booked timing: {tracking.appointmentSlot}</p>}
                 </div>
-                <span className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] ${
-                  tracking.status === 'COMPLETED'
-                    ? 'bg-slate-100 text-slate-600'
-                    : tracking.status === 'CALLED' || tracking.status === 'IN_CONSULTATION'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : tracking.doctorStatus === 'IN'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-slate-100 text-slate-600'
-                }`}>
-                  {tracking.status === 'COMPLETED' ? 'Completed' : tracking.status === 'CALLED' || tracking.status === 'IN_CONSULTATION' ? 'Your turn' : tracking.doctorStatus === 'IN' ? 'Queue open' : 'Not started'}
+                <span className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] ${tracking.doctorStatus === 'IN' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+                  Doctor: {tracking.doctorStatus === 'IN' ? 'Available' : 'Not started'}
                 </span>
               </div>
 
               <div className="text-center">
                 <h1 className="text-3xl font-black tracking-[-0.04em] text-slate-900 sm:text-4xl">{tracking.token}</h1>
                 <p className="mt-2 text-base font-semibold text-slate-800">{tracking.patientName}</p>
-              </div>
-
-              <div className="space-y-1 text-center text-sm text-slate-600">
-                <p className="font-semibold text-slate-800">{tracking.doctor}</p>
-                <p>{tracking.clinic}</p>
-                {tracking.appointmentSlot && <p className="font-medium text-emerald-700">Booked timing: {tracking.appointmentSlot}</p>}
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -252,11 +240,6 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
                   <p className="mt-3 text-2xl font-black text-slate-900">Around {tracking.estimatedConsultationTime}</p>
                   <p className="mt-1 text-xs text-slate-500">Wait: ~{tracking.estimatedWaitMinutes} min</p>
                   <p className="mt-2 text-xs text-slate-500">Approximate time based on your booking and clinic schedule.</p>
-                </div>
-                <div className="min-h-[148px] rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-emerald-200 hover:bg-emerald-50/40">
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Doctor status</p>
-                  <p className="mt-3 text-2xl font-black text-slate-900">{tracking.doctorStatus === 'IN' ? 'Available' : 'Not started'}</p>
-                  <p className="mt-1 text-xs text-slate-500">{tracking.doctorStatus === 'IN' ? 'Queue is open.' : 'Waiting for check-in.'}</p>
                 </div>
               </div>
 
