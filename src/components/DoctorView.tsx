@@ -498,21 +498,21 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
         </div>
 
         {/* Metric 4: Today's Revenue */}
-        <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 sm:p-5 shadow-lg">
+        <div className="overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-slate-900 to-emerald-950/30 p-4 shadow-lg sm:p-5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Clinic Revenue</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">Clinic Revenue</span>
             <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
               <IndianRupee className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl sm:text-3xl font-black text-emerald-400">
+          <div className="mt-3 min-w-0">
+            <span className="block truncate text-2xl font-black leading-none text-emerald-400 sm:text-3xl">
               ₹{totalRevenue.toLocaleString('en-IN')}
             </span>
-            <span className="text-xs text-emerald-500/80 font-medium">Collected today</span>
+            <span className="mt-2 block text-xs font-medium text-emerald-300/90">Collected today</span>
           </div>
-          <div className="mt-2 text-xs text-slate-500">
-            Avg Fee: ₹{clinic.consultationFee} / patient
+          <div className="mt-3 border-t border-emerald-500/10 pt-2 text-xs text-slate-400">
+            Avg fee: ₹{clinic.consultationFee} per patient
           </div>
         </div>
 
