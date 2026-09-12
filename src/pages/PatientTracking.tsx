@@ -206,11 +206,11 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
           )}
 
           {tracking && (
-            <div className="space-y-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_55px_rgba(15,23,42,0.08)] sm:p-7">
-              <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-5">
+            <div className="space-y-4 rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_20px_55px_rgba(15,23,42,0.08)] sm:p-6">
+              <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Live tracking</p>
-                  <p className="mt-1 text-sm text-slate-500">Updated just now</p>
+                  <p className="mt-1 text-sm text-slate-500">Token {tracking.token}</p>
                 </div>
                 <span className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] ${
                   tracking.status === 'COMPLETED'
@@ -226,24 +226,22 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
               </div>
 
               <div className="text-center">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Your token</p>
-                <h1 className="mt-3 text-3xl font-black tracking-[-0.04em] text-slate-900 sm:text-4xl">{tracking.token}</h1>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">{tracking.patientName}</p>
+                <h1 className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-900 sm:text-4xl">{tracking.doctor}</h1>
               </div>
 
-              <div className="space-y-2 text-center text-sm text-slate-600">
-                <p className="font-semibold text-slate-800">{tracking.patientName}</p>
-                <p className="font-semibold text-slate-800">{tracking.doctor}</p>
+              <div className="space-y-1 text-center text-sm text-slate-600">
                 <p>{tracking.clinic}</p>
                 {tracking.appointmentSlot && <p className="font-medium text-emerald-700">Booked timing: {tracking.appointmentSlot}</p>}
               </div>
 
-              <div className="rounded-2xl border border-emerald-100 bg-[linear-gradient(180deg,#ecfdf5_0%,#f8fffd_100%)] p-5 text-center shadow-inner shadow-emerald-100/60">
+              <div className="rounded-2xl border border-emerald-100 bg-[linear-gradient(180deg,#ecfdf5_0%,#f8fffd_100%)] p-4 text-center shadow-inner shadow-emerald-100/60">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Your Position</p>
                 <div className="mt-3 text-5xl font-black tracking-[-0.05em] text-slate-900">#{getQueuePosition(tracking)}</div>
                 <p className="mt-2 text-sm text-slate-600">in the queue</p>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50/40">
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Currently serving</p>
                   <p className="mt-3 text-2xl font-black text-slate-900">{tracking.currentlyServingToken || 'Not started'}</p>
@@ -262,13 +260,13 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
                 <p className="mt-2 text-sm text-emerald-700">{getQueueStatusSubtext(tracking)}</p>
               </div>
 
-              <div className="space-y-3 border-t border-slate-200 pt-4 text-sm text-slate-600">
+              <div className="space-y-2 border-t border-slate-200 pt-3 text-sm text-slate-600">
                 <p className="font-medium text-slate-700">Doctor status: {tracking.doctorStatus}</p>
                 <p>Average consultation duration: about {tracking.estimatedConsultationMinutes} min</p>
                 {tracking.delayMinutes > 0 && <p className="text-amber-700">Current delay: +{tracking.delayMinutes} min</p>}
               </div>
 
-              <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+              <div className="flex flex-col gap-2 pt-1 sm:flex-row">
                 <button
                   type="button"
                   onClick={() => void findBooking()}
