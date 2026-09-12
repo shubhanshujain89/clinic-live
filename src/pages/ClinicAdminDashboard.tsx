@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, Plus, Edit, Trash2, Users, Clock, Search, Filter, Barcode, Link2, Unlink } from 'lucide-react';
-import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, auth, onAuthStateChanged, recordAuditEvent, hashPassword } from '../lib/firebase';
+import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where, orderBy, auth, onAuthStateChanged, recordAuditEvent, hashPassword } from '../lib/firebase';
 import { defaultContentSections, defaultSiteSettings, loadContentSections, loadSiteSettings, saveContentSections, saveSiteSettings, initializeSiteConfig, loadSiteSettingsFromDatabase, loadContentSectionsFromDatabase } from '../lib/siteConfig';
 import { FeaturePlan } from '../types/queue';
 import { PhoneInput } from '../components/PhoneInput';
@@ -242,14 +242,14 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [appointments, setAppointments] = useState<Array<{ clinicId: string; appointmentType?: string; status?: string }>>([]);
   const [payments, setPayments] = useState<Array<{ id: string; clinicId: string; clinicName: string; pack: FeaturePlan; trialForPlan?: FeaturePlan; amount: number; durationDays: number; status: 'PAID' | 'PENDING'; paidAt: string; startDate: string; expiryDate: string; notes?: string }>>([]);
-  const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; role: string; status: 'Active' | 'Offline' | 'Pending'; clinicName?: string; phone?: string; accessStatus?: 'Granted' | 'Hold' | 'Denied'; photoURL?: string; passwordReset?: string; source?: 'staff_users' | 'doctors' }>>([]);
+  const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; role: string; status: 'Active' | 'Offline' | 'Pending'; clinicName?: string; phone?: string; doctorId?: string; accessStatus?: 'Granted' | 'Hold' | 'Denied'; photoURL?: string; passwordReset?: string; source?: 'staff_users' | 'doctors' }>>([]);
   const [inventoryDoctors, setInventoryDoctors] = useState<InventoryDoctor[]>([]);
   const [barcodeInventory, setBarcodeInventory] = useState<BarcodeInventoryItem[]>([]);
   const [barcodeForm, setBarcodeForm] = useState({ barcodeValue: '', label: '', notes: '' });
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingClinic, setEditingClinic] = useState<Clinic | null>(null);
-  const [editingUser, setEditingUser] = useState<{ id: string; name: string; email: string; role: string; status: 'Active' | 'Offline' | 'Pending'; clinicName?: string; phone?: string; accessStatus?: 'Granted' | 'Hold' | 'Denied'; photoURL?: string; passwordReset?: string; source?: 'staff_users' | 'doctors' } | null>(null);
+  const [editingUser, setEditingUser] = useState<{ id: string; name: string; email: string; role: string; status: 'Active' | 'Offline' | 'Pending'; clinicName?: string; phone?: string; doctorId?: string; accessStatus?: 'Granted' | 'Hold' | 'Denied'; photoURL?: string; passwordReset?: string; source?: 'staff_users' | 'doctors' } | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [userFilters, setUserFilters] = useState({ search: '', role: 'ALL', clinic: 'ALL', status: 'ALL' });
@@ -738,6 +738,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
           name: safeName || 'User',
           email: safeEmail,
           role: safeRole,
+          doctorId: String(item.doctorId || item.doctor_id || '').trim() || undefined,
           status: safeStatus as 'Active' | 'Offline' | 'Pending',
           clinicName: String(item.clinicName || item.clinic_name || item.clinicId || item.clinic_id || '').trim(),
           phone: String(item.phone || item.mobile || '+91 ').trim() || '+91 ',
@@ -844,8 +845,23 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
           rating: 0,
         };
 
-        if (editingUser?.source === 'doctors') {
+        if (editingUser?.doctorId) {
+          await updateDoc(doc(db, 'doctors', editingUser.doctorId), doctorPayload);
+          await updateDoc(doc(db, 'users', editingUser.id), {
+            ...payload,
+            doctorId: editingUser.doctorId,
+          });
+        } else if (editingUser?.source === 'doctors') {
           await updateDoc(doc(db, 'doctors', editingUser.id), doctorPayload);
+          const linkedUsers = (await getDocs(query(collection(db, 'users'), where('doctorId', '==', editingUser.id)))).docs;
+          await Promise.all(linkedUsers.map((userDoc) => updateDoc(doc(db, 'users', userDoc.id), {
+            name: payload.name,
+            displayName: payload.name,
+            email: payload.email,
+            phone: payload.phone,
+            clinicId: selectedClinic!.id,
+            clinicName: userFormData.clinicName,
+          })));
         } else {
           const doctorRef = await addDoc(collection(db, 'doctors'), {
             ...doctorPayload,
