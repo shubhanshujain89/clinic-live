@@ -66,7 +66,7 @@ interface PatientTrackingProps {
 
 export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
   const [tracking, setTracking] = useState<TrackingData | null>(null);
-  const [unavailable, setUnavailable] = useState(false);
+  const [trackingError, setTrackingError] = useState('');
   const [mobile, setMobile] = useState(getTrackingMobileFromQuery());
   const [isSearching, setIsSearching] = useState(false);
 
@@ -88,7 +88,13 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
     const normalizedMobile = mobile.trim();
     if (!normalizedMobile) return;
     setIsSearching(true);
-    setUnavailable(false);
+    setTrackingError('');
+    if (!/^\d{10}$/.test(normalizedMobile.replace(/\D/g, ''))) {
+      setTracking(null);
+      setTrackingError('Enter a valid 10-digit mobile number.');
+      setIsSearching(false);
+      return;
+    }
     try {
       const response = await fetch('/api/patient/track', {
         method: 'POST',
@@ -101,7 +107,9 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
       setTracking(data as TrackingData);
     } catch (error) {
       setTracking(null);
-      setUnavailable(true);
+      setTrackingError(error instanceof Error && error.message
+        ? error.message
+        : 'Connection temporarily unavailable.');
     } finally {
       setIsSearching(false);
     }
@@ -143,9 +151,9 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
 
       <div className="mx-auto max-w-[980px] px-4 pt-6 pb-0 sm:px-6 lg:px-8 lg:pt-8">
         <div className="mx-auto max-w-[760px] rounded-[30px] border border-[#dfe6e2] bg-white/90 p-3 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur-sm sm:p-5 lg:p-6">
-          {unavailable && (
+          {trackingError && (
             <div className="mb-5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700">
-              Connection temporarily unavailable.
+              {trackingError}
             </div>
           )}
 

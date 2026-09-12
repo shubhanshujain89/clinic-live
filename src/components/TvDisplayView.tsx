@@ -6,12 +6,12 @@ import {
   Volume2,
   VolumeX,
   Activity,
-  Clock,
-  Barcode
+  Clock
 } from 'lucide-react';
 import { Clinic, TokenItem, QueueSession } from '../types/queue';
 import { soundManager } from '../lib/audio';
 import { formatDoctorName } from '../lib/doctorName';
+import { makeDoctorBookingQrCodeUrl } from '../lib/doctorQr';
 
 interface TvDisplayViewProps {
   clinic: Clinic;
@@ -76,6 +76,8 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
   };
 
   const isDoctorIn = clinic.doctorStatus === 'IN';
+  const bookingHref = `/booking?clinicId=${encodeURIComponent(clinic.id)}&doctorId=${encodeURIComponent(clinic.doctorId || '')}`;
+  const generatedBookingQr = makeDoctorBookingQrCodeUrl(clinic.id, clinic.doctorId || '');
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-between overflow-hidden bg-[radial-gradient(circle_at_15%_15%,rgba(20,184,166,0.16),transparent_28%),radial-gradient(circle_at_85%_85%,rgba(59,130,246,0.12),transparent_30%),#020817] p-4 text-white select-none sm:p-7 lg:p-9 font-sans">
@@ -224,9 +226,9 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
         {/* Phone Tracking Side Card */}
         <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-slate-700/80 bg-slate-900/90 p-4 lg:col-span-12 xl:col-span-2 xl:flex-col xl:items-center xl:justify-center xl:text-center">
           <a
-            href={`/booking?clinicId=${encodeURIComponent(clinic.id)}&doctorId=${encodeURIComponent(clinic.doctorId || '')}`}
+            href={bookingHref}
             className="block"
-            title="Open booking page for this clinic and doctor"
+            title="Scan or open the booking page for this clinic and doctor"
           >
           <div>
             <span className="block text-xs font-black uppercase tracking-wider text-teal-400">
@@ -235,11 +237,11 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
           </div>
 
           <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-2xl border border-teal-500/30 bg-teal-500/10 text-teal-300 xl:mt-4">
-            {clinic.qrCodeUrl ? (
-              <img src={clinic.qrCodeUrl} alt="Scan to track your status" className="h-full w-full rounded-xl object-contain" />
-            ) : (
-              <Barcode className="h-10 w-16" />
-            )}
+            <img
+              src={clinic.qrCodeUrl || generatedBookingQr}
+              alt="Scan to book an appointment"
+              className="h-full w-full rounded-xl bg-white object-contain p-1"
+            />
           </div>
           </a>
         </div>

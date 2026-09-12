@@ -41,7 +41,9 @@ const parseTimeParts = (value: string): TimeParts => {
 };
 
 const formatTimeParts = (parts: TimeParts) =>
-  parts.hour && parts.minute && parts.meridian ? `${parts.hour}:${parts.minute} ${parts.meridian}` : '';
+  parts.hour || parts.minute || parts.meridian
+    ? `${parts.hour || '12'}:${parts.minute || '00'} ${parts.meridian || 'AM'}`
+    : '';
 
 const parseAvailableWindows = (value: string) => String(value || '')
   .split(',')
