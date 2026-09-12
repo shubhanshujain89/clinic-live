@@ -183,7 +183,7 @@ export function ClinicQueueApp({ userId, role, clinicId: selectedClinicId, onLog
   }
 
   return (
-    <div className="app-shell h-screen overflow-hidden text-slate-100 flex flex-col selection:bg-teal-500 selection:text-slate-950">
+    <div className="app-shell min-h-screen overflow-x-hidden text-slate-100 flex flex-col selection:bg-teal-500 selection:text-slate-950">
       <div className="relative z-10 flex h-full min-h-0 flex-col">
         <div className="fixed inset-x-0 top-0 z-50 border-b border-slate-700/50 bg-slate-950/90 backdrop-blur-sm">
           <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">

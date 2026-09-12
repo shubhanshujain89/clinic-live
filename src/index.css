@@ -97,7 +97,8 @@ textarea {
 
 .app-shell {
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--bg-base);
 }
 
