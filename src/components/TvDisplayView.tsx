@@ -224,7 +224,7 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
         </div>
 
         {/* Phone Tracking Side Card */}
-        <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-slate-700/80 bg-slate-900/90 p-4 lg:col-span-12 xl:col-span-2 xl:flex-col xl:items-center xl:justify-center xl:text-center">
+        <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-slate-700/80 bg-slate-900/90 p-4 shadow-xl sm:p-5 lg:col-span-12 xl:col-span-2 xl:flex-col xl:items-center xl:justify-center xl:text-center">
           <a
             href={bookingHref}
             className="block"
@@ -236,11 +236,11 @@ export const TvDisplayView: React.FC<TvDisplayViewProps> = ({
             </span>
           </div>
 
-          <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-2xl border border-teal-500/30 bg-teal-500/10 text-teal-300 xl:mt-4">
+          <div className="flex aspect-square w-32 shrink-0 items-center justify-center rounded-2xl border border-teal-500/30 bg-teal-500/10 p-2 text-teal-300 sm:w-36 xl:mt-5 xl:w-full xl:max-w-[190px]">
             <img
               src={clinic.qrCodeUrl || generatedBookingQr}
               alt="Scan to book an appointment"
-              className="h-full w-full rounded-xl bg-white object-contain p-1"
+              className="block h-full w-full rounded-xl bg-white object-contain p-1"
             />
           </div>
           </a>
