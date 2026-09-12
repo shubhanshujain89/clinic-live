@@ -400,8 +400,8 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                   {clinic.doctorStatus === 'IN' ? 'Available' : 'Not checked in'}
                 </span>
               </div>
-              <div className="mt-2 flex min-w-0 items-center gap-2">
-                <span className="min-w-0 break-words text-[10px] font-mono leading-snug text-slate-500">
+              <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+                <span className="whitespace-nowrap text-[10px] font-mono leading-snug text-slate-500">
                   {roomNumber ? `Room ${roomNumber}` : 'No room number'}
                 </span>
                 <button
