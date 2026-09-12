@@ -629,7 +629,7 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
 
                       {/* Payment */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span className="text-emerald-400 font-bold">₹{token.paymentStatus === 'PAID' ? token.amountPaid : clinic.consultationFee}</span>
+                        <span className="text-emerald-400 font-bold">₹{token.amountPaid > 0 ? token.amountPaid : clinic.consultationFee}</span>
                         <span className={`text-[10px] block font-semibold ${token.paymentStatus === 'PAID' ? 'text-emerald-400' : 'text-amber-300'}`}>
                           {token.paymentStatus === 'PAID' ? 'Paid' : 'Payment pending'}
                         </span>
