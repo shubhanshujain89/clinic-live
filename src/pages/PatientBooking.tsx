@@ -309,7 +309,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'Unable to load clinics.');
       const clinicList = (payload || []) as Clinic[];
-      const availableClinics = clinicList.length ? clinicList : fallbackClinics;
+      const availableClinics = clinicList;
       setClinics(availableClinics);
 
       const clinicAvailabilityMap = Object.fromEntries(
@@ -329,8 +329,8 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({ onBack }) => {
       setClinicAvailability(clinicAvailabilityMap);
 
       if (linkedClinicId && linkedDoctorId) {
-        const availableClinics = clinicList.length ? clinicList : fallbackClinics;
-        const linkedClinic = availableClinics.find((clinic) => clinic.id === linkedClinicId) || fallbackClinics.find((clinic) => clinic.id === linkedClinicId);
+        const availableClinics = clinicList;
+        const linkedClinic = availableClinics.find((clinic) => clinic.id === linkedClinicId);
         if (linkedClinic) {
           const doctorsResponse = await fetch(`/api/clinics/${encodeURIComponent(linkedClinic.id)}/doctors`);
           const doctorsPayload = await doctorsResponse.json();

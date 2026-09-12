@@ -143,8 +143,8 @@ export class ClinicRepository extends BaseRepository<Clinic> {
       LEFT JOIN \`settings\` s
         ON s.\`key\` = CONCAT('clinic_access_', c.id) AND s.clinic_id IS NULL
       WHERE c.\`feature_plan\` IN (?, ?)
-        AND (c.subscription_status IS NULL OR c.subscription_status <> 'PAUSED')
-        AND (c.subscription_expires_at IS NULL OR c.subscription_expires_at > CURRENT_TIMESTAMP)
+        AND c.subscription_status = 'ACTIVE'
+        AND c.subscription_expires_at > CURRENT_TIMESTAMP
         AND (s.value IS NULL OR s.value NOT IN ('Denied'))
       ORDER BY c.\`name\` ASC
     `;

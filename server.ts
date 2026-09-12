@@ -906,6 +906,11 @@ app.post('/api/auth/login', async (req, res) => {
       return;
     }
 
+    if (context.role === 'SUPER_ADMIN' && normalizedRole !== 'SUPER_ADMIN') {
+      res.status(403).json({ error: 'Super Admin must use the dedicated admin login.' });
+      return;
+    }
+
     if (context.role !== 'SUPER_ADMIN') {
       if (!['active', 'enabled', 'granted'].includes(accountStatus.toLowerCase())) {
         res.status(403).json({ error: 'Account is not active.' });

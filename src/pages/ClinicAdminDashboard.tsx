@@ -866,14 +866,15 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       const clinicPlan = formData.featurePlan as FeaturePlan;
       const hasBillingRecord = editingClinic ? payments.some((payment) => payment.clinicId === editingClinic.id || payment.clinicName.toLowerCase() === editingClinic.name.toLowerCase()) : false;
       const subscriptionStartedAt = editingClinic?.subscriptionStartedAt || new Date().toISOString();
-      const subscriptionPack = buildClinicPack(clinicPlan, subscriptionStartedAt, clinicPlan === 'TRIAL' || hasBillingRecord ? 'ACTIVE' : 'PAUSED');
+      const shouldActivateSubscription = hasBillingRecord || (Boolean(editingClinic) && clinicPlan === 'TRIAL');
+      const subscriptionPack = buildClinicPack(clinicPlan, subscriptionStartedAt, shouldActivateSubscription ? 'ACTIVE' : 'PAUSED');
       const clinicPayload: Record<string, unknown> = {
         name: formData.name.trim(),
         address: formData.address.trim(),
         phone: formData.phone.trim(),
         email: formData.email.trim(),
         featurePlan: clinicPlan,
-        subscriptionStatus: clinicPlan === 'TRIAL' || hasBillingRecord ? 'ACTIVE' : 'PAUSED',
+        subscriptionStatus: shouldActivateSubscription ? 'ACTIVE' : 'PAUSED',
         subscriptionStartedAt,
         subscriptionExpiresAt: subscriptionPack.expiryDate,
         subscriptionPack,
