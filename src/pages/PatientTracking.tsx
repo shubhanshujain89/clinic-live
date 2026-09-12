@@ -207,8 +207,26 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
 
           {tracking && (
             <div className="space-y-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_55px_rgba(15,23,42,0.08)] sm:p-7">
+              <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-5">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Live tracking</p>
+                  <p className="mt-1 text-sm text-slate-500">Updated just now</p>
+                </div>
+                <span className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] ${
+                  tracking.status === 'COMPLETED'
+                    ? 'bg-slate-100 text-slate-600'
+                    : tracking.status === 'CALLED' || tracking.status === 'IN_CONSULTATION'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : tracking.doctorStatus === 'IN'
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-slate-100 text-slate-600'
+                }`}>
+                  {tracking.status === 'COMPLETED' ? 'Completed' : tracking.status === 'CALLED' || tracking.status === 'IN_CONSULTATION' ? 'Your turn' : tracking.doctorStatus === 'IN' ? 'Queue open' : 'Not started'}
+                </span>
+              </div>
+
               <div className="text-center">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">Your Live Queue</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Your token</p>
                 <h1 className="mt-3 text-3xl font-black tracking-[-0.04em] text-slate-900 sm:text-4xl">{tracking.token}</h1>
               </div>
 
@@ -229,9 +247,10 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50/40">
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Currently serving</p>
                   <p className="mt-3 text-2xl font-black text-slate-900">{tracking.currentlyServingToken || 'Not started'}</p>
+                  <p className="mt-1 text-xs text-slate-500">{tracking.currentlyServingToken ? 'The doctor is with this patient.' : 'Waiting for the queue to begin.'}</p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50/40">
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Estimated appointment</p>
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 transition hover:border-emerald-300 hover:bg-emerald-50">
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Estimated appointment</p>
                   <p className="mt-3 text-2xl font-black text-slate-900">Around {tracking.estimatedConsultationTime}</p>
                   <p className="mt-1 text-xs text-slate-500">Wait: ~{tracking.estimatedWaitMinutes} min</p>
                   <p className="mt-2 text-xs text-slate-500">Approximate time based on your booking and clinic schedule.</p>
