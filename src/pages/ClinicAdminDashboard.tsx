@@ -39,6 +39,7 @@ const BarcodePreview: React.FC<{ value: string }> = ({ value }) => {
       <div className="flex h-40 items-center justify-center overflow-hidden">
         <img src={qrImageUrl} alt={`QR code for ${qrUrl}`} className="h-40 w-40 object-contain" />
       </div>
+      <img src="/nextq-logo.png" alt="NEXTQ" className="mx-auto my-1 h-6 w-24 object-contain" />
       <div className="mt-1 text-center font-mono text-[10px] font-bold tracking-[0.18em] text-black">{normalizeCode39Value(value)}</div>
     </div>
   );
