@@ -385,31 +385,35 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
 
         {/* Doctor Profile */}
-        <div className="min-w-0 overflow-hidden rounded-2xl border border-teal-500/20 bg-gradient-to-br from-slate-900 to-slate-950 p-4 shadow-lg">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex aspect-square h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-950 text-teal-400 ring-1 ring-teal-400/40">
+        <div className="relative min-w-0 overflow-hidden rounded-2xl border border-teal-500/25 bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950/30 p-4 shadow-lg">
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-teal-400 via-emerald-400 to-transparent" />
+          <div className="flex min-w-0 items-start gap-3 pt-1">
+            <div className="flex aspect-square h-[68px] w-[68px] shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-950 p-0.5 text-teal-400 ring-1 ring-teal-400/50">
               {clinic.doctorPhoto ? <img src={clinic.doctorPhoto} alt={clinic.doctorName || 'Doctor'} className="block h-full w-full object-cover object-center" /> : <Stethoscope className="h-7 w-7" />}
             </div>
-            <div className="min-w-0">
-              <h2 className="truncate text-sm font-bold leading-tight text-white">{formatDoctorName(clinic.doctorName)}</h2>
-              <p className="mt-0.5 truncate text-[11px] leading-snug text-slate-400">{clinic.specialty || 'General Practice'}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-base font-bold leading-tight text-white">{formatDoctorName(clinic.doctorName)}</h2>
+              <p className="mt-1 truncate text-xs leading-snug text-slate-400">{clinic.specialty || 'General Practice'}</p>
+              <div className="mt-3 flex min-w-0 items-center gap-2">
                 <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${clinic.doctorStatus === 'IN' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-slate-800 text-slate-400'}`}>
                   <span className={`h-1.5 w-1.5 rounded-full ${clinic.doctorStatus === 'IN' ? 'bg-emerald-400' : 'bg-slate-500'}`} />
                   {clinic.doctorStatus === 'IN' ? 'Available' : 'Not checked in'}
                 </span>
-                <span className="break-words text-[10px] font-mono leading-snug text-slate-500">
+              </div>
+              <div className="mt-2 flex min-w-0 items-center gap-2">
+                <span className="min-w-0 truncate text-[10px] font-mono leading-snug text-slate-500">
                   {roomNumber ? `Room ${roomNumber}` : 'No room number'}
                 </span>
                 <button
                   type="button"
                   onClick={() => setEditingRoomNumber((value) => !value)}
-                  className="rounded border border-slate-700 px-2 py-0.5 text-[10px] font-bold text-teal-300 hover:bg-slate-800"
+                  className="shrink-0 rounded-md border border-slate-700 px-2 py-1 text-[10px] font-bold text-teal-300 transition hover:border-teal-400/50 hover:bg-slate-800"
                 >
-                  Edit
+                  {editingRoomNumber ? 'Close' : 'Edit room'}
                 </button>
-                {editingRoomNumber && (
-                  <div className="mt-2 flex w-full items-center gap-2">
+              </div>
+              {editingRoomNumber && (
+                <div className="mt-2 flex w-full items-center gap-2">
                     <input
                       value={roomNumber}
                       onChange={(e) => setRoomNumber(e.target.value)}
@@ -424,9 +428,8 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                     >
                       {isSavingRoomNumber ? '...' : 'Save'}
                     </button>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
