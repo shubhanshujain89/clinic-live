@@ -7,6 +7,7 @@ const getTrackingMobileFromQuery = () => {
 };
 
 interface TrackingData {
+  patientName: string;
   clinic: string;
   doctor: string;
   token: string;
@@ -18,6 +19,7 @@ interface TrackingData {
   delayMinutes: number;
   estimatedConsultationMinutes: number;
   appointmentSlot?: string;
+  currentlyServingToken?: string;
 }
 
 const getQueuePosition = (tracking: TrackingData | null) => {
@@ -36,8 +38,12 @@ const getQueueStatusMessage = (tracking: TrackingData | null) => {
     return "It's your turn!";
   }
 
+  if (tracking.doctorStatus !== 'IN' && !tracking.currentlyServingToken) {
+    return 'Doctor has not started the queue';
+  }
+
   if (tracking.patientsAhead <= 1) {
-    return "You're almost up!";
+    return "You're next in line";
   }
 
   return 'Queue is moving normally';
@@ -54,8 +60,12 @@ const getQueueStatusSubtext = (tracking: TrackingData | null) => {
     return 'Please proceed to the consultation area.';
   }
 
+  if (tracking.doctorStatus !== 'IN' && !tracking.currentlyServingToken) {
+    return 'Please wait for the doctor to check in.';
+  }
+
   if (tracking.patientsAhead <= 1) {
-    return "You're next after 1 patient. Please make your way to the clinic.";
+    return 'Please be ready when the doctor calls your token.';
   }
 
   return 'Track your turn live and come when it\'s time.';
@@ -203,6 +213,7 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
               </div>
 
               <div className="space-y-2 text-center text-sm text-slate-600">
+                <p className="font-semibold text-slate-800">{tracking.patientName}</p>
                 <p className="font-semibold text-slate-800">{tracking.doctor}</p>
                 <p>{tracking.clinic}</p>
                 {tracking.appointmentSlot && <p className="font-medium text-emerald-700">Booked timing: {tracking.appointmentSlot}</p>}
@@ -217,7 +228,7 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50/40">
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Currently serving</p>
-                  <p className="mt-3 text-2xl font-black text-slate-900">Token #{tracking.patientsAhead > 0 ? Math.max(1, tracking.patientsAhead) : '1'}</p>
+                  <p className="mt-3 text-2xl font-black text-slate-900">{tracking.currentlyServingToken || 'Not started'}</p>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50/40">
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Estimated consultation</p>

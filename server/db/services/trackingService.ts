@@ -9,6 +9,7 @@ import { getClinicBusinessDate } from './clinicTime.js';
 import { getPublicTrackingEstimatedWaitMinutes, QueueService } from './queueService.js';
 
 export interface TrackingResult {
+  patientName: string;
   clinic: string;
   doctor: string;
   token: string;
@@ -20,6 +21,7 @@ export interface TrackingResult {
   doctorStatus: string;
   delayMinutes: number;
   appointmentSlot?: string;
+  currentlyServingToken?: string;
 }
 
 export class TrackingService {
@@ -37,6 +39,7 @@ export class TrackingService {
       SELECT
         c.name AS clinic_name,
         d.name AS doctor_name,
+        p.name AS patient_name,
         t.token_number,
         t.status,
         t.sequence_number,
@@ -80,6 +83,15 @@ export class TrackingService {
       [result.clinic_id, result.session_id, result.doctor_id, waitingStates, result.sequence_number]
     );
     const patientsAhead = Number(aheadResult?.count || 0);
+
+    const servingResult = await executeQueryOne<{ token_number: string }>(
+      `SELECT token_number FROM tokens
+       WHERE clinic_id = ? AND session_id = ? AND doctor_id = ?
+         AND status IN ('CALLED', 'IN_CONSULTATION', 'SERVING')
+       ORDER BY called_at ASC, sequence_number ASC
+       LIMIT 1`,
+      [result.clinic_id, result.session_id, result.doctor_id]
+    );
 
     // Get average consultation duration from recent completed tokens
     const completedResult = await executeQuery<{ consultation_duration_seconds: number }>(
@@ -131,6 +143,7 @@ export class TrackingService {
     const publicStatus = result.status === 'SERVING' ? 'IN_CONSULTATION' : result.status;
 
     return {
+      patientName: result.patient_name,
       clinic: result.clinic_name,
       doctor: /^Dr\.\s*/i.test(result.doctor_name)
         ? result.doctor_name
@@ -144,6 +157,7 @@ export class TrackingService {
       doctorStatus: result.doctor_status,
       delayMinutes: Number(result.delay_minutes) || 0,
       appointmentSlot: result.appointment_slot || undefined,
+      currentlyServingToken: servingResult?.token_number || undefined,
     };
   }
 }
