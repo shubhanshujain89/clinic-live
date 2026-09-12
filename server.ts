@@ -1244,8 +1244,8 @@ app.post('/api/users/reset-password', async (req, res) => {
     const userId = String(req.body?.userId || '').trim();
     const newPassword = String(req.body?.newPassword || '');
 
-    if (!context || !['SUPER_ADMIN', 'CLINIC_ADMIN'].includes(context.role)) {
-      res.status(403).json({ error: 'Only administrators can reset passwords.' });
+    if (!context) {
+      res.status(403).json({ error: 'Authentication required.' });
       return;
     }
 
@@ -1255,6 +1255,13 @@ app.post('/api/users/reset-password', async (req, res) => {
     }
     if (newPassword.length < 12) {
       res.status(400).json({ error: 'New password must be at least 12 characters.' });
+      return;
+    }
+
+    const isAdministrator = ['SUPER_ADMIN', 'CLINIC_ADMIN'].includes(context.role);
+    const isSelfReset = context.userId === userId;
+    if (!isAdministrator && !isSelfReset) {
+      res.status(403).json({ error: 'Only administrators can reset other users\' passwords.' });
       return;
     }
 
