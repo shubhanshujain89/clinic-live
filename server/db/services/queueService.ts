@@ -322,6 +322,25 @@ export class QueueService {
     return repositories.tokens.getQueueStats(doctorId, sessionId);
   }
 
+  async markPaymentPaidForClinic(tokenId: string, clinicId: string): Promise<TokenWithDetails | null> {
+    const token = await repositories.tokens.findById(tokenId);
+    if (!token || token.clinicId !== clinicId || ['CANCELLED', 'NO_SHOW'].includes(token.status)) return null;
+
+    const clinic = await repositories.clinics.findById(clinicId);
+    if (!clinic) return null;
+
+    const updatedToken = await repositories.tokens.update(tokenId, {
+      amountPaid: Number(clinic.consultationFee || 0),
+      paymentMode: 'PAY_AT_CLINIC',
+      paymentMethod: 'CASH',
+      paymentStatus: 'PAID',
+    });
+    if (!updatedToken) return null;
+
+    return (await this.getQueueTokens(updatedToken.doctorId, updatedToken.sessionId))
+      .find((queueToken) => queueToken.id === updatedToken.id) || null;
+  }
+
   /**
    * Call next token in queue
    */

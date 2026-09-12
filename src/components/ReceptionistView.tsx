@@ -215,6 +215,21 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
     }
   };
 
+  const handleMarkPaymentPaid = async (token: TokenItem) => {
+    try {
+      const response = await fetch(`/api/staff/queue/${encodeURIComponent(token.id)}/payment`, {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Unable to update payment status.');
+      showToast(`Payment marked paid for #${token.tokenNumber}.`);
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      showToast(error instanceof Error ? error.message : 'Unable to update payment status.');
+    }
+  };
+
   // Hold / No-Show active token
   const handleHoldActiveToken = async () => {
     if (!activeToken) {
@@ -618,6 +633,15 @@ export const ReceptionistView: React.FC<ReceptionistViewProps> = ({
                         <span className={`text-[10px] block font-semibold ${token.paymentStatus === 'PAID' ? 'text-emerald-400' : 'text-amber-300'}`}>
                           {token.paymentStatus === 'PAID' ? 'Paid' : 'Payment pending'}
                         </span>
+                        {token.paymentStatus !== 'PAID' && (
+                          <button
+                            type="button"
+                            onClick={() => void handleMarkPaymentPaid(token)}
+                            className="mt-1 rounded-md bg-emerald-500/15 px-2 py-1 text-[10px] font-bold text-emerald-300 transition hover:bg-emerald-500/25"
+                          >
+                            Mark paid
+                          </button>
+                        )}
                       </td>
 
                       {/* Action Buttons */}

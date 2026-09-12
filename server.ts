@@ -541,6 +541,21 @@ app.post('/api/staff/queue/:tokenId/call', async (req, res) => {
   }
 });
 
+app.patch('/api/staff/queue/:tokenId/payment', async (req, res) => {
+  try {
+    const context = await queueMutationContext(req, res);
+    if (!context) return;
+    const token = await services.queue.markPaymentPaidForClinic(String(req.params.tokenId || ''), context.clinicId!);
+    if (!token) {
+      res.status(409).json({ error: 'Payment cannot be updated for this token.' });
+      return;
+    }
+    res.status(200).json(token);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to update payment status.' });
+  }
+});
+
 app.post('/api/staff/queue/:tokenId/start', async (req, res) => {
   try {
     const context = await authContext(req);
