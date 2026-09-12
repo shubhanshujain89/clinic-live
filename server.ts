@@ -1240,7 +1240,13 @@ app.patch('/api/barcodes/:barcodeId', async (req, res) => {
     };
 
     if (requestedStatus === 'DISABLED') {
-      assignment = { ...assignment, status: 'DISABLED' };
+      assignment = {
+        assignedDoctorId: null,
+        assignedDoctorName: null,
+        assignedClinicId: null,
+        assignedAt: null,
+        status: 'DISABLED',
+      };
     } else if (doctorId) {
       const doctor = await repositories.doctors.findById(doctorId);
       if (!doctor || doctor.status !== 'active') {
@@ -1264,7 +1270,13 @@ app.patch('/api/barcodes/:barcodeId', async (req, res) => {
         status: 'ASSIGNED',
       };
     } else if (requestedStatus === 'ASSIGNED') {
-      assignment = { ...assignment, status: 'ASSIGNED' };
+      assignment = {
+        assignedDoctorId: current.assignedDoctorId || null,
+        assignedDoctorName: current.assignedDoctorName || null,
+        assignedClinicId: current.assignedClinicId || null,
+        assignedAt: current.assignedAt || null,
+        status: 'ASSIGNED',
+      };
     } else {
       assignment = {
         assignedDoctorId: null,

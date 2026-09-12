@@ -12,7 +12,7 @@ interface BarcodeInventoryItem {
   barcodeValue: string;
   label: string;
   notes?: string;
-  status: 'ASSIGNED' | 'UNASSIGNED';
+  status: 'AVAILABLE' | 'ASSIGNED' | 'DISABLED';
   assignedDoctorId?: string | null;
   assignedDoctorName?: string | null;
   assignedClinicId?: string | null;
@@ -658,13 +658,13 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     }
   };
 
-  const assignBarcodeToDoctor = async (barcodeId: string, assignedDoctorId: string) => {
+  const updateBarcodeStatus = async (barcodeId: string, nextStatus: BarcodeInventoryItem['status'], assignedDoctorId = '') => {
     try {
       const response = await fetch(`/api/barcodes/${encodeURIComponent(barcodeId)}`, {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assignedDoctorId }),
+        body: JSON.stringify({ status: nextStatus, assignedDoctorId }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'Unable to update barcode assignment.');
@@ -672,6 +672,14 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     } catch (error) {
       window.alert(error instanceof Error ? error.message : 'Unable to update barcode assignment.');
     }
+  };
+
+  const assignBarcodeToDoctor = async (barcodeId: string, assignedDoctorId: string) => {
+    if (!assignedDoctorId) {
+      await updateBarcodeStatus(barcodeId, 'AVAILABLE');
+      return;
+    }
+    await updateBarcodeStatus(barcodeId, 'ASSIGNED', assignedDoctorId);
   };
 
   const deleteBarcodeInventoryItem = async (barcodeId: string) => {
@@ -1954,10 +1962,16 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <h4 className="truncate text-lg font-bold text-white">{item.label}</h4>
-                        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${item.status === 'ASSIGNED' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}`}>{item.status}</span>
+                        <h4 className="truncate text-lg font-bold text-white">{item.barcodeValue}</h4>
+                        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                          item.status === 'ASSIGNED'
+                            ? 'bg-emerald-500/15 text-emerald-300'
+                            : item.status === 'DISABLED'
+                              ? 'bg-rose-500/15 text-rose-300'
+                              : 'bg-amber-500/15 text-amber-300'
+                        }`}>{item.status}</span>
                       </div>
-                      <p className="mt-1 text-xs text-slate-400">Created {formatDashboardDate(item.createdAt)}</p>
+                      <p className="mt-1 text-xs text-slate-400">{item.label || 'Preprinted QR'} · Created {formatDashboardDate(item.createdAt)}</p>
                     </div>
                     <button onClick={() => deleteBarcodeInventoryItem(item.id)} className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-500/10 hover:text-rose-300" title="Delete barcode">
                       <Trash2 className="h-4 w-4" />
@@ -1968,18 +1982,33 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                     <BarcodePreview value={item.barcodeValue} />
                     <div className="space-y-3">
                       <div>
+                        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Status</label>
+                        <select
+                          value={item.status}
+                          onChange={(event) => updateBarcodeStatus(item.id, event.target.value as BarcodeInventoryItem['status'])}
+                          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
+                        >
+                          <option value="AVAILABLE">Available</option>
+                          <option value="ASSIGNED">Assigned</option>
+                          <option value="DISABLED">Disabled</option>
+                        </select>
+                      </div>
+
+                      <div>
                         <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Assign doctor</label>
                         <select
                           value={item.assignedDoctorId || ''}
                           onChange={(event) => assignBarcodeToDoctor(item.id, event.target.value)}
-                          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
+                          disabled={item.status === 'DISABLED'}
+                          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          <option value="">Unassigned</option>
+                          <option value="">Available</option>
                           {inventoryDoctors.map((doctor) => <option key={doctor.id} value={doctor.id}>{doctor.name}</option>)}
                         </select>
                       </div>
+
                       <div className="text-xs text-slate-400">
-                        <p className="flex items-center gap-1"><Link2 className="h-3.5 w-3.5 text-emerald-400" /> {item.assignedDoctorName || 'Available for assignment'}</p>
+                        <p className="flex items-center gap-1"><Link2 className="h-3.5 w-3.5 text-emerald-400" /> {item.assignedDoctorName || (item.status === 'ASSIGNED' ? 'Assigned to a doctor' : 'Available for assignment')}</p>
                         {item.assignedClinicId && <p className="mt-1">Clinic: {clinics.find((clinic) => clinic.id === item.assignedClinicId)?.name || item.assignedClinicId}</p>}
                       </div>
                       {item.status === 'ASSIGNED' && <button onClick={() => assignBarcodeToDoctor(item.id, '')} className="inline-flex items-center gap-1 text-xs font-semibold text-amber-300 hover:text-amber-200"><Unlink className="h-3.5 w-3.5" /> De-assign</button>}
