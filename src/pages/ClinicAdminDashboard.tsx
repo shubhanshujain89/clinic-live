@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Plus, Edit, Trash2, Users, Clock, Search, Filter, Barcode, Link2, Unlink } from 'lucide-react';
+import { Building2, Plus, Edit, Trash2, Users, Clock, Search, Filter, Barcode, Link2, Unlink, Printer } from 'lucide-react';
 import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where, orderBy, auth, onAuthStateChanged, recordAuditEvent, hashPassword } from '../lib/firebase';
 import { defaultContentSections, defaultSiteSettings, loadContentSections, loadSiteSettings, saveContentSections, saveSiteSettings, initializeSiteConfig, loadSiteSettingsFromDatabase, loadContentSectionsFromDatabase } from '../lib/siteConfig';
 import { FeaturePlan } from '../types/queue';
@@ -39,7 +39,9 @@ const BarcodePreview: React.FC<{ value: string }> = ({ value }) => {
       <div className="flex h-40 items-center justify-center overflow-hidden">
         <img src={qrImageUrl} alt={`QR code for ${qrUrl}`} className="h-40 w-40 object-contain" />
       </div>
-      <img src="/nextq-logo.png" alt="NEXTQ" className="mx-auto my-1 h-6 w-24 object-contain" />
+      <div className="flex h-9 items-center justify-center border-y border-slate-100 bg-white">
+        <img src="/nextq-logo.png" alt="NEXTQ" className="h-8 w-32 object-contain" />
+      </div>
       <div className="mt-1 text-center font-mono text-[10px] font-bold tracking-[0.18em] text-black">{normalizeCode39Value(value)}</div>
     </div>
   );
@@ -638,6 +640,33 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       console.error('Error fetching barcode inventory:', error);
       setBarcodeInventory([]);
     }
+  };
+
+  const printBarcode = (barcodeValue: string) => {
+    const popup = window.open('', '_blank', 'width=480,height=640');
+    if (!popup) {
+      window.alert('Please allow pop-ups to print the barcode.');
+      return;
+    }
+
+    const code = normalizeCode39Value(barcodeValue);
+    const qrUrl = buildQrPublicUrl(code);
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=${encodeURIComponent(qrUrl)}`;
+    const logoUrl = new URL('/nextq-logo.png', window.location.origin).href;
+
+    popup.document.write(`<!doctype html><html><head><title>${code} - NEXTQ</title><style>
+      @page { margin: 12mm; }
+      body { margin: 0; display: flex; min-height: 100vh; align-items: center; justify-content: center; font-family: Arial, sans-serif; }
+      .card { width: 72mm; padding: 6mm; text-align: center; border: 1px solid #d1d5db; }
+      .qr { display: block; width: 62mm; height: 62mm; margin: 0 auto 4mm; }
+      .logo { display: block; width: 42mm; height: 10mm; object-fit: contain; margin: 0 auto 3mm; }
+      .code { font: 700 12pt monospace; letter-spacing: 2px; }
+    </style></head><body><main class="card">
+      <img class="qr" src="${qrImageUrl}" alt="QR code for ${qrUrl}">
+      <img class="logo" src="${logoUrl}" alt="NEXTQ">
+      <div class="code">${code}</div>
+    </main><script>window.addEventListener('load', () => { window.print(); });</script></body></html>`);
+    popup.document.close();
   };
 
   const createBarcodeInventoryItem = async () => {
@@ -1985,6 +2014,9 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                   <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-center">
                     <BarcodePreview value={item.barcodeValue} />
                     <div className="space-y-3">
+                      <button onClick={() => printBarcode(item.barcodeValue)} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400">
+                        <Printer className="h-4 w-4" /> Save / Print Barcode
+                      </button>
                       <div>
                         <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Status</label>
                         <select
