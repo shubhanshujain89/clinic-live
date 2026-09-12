@@ -56,6 +56,7 @@ export const resolveAppPageForRoute = (path: string, userRole?: string | null): 
 
   if (path.startsWith('/track/')) return 'patient-tracking';
   if (path === '/track') return 'patient-tracking';
+  if (path.startsWith('/q/')) return 'patient-booking';
   if (path === '/booking') return 'patient-booking';
   if (path === '/login') return 'login';
   if (path === '/what-we-provide') return 'what-we-provide';
@@ -67,7 +68,7 @@ export const resolveAppPageForRoute = (path: string, userRole?: string | null): 
 };
 
 const isPublicRoute = (path: string) => {
-  return path === '/login' || path === '/booking' || path === '/track' || path.startsWith('/track/') || path === '/what-we-provide' || path === '/how-it-works' || path === '/why-choose-us' || path === '/benefits' || path === '/contact';
+  return path === '/login' || path === '/booking' || path.startsWith('/q/') || path === '/track' || path.startsWith('/track/') || path === '/what-we-provide' || path === '/how-it-works' || path === '/why-choose-us' || path === '/benefits' || path === '/contact';
 };
 
 export default function App() {
