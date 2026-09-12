@@ -1,10 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Plus, Edit, Trash2, Users, Clock, Search, Filter } from 'lucide-react';
+import { Building2, Plus, Edit, Trash2, Users, Clock, Search, Filter, Barcode, Link2, Unlink } from 'lucide-react';
 import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, auth, onAuthStateChanged, recordAuditEvent, hashPassword } from '../lib/firebase';
 import { defaultContentSections, defaultSiteSettings, loadContentSections, loadSiteSettings, saveContentSections, saveSiteSettings, initializeSiteConfig, loadSiteSettingsFromDatabase, loadContentSectionsFromDatabase } from '../lib/siteConfig';
 import { FeaturePlan } from '../types/queue';
 import { PhoneInput } from '../components/PhoneInput';
 import { DashboardMode, DashboardTabKey, getDashboardTabs } from './clinicAdminDashboardLogic';
+import { getCode39Bars, normalizeCode39Value } from '../lib/code39';
+
+interface BarcodeInventoryItem {
+  id: string;
+  barcodeValue: string;
+  label: string;
+  notes?: string;
+  status: 'ASSIGNED' | 'UNASSIGNED';
+  assignedDoctorId?: string | null;
+  assignedDoctorName?: string | null;
+  assignedClinicId?: string | null;
+  assignedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface InventoryDoctor {
+  id: string;
+  name: string;
+  clinicId: string;
+  specialization?: string;
+  status?: string;
+}
+
+const BarcodePreview: React.FC<{ value: string }> = ({ value }) => {
+  const bars = getCode39Bars(value);
+  return (
+    <div className="rounded-lg bg-white px-3 py-2">
+      <div className="flex h-14 items-stretch justify-center overflow-hidden">
+        {bars.map((isBar, index) => <span key={`${value}-${index}`} className={isBar ? 'bg-black' : 'bg-white'} style={{ width: isBar ? 2 : 1 }} />)}
+      </div>
+      <div className="mt-1 text-center font-mono text-[10px] font-bold tracking-[0.18em] text-black">{normalizeCode39Value(value)}</div>
+    </div>
+  );
+};
 
 const normalizeDashboardMode = (value?: string): DashboardMode => value === 'site-admin' ? 'site-admin' : 'clinic-admin';
 
@@ -208,6 +243,9 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   const [appointments, setAppointments] = useState<Array<{ clinicId: string; appointmentType?: string; status?: string }>>([]);
   const [payments, setPayments] = useState<Array<{ id: string; clinicId: string; clinicName: string; pack: FeaturePlan; trialForPlan?: FeaturePlan; amount: number; durationDays: number; status: 'PAID' | 'PENDING'; paidAt: string; startDate: string; expiryDate: string; notes?: string }>>([]);
   const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; role: string; status: 'Active' | 'Offline' | 'Pending'; clinicName?: string; phone?: string; accessStatus?: 'Granted' | 'Hold' | 'Denied'; photoURL?: string; passwordReset?: string; source?: 'staff_users' | 'doctors' }>>([]);
+  const [inventoryDoctors, setInventoryDoctors] = useState<InventoryDoctor[]>([]);
+  const [barcodeInventory, setBarcodeInventory] = useState<BarcodeInventoryItem[]>([]);
+  const [barcodeForm, setBarcodeForm] = useState({ barcodeValue: '', label: '', notes: '' });
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingClinic, setEditingClinic] = useState<Clinic | null>(null);
@@ -459,6 +497,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
       };
 
       await setupUsersListener();
+      void fetchBarcodeInventory();
       cleanupListeners = () => {
         clearDashboardTimers();
         listenersRef.current.forEach((unsub) => unsub());
@@ -570,6 +609,82 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     } catch (error) {
       console.error('Error fetching payment records:', error);
       setPayments([]);
+    }
+  };
+
+  const fetchBarcodeInventory = async () => {
+    try {
+      const [barcodeResponse, doctorSnapshot] = await Promise.all([
+        fetch('/api/barcodes', { credentials: 'include' }),
+        getDocs(collection(db, 'doctors')),
+      ]);
+      if (!barcodeResponse.ok) throw new Error(`Barcode inventory request failed (${barcodeResponse.status})`);
+      setBarcodeInventory(await barcodeResponse.json());
+      setInventoryDoctors(doctorSnapshot.docs.map((docItem) => {
+        const item = docItem.data() as Record<string, any>;
+        return {
+          id: docItem.id,
+          name: String(item.name || 'Unnamed doctor'),
+          clinicId: String(item.clinicId || item.clinic_id || ''),
+          specialization: String(item.specialization || ''),
+          status: String(item.status || 'active'),
+        };
+      }).filter((doctor) => doctor.status === 'active'));
+    } catch (error) {
+      console.error('Error fetching barcode inventory:', error);
+      setBarcodeInventory([]);
+    }
+  };
+
+  const createBarcodeInventoryItem = async () => {
+    const barcodeValue = normalizeCode39Value(barcodeForm.barcodeValue || `NQ-${String(barcodeInventory.length + 1).padStart(4, '0')}`);
+    if (!barcodeForm.label.trim()) {
+      window.alert('Barcode label is required.');
+      return;
+    }
+    try {
+      const response = await fetch('/api/barcodes', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...barcodeForm, barcodeValue }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Unable to create barcode.');
+      setBarcodeInventory((current) => [payload, ...current]);
+      setBarcodeForm({ barcodeValue: '', label: '', notes: '' });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Unable to create barcode.');
+    }
+  };
+
+  const assignBarcodeToDoctor = async (barcodeId: string, assignedDoctorId: string) => {
+    try {
+      const response = await fetch(`/api/barcodes/${encodeURIComponent(barcodeId)}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignedDoctorId }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Unable to update barcode assignment.');
+      setBarcodeInventory((current) => current.map((item) => item.id === barcodeId ? payload : item));
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Unable to update barcode assignment.');
+    }
+  };
+
+  const deleteBarcodeInventoryItem = async (barcodeId: string) => {
+    if (!window.confirm('Delete this barcode from inventory?')) return;
+    try {
+      const response = await fetch(`/api/barcodes/${encodeURIComponent(barcodeId)}`, { method: 'DELETE', credentials: 'include' });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || 'Unable to delete barcode.');
+      }
+      setBarcodeInventory((current) => current.filter((item) => item.id !== barcodeId));
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Unable to delete barcode.');
     }
   };
 
@@ -1737,6 +1852,98 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                 ))}
               </div>
             )}
+          </div>
+        );
+      case 'barcode-inventory':
+        return (
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-6">
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-emerald-300">Super Admin tools</div>
+                  <h3 className="mt-2 text-2xl font-bold text-white">Barcode Inventory</h3>
+                  <p className="mt-1 text-sm text-slate-400">Create unique Code 39 barcodes and assign one barcode to each doctor.</p>
+                </div>
+                <Barcode className="h-8 w-8 text-emerald-400" />
+              </div>
+
+              <div className="grid gap-4 rounded-xl border border-slate-700 bg-slate-800/70 p-4 md:grid-cols-[1fr_1fr_1.5fr_auto] md:items-end">
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">Barcode value</label>
+                  <input
+                    value={barcodeForm.barcodeValue}
+                    onChange={(event) => setBarcodeForm((current) => ({ ...current, barcodeValue: event.target.value }))}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                    placeholder={`Auto: NQ-${String(barcodeInventory.length + 1).padStart(4, '0')}`}
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">Label *</label>
+                  <input
+                    value={barcodeForm.label}
+                    onChange={(event) => setBarcodeForm((current) => ({ ...current, label: event.target.value }))}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                    placeholder="Doctor counter barcode"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">Notes</label>
+                  <input
+                    value={barcodeForm.notes}
+                    onChange={(event) => setBarcodeForm((current) => ({ ...current, notes: event.target.value }))}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                    placeholder="Optional inventory note"
+                  />
+                </div>
+                <button onClick={createBarcodeInventoryItem} className="rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-950 transition hover:bg-emerald-400">
+                  <Plus className="mr-1 inline h-4 w-4" /> Create
+                </button>
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              {barcodeInventory.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/50 p-10 text-center text-sm text-slate-400 lg:col-span-2">No barcodes in inventory yet.</div>
+              ) : barcodeInventory.map((item) => (
+                <div key={item.id} className="rounded-2xl border border-slate-700 bg-slate-900/70 p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="truncate text-lg font-bold text-white">{item.label}</h4>
+                        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${item.status === 'ASSIGNED' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}`}>{item.status}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-400">Created {formatDashboardDate(item.createdAt)}</p>
+                    </div>
+                    <button onClick={() => deleteBarcodeInventoryItem(item.id)} className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-500/10 hover:text-rose-300" title="Delete barcode">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-center">
+                    <BarcodePreview value={item.barcodeValue} />
+                    <div className="space-y-3">
+                      <div>
+                        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Assign doctor</label>
+                        <select
+                          value={item.assignedDoctorId || ''}
+                          onChange={(event) => assignBarcodeToDoctor(item.id, event.target.value)}
+                          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
+                        >
+                          <option value="">Unassigned</option>
+                          {inventoryDoctors.map((doctor) => <option key={doctor.id} value={doctor.id}>{doctor.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        <p className="flex items-center gap-1"><Link2 className="h-3.5 w-3.5 text-emerald-400" /> {item.assignedDoctorName || 'Available for assignment'}</p>
+                        {item.assignedClinicId && <p className="mt-1">Clinic: {clinics.find((clinic) => clinic.id === item.assignedClinicId)?.name || item.assignedClinicId}</p>}
+                      </div>
+                      {item.status === 'ASSIGNED' && <button onClick={() => assignBarcodeToDoctor(item.id, '')} className="inline-flex items-center gap-1 text-xs font-semibold text-amber-300 hover:text-amber-200"><Unlink className="h-3.5 w-3.5" /> De-assign</button>}
+                    </div>
+                  </div>
+                  {item.notes && <p className="mt-4 border-t border-slate-800 pt-3 text-xs text-slate-500">{item.notes}</p>}
+                </div>
+              ))}
+            </div>
           </div>
         );
       case 'users':

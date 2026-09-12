@@ -1,5 +1,5 @@
 export type DashboardMode = 'site-admin' | 'clinic-admin';
-export type DashboardTabKey = 'dashboard' | 'clinic-summary' | 'content' | 'clinics' | 'users' | 'security' | 'billing' | 'audit' | 'recent-activity';
+export type DashboardTabKey = 'dashboard' | 'clinic-summary' | 'content' | 'clinics' | 'barcode-inventory' | 'users' | 'security' | 'billing' | 'audit' | 'recent-activity';
 export type DashboardTab = { key: DashboardTabKey; label: string };
 
 export const getDashboardTabs = (mode: DashboardMode): DashboardTab[] => {
@@ -18,7 +18,9 @@ export const getDashboardTabs = (mode: DashboardMode): DashboardTab[] => {
     return [
       ...commonTabs.slice(0, 2),
       { key: 'content', label: 'Website Content' },
-      ...commonTabs.slice(2),
+      ...commonTabs.slice(2, 3),
+      { key: 'barcode-inventory', label: 'Barcode Inventory' },
+      ...commonTabs.slice(3),
     ];
   }
 

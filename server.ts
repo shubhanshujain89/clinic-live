@@ -1083,6 +1083,144 @@ app.post('/api/clinic-access', async (req, res) => {
   }
 });
 
+app.get('/api/barcodes', async (req, res) => {
+  const context = await authContext(req);
+  if (!context || context.role !== 'SUPER_ADMIN') {
+    res.status(403).json({ error: 'Only Super Admin can access barcode inventory.' });
+    return;
+  }
+
+  try {
+    const records = await repositories.settings.findAll({ where: { category: 'barcode_inventory' }, orderBy: 'updated_at', orderDirection: 'DESC' });
+    res.status(200).json(records.flatMap((record) => {
+      try {
+        return [{ id: record.id, ...JSON.parse(record.value || '{}') }];
+      } catch {
+        return [];
+      }
+    }));
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to load barcode inventory.' });
+  }
+});
+
+app.post('/api/barcodes', async (req, res) => {
+  const context = await authContext(req);
+  if (!context || context.role !== 'SUPER_ADMIN') {
+    res.status(403).json({ error: 'Only Super Admin can manage barcode inventory.' });
+    return;
+  }
+
+  try {
+    const barcodeValue = String(req.body?.barcodeValue || '').trim().toUpperCase();
+    const label = String(req.body?.label || '').trim();
+    if (!barcodeValue || !label) {
+      res.status(400).json({ error: 'Barcode value and label are required.' });
+      return;
+    }
+
+    const records = await repositories.settings.findAll({ where: { category: 'barcode_inventory' } });
+    const duplicate = records.some((record) => {
+      try {
+        return String(JSON.parse(record.value || '{}').barcodeValue || '').toUpperCase() === barcodeValue;
+      } catch {
+        return false;
+      }
+    });
+    if (duplicate) {
+      res.status(409).json({ error: 'That barcode value already exists.' });
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const inventoryItem = {
+      barcodeValue,
+      label,
+      notes: String(req.body?.notes || '').trim(),
+      status: 'UNASSIGNED',
+      assignedDoctorId: null,
+      assignedDoctorName: null,
+      assignedClinicId: null,
+      assignedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const record = await repositories.settings.create({
+      id: crypto.randomUUID(),
+      key: `barcode_${barcodeValue}_${crypto.randomUUID()}`,
+      value: JSON.stringify(inventoryItem),
+      category: 'barcode_inventory',
+      clinicId: null,
+    } as any);
+    res.status(201).json({ id: record.id, ...inventoryItem });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to create barcode.' });
+  }
+});
+
+app.patch('/api/barcodes/:barcodeId', async (req, res) => {
+  const context = await authContext(req);
+  if (!context || context.role !== 'SUPER_ADMIN') {
+    res.status(403).json({ error: 'Only Super Admin can manage barcode inventory.' });
+    return;
+  }
+
+  try {
+    const record = await repositories.settings.findById(String(req.params.barcodeId || ''));
+    if (!record || record.category !== 'barcode_inventory') {
+      res.status(404).json({ error: 'Barcode not found.' });
+      return;
+    }
+    const current = JSON.parse(record.value || '{}');
+    const doctorId = req.body?.assignedDoctorId ? String(req.body.assignedDoctorId) : '';
+    let assignment = { assignedDoctorId: null as string | null, assignedDoctorName: null as string | null, assignedClinicId: null as string | null, assignedAt: null as string | null, status: 'UNASSIGNED' };
+    if (doctorId) {
+      const doctor = await repositories.doctors.findById(doctorId);
+      if (!doctor || doctor.status !== 'active') {
+        res.status(404).json({ error: 'Doctor not found.' });
+        return;
+      }
+      const existingAssignment = (await repositories.settings.findAll({ where: { category: 'barcode_inventory' } })).some((candidate) => {
+        if (candidate.id === record.id) return false;
+        try {
+          return String(JSON.parse(candidate.value || '{}').assignedDoctorId || '') === doctor.id;
+        } catch {
+          return false;
+        }
+      });
+      if (existingAssignment) {
+        res.status(409).json({ error: 'This doctor already has a barcode assigned.' });
+        return;
+      }
+      assignment = { assignedDoctorId: doctor.id, assignedDoctorName: doctor.name, assignedClinicId: doctor.clinicId, assignedAt: new Date().toISOString(), status: 'ASSIGNED' };
+    }
+    const updated = { ...current, ...assignment, updatedAt: new Date().toISOString() };
+    await repositories.settings.update(record.id, { value: JSON.stringify(updated) });
+    res.status(200).json({ id: record.id, ...updated });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to update barcode assignment.' });
+  }
+});
+
+app.delete('/api/barcodes/:barcodeId', async (req, res) => {
+  const context = await authContext(req);
+  if (!context || context.role !== 'SUPER_ADMIN') {
+    res.status(403).json({ error: 'Only Super Admin can manage barcode inventory.' });
+    return;
+  }
+  try {
+    const record = await repositories.settings.findById(String(req.params.barcodeId || ''));
+    if (!record || record.category !== 'barcode_inventory') {
+      res.status(404).json({ error: 'Barcode not found.' });
+      return;
+    }
+    await repositories.settings.delete(record.id);
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to delete barcode.' });
+  }
+});
+
 app.post('/api/users/reset-password', async (req, res) => {
   try {
     const context = await authContext(req);
