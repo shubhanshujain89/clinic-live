@@ -31,30 +31,56 @@ interface DoctorManagementProps {
 
 const isValidPhotoDataUrl = (value: string) => /^data:image\/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(value) && value.length <= 65000;
 
+type TimePart = 'hour' | 'minute' | 'meridian';
+type TimeParts = { hour: string; minute: string; meridian: string };
+
+const parseTimeParts = (value: string): TimeParts => {
+  const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return { hour: '', minute: '', meridian: '' };
+  return { hour: match[1], minute: match[2], meridian: match[3].toUpperCase() };
+};
+
+const formatTimeParts = (parts: TimeParts) =>
+  parts.hour && parts.minute && parts.meridian ? `${parts.hour}:${parts.minute} ${parts.meridian}` : '';
+
+const parseAvailableWindows = (value: string) => String(value || '')
+  .split(',')
+  .map((window) => window.trim().match(/^(\d{1,2}:\d{2}\s*(?:AM|PM))\s*-\s*(\d{1,2}:\d{2}\s*(?:AM|PM))$/i))
+  .filter((match): match is RegExpMatchArray => Boolean(match))
+  .map((match) => ({ start: match[1], end: match[2] }));
+
+const buildAvailableHours = (start: string, end: string, start2: string, end2: string) =>
+  [[start, end], [start2, end2]]
+    .filter(([windowStart, windowEnd]) => windowStart && windowEnd)
+    .map(([windowStart, windowEnd]) => `${windowStart} - ${windowEnd}`)
+    .join(', ');
+
+const emptyDoctorForm = {
+  name: '',
+  specialization: '',
+  qualification: '',
+  experience: '',
+  phone: '',
+  email: '',
+  photo: '',
+  bio: '',
+  consultationFee: '',
+  availableDays: [] as string[],
+  availableHours: '',
+  availableStart: '',
+  availableEnd: '',
+  availableStart2: '',
+  availableEnd2: '',
+  status: 'active' as 'active' | 'inactive'
+};
+
 export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, clinicName, onBack }) => {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [formData, setFormData] = useState({
-    name: '',
-    specialization: '',
-    qualification: '',
-    experience: '',
-    phone: '',
-    email: '',
-    photo: '',
-    bio: '',
-    consultationFee: '',
-    availableDays: [] as string[],
-    availableHours: '',
-    availableStart: '',
-    availableEnd: '',
-    availableStart2: '',
-    availableEnd2: '',
-    status: 'active' as 'active' | 'inactive'
-  });
+  const [formData, setFormData] = useState(emptyDoctorForm);
 
   useEffect(() => {
     fetchDoctors();
@@ -105,24 +131,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
 
       setShowAddModal(false);
       setEditingDoctor(null);
-      setFormData({
-        name: '',
-        specialization: '',
-        qualification: '',
-        experience: '',
-        phone: '',
-        email: '',
-        photo: '',
-        bio: '',
-        consultationFee: '',
-        availableDays: [],
-        availableHours: '',
-        availableStart: '',
-        availableEnd: '',
-        availableStart2: '',
-        availableEnd2: '',
-        status: 'active'
-      });
+      setFormData({ ...emptyDoctorForm });
       fetchDoctors();
     } catch (error) {
       console.error('Error saving doctor:', error);
@@ -171,6 +180,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
 
   const handleEditDoctor = (doctor: Doctor) => {
     setEditingDoctor(doctor);
+    const windows = parseAvailableWindows(doctor.availableHours);
     setFormData({
       name: doctor.name,
       specialization: doctor.specialization,
@@ -183,13 +193,23 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
       consultationFee: doctor.consultationFee.toString(),
       availableDays: doctor.availableDays,
       availableHours: doctor.availableHours,
-      availableStart: doctor.availableHours?.split(' - ')[0]?.split(',')[0]?.trim() || '',
-      availableEnd: doctor.availableHours?.split(' - ')[1]?.split(',')[0]?.trim() || '',
-      availableStart2: doctor.availableHours?.split(',')[1]?.split(' - ')[0]?.trim() || '',
-      availableEnd2: doctor.availableHours?.split(',')[1]?.split(' - ')[1]?.trim() || '',
+      availableStart: windows[0]?.start || '',
+      availableEnd: windows[0]?.end || '',
+      availableStart2: windows[1]?.start || '',
+      availableEnd2: windows[1]?.end || '',
       status: doctor.status
     });
     setShowAddModal(true);
+  };
+
+  const updateAvailableTime = (field: 'availableStart' | 'availableEnd' | 'availableStart2' | 'availableEnd2', part: TimePart, value: string) => {
+    const nextParts = { ...parseTimeParts(formData[field]), [part]: value };
+    const nextTime = formatTimeParts(nextParts);
+    const nextFormData = { ...formData, [field]: nextTime };
+    setFormData({
+      ...nextFormData,
+      availableHours: buildAvailableHours(nextFormData.availableStart, nextFormData.availableEnd, nextFormData.availableStart2, nextFormData.availableEnd2),
+    });
   };
 
   const filteredDoctors = doctors.filter(doctor =>
@@ -233,24 +253,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
           <button
             onClick={() => {
               setEditingDoctor(null);
-              setFormData({
-                name: '',
-                specialization: '',
-                qualification: '',
-                experience: '',
-                phone: '',
-                email: '',
-                photo: '',
-                bio: '',
-                consultationFee: '',
-                availableDays: [],
-                availableHours: '',
-                availableStart: '',
-                availableEnd: '',
-                availableStart2: '',
-                availableEnd2: '',
-                status: 'active'
-              });
+              setFormData({ ...emptyDoctorForm });
               setShowAddModal(true);
             }}
             className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-lg font-semibold hover:shadow-lg hover:shadow-emerald-500/50 flex items-center gap-2 transition"
@@ -470,67 +473,55 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
 
               <div>
                 <label className="block text-sm font-semibold mb-2">Available Hours</label>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-400">Start time</label>
-                    <input
-                      type="text"
-                      value={formData.availableStart}
-                      onChange={(e) => {
-                        const firstStart = e.target.value;
-                        const firstWindow = firstStart && formData.availableEnd ? `${firstStart} - ${formData.availableEnd}` : '';
-                        const secondWindow = formData.availableStart2 && formData.availableEnd2 ? `${formData.availableStart2} - ${formData.availableEnd2}` : '';
-                        setFormData({ ...formData, availableStart: firstStart, availableHours: [firstWindow, secondWindow].filter(Boolean).join(', ') });
-                      }}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none"
-                      placeholder="e.g. 9:00 AM"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-400">End time</label>
-                    <input
-                      type="text"
-                      value={formData.availableEnd}
-                      onChange={(e) => {
-                        const firstEnd = e.target.value;
-                        const firstWindow = formData.availableStart && firstEnd ? `${formData.availableStart} - ${firstEnd}` : '';
-                        const secondWindow = formData.availableStart2 && formData.availableEnd2 ? `${formData.availableStart2} - ${formData.availableEnd2}` : '';
-                        setFormData({ ...formData, availableEnd: firstEnd, availableHours: [firstWindow, secondWindow].filter(Boolean).join(', ') });
-                      }}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none"
-                      placeholder="e.g. 6:00 PM"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-400">Second start time <span className="text-slate-500">(optional)</span></label>
-                    <input
-                      type="text"
-                      value={formData.availableStart2}
-                      onChange={(e) => {
-                        const secondStart = e.target.value;
-                        const firstWindow = formData.availableStart && formData.availableEnd ? `${formData.availableStart} - ${formData.availableEnd}` : '';
-                        const secondWindow = secondStart && formData.availableEnd2 ? `${secondStart} - ${formData.availableEnd2}` : '';
-                        setFormData({ ...formData, availableStart2: secondStart, availableHours: [firstWindow, secondWindow].filter(Boolean).join(', ') });
-                      }}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none"
-                      placeholder="e.g. 7:00 PM"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-400">Second end time <span className="text-slate-500">(optional)</span></label>
-                    <input
-                      type="text"
-                      value={formData.availableEnd2}
-                      onChange={(e) => {
-                        const secondEnd = e.target.value;
-                        const firstWindow = formData.availableStart && formData.availableEnd ? `${formData.availableStart} - ${formData.availableEnd}` : '';
-                        const secondWindow = formData.availableStart2 && secondEnd ? `${formData.availableStart2} - ${secondEnd}` : '';
-                        setFormData({ ...formData, availableEnd2: secondEnd, availableHours: [firstWindow, secondWindow].filter(Boolean).join(', ') });
-                      }}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none"
-                      placeholder="e.g. 9:00 PM"
-                    />
-                  </div>
+                <div className="space-y-4 rounded-xl border border-slate-600 bg-slate-700 p-3">
+                  {([
+                    { label: 'First shift', start: 'availableStart' as const, end: 'availableEnd' as const },
+                    { label: 'Second shift (optional)', start: 'availableStart2' as const, end: 'availableEnd2' as const },
+                  ]).map((shift) => (
+                    <div key={shift.label}>
+                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-300">{shift.label}</label>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {([['Opening', shift.start], ['Closing', shift.end]] as const).map(([label, field]) => {
+                          const parts = parseTimeParts(formData[field]);
+                          return (
+                            <div key={field}>
+                              <label className="mb-1 block text-xs text-slate-400">{label}</label>
+                              <div className="flex gap-2">
+                                <select
+                                  value={parts.hour}
+                                  onChange={(event) => updateAvailableTime(field, 'hour', event.target.value)}
+                                  className="min-w-0 flex-1 bg-slate-800 border border-slate-600 rounded-lg px-2 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                                >
+                                  <option value="">Hour</option>
+                                  {Array.from({ length: 12 }, (_, index) => index + 1).map((hour) => <option key={hour} value={String(hour)}>{hour}</option>)}
+                                </select>
+                                <select
+                                  value={parts.minute}
+                                  onChange={(event) => updateAvailableTime(field, 'minute', event.target.value)}
+                                  className="min-w-0 flex-1 bg-slate-800 border border-slate-600 rounded-lg px-2 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                                >
+                                  <option value="">Min</option>
+                                  {['00', '15', '30', '45'].map((minute) => <option key={minute} value={minute}>{minute}</option>)}
+                                </select>
+                                <select
+                                  value={parts.meridian}
+                                  onChange={(event) => updateAvailableTime(field, 'meridian', event.target.value)}
+                                  className="min-w-0 flex-1 bg-slate-800 border border-slate-600 rounded-lg px-2 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                                >
+                                  <option value="">AM/PM</option>
+                                  <option value="AM">AM</option>
+                                  <option value="PM">PM</option>
+                                </select>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+                    Saved schedule: <span className="font-semibold">{formData.availableHours || 'Select opening and closing times'}</span>
+                  </p>
                 </div>
               </div>
 
@@ -552,24 +543,7 @@ export const DoctorManagement: React.FC<DoctorManagementProps> = ({ clinicId, cl
                 onClick={() => {
                   setShowAddModal(false);
                   setEditingDoctor(null);
-                  setFormData({
-                    name: '',
-                    specialization: '',
-                    qualification: '',
-                    experience: '',
-                    phone: '',
-                    email: '',
-                    photo: '',
-                    bio: '',
-                    consultationFee: '',
-                    availableDays: [],
-                    availableHours: '',
-                    availableStart: '',
-                    availableEnd: '',
-                    availableStart2: '',
-                    availableEnd2: '',
-                    status: 'active'
-                  });
+                  setFormData({ ...emptyDoctorForm });
                 }}
                 className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition"
               >

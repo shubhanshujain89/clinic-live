@@ -1055,6 +1055,13 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
     setShowAddModal(true);
   };
 
+  const openAddClinicModal = () => {
+    setEditingClinic(null);
+    setCustomOperatingHours(parseOperatingHoursParts(DEFAULT_OPERATING_HOURS));
+    setFormData({ name: '', address: '', phone: '+91 ', email: '', specializations: '', operatingHours: DEFAULT_OPERATING_HOURS, featurePlan: 'TRIAL', logo: '', qrCodeUrl: '' });
+    setShowAddModal(true);
+  };
+
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -1670,12 +1677,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
               </div>
               {isSiteAdmin && (
                 <button
-                  onClick={() => {
-                    setEditingClinic(null);
-                    setCustomOperatingHours(parseOperatingHoursParts(DEFAULT_OPERATING_HOURS));
-                    setFormData({ name: '', address: '', phone: '+91 ', email: '', specializations: '', operatingHours: DEFAULT_OPERATING_HOURS, featurePlan: 'TRIAL', logo: '', qrCodeUrl: '' });
-                    setShowAddModal(true);
-                  }}
+                  onClick={openAddClinicModal}
                   className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-lg font-semibold hover:shadow-lg hover:shadow-emerald-500/50 flex items-center gap-2 transition"
                 >
                   <Plus className="w-5 h-5" />
@@ -2183,6 +2185,15 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
           </div>
 
           <div className="hidden items-center gap-2 md:flex">
+            {isSiteAdmin && (
+              <button
+                onClick={openAddClinicModal}
+                className="rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:shadow-lg hover:shadow-emerald-500/30"
+              >
+                <Plus className="mr-1 inline h-4 w-4" />
+                Add Clinic
+              </button>
+            )}
             {isSiteAdmin && (
               <button
                 onClick={() => setActiveTab('content')}

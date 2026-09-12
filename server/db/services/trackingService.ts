@@ -45,6 +45,7 @@ export class TrackingService {
         c.delay_minutes,
         c.avg_consultation_minutes,
         c.operating_hours,
+        d.available_hours AS doctor_available_hours,
         t.session_id,
         t.clinic_id,
         t.doctor_id,
@@ -112,7 +113,7 @@ export class TrackingService {
     const estimatedWaitMinutes = getPublicTrackingEstimatedWaitMinutes({
       doctorStatus: result.doctor_status,
       status: result.status,
-      operatingHours: result.operating_hours,
+      operatingHours: result.doctor_available_hours || result.operating_hours,
       queueWaitMinutes: rawEstimatedWaitMinutes,
       now: new Date(),
       timezone: result.timezone,

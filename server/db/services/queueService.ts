@@ -183,27 +183,26 @@ const parseTimeStringToMinutes = (timeText: string, meridiem?: string): number =
   return hours * 60 + minutes;
 };
 
-const parseClinicOperatingWindow = (operatingHours?: string): { openMinutes: number; closeMinutes: number } | null => {
+const parseClinicOperatingWindows = (operatingHours?: string): Array<{ openMinutes: number; closeMinutes: number }> => {
   if (!operatingHours || /24\s*hours/i.test(operatingHours) || /open\s*24/i.test(operatingHours)) {
-    return null;
+    return [];
   }
 
   const matches = Array.from(
     operatingHours.matchAll(/(\d{1,2}:\d{2})\s*(AM|PM)?\s*-\s*(\d{1,2}:\d{2})\s*(AM|PM)?/gi)
   );
 
-  if (!matches.length) return null;
-
-  const lastMatch = matches[matches.length - 1];
-  const openMinutes = parseTimeStringToMinutes(lastMatch[1], lastMatch[2]);
-  const closeMinutes = parseTimeStringToMinutes(lastMatch[3], lastMatch[4]);
-
-  if (!openMinutes && !closeMinutes) return null;
-
-  return {
-    openMinutes,
-    closeMinutes: closeMinutes <= openMinutes ? closeMinutes + (24 * 60) : closeMinutes,
-  };
+  return matches
+    .map((match) => {
+      const openMinutes = parseTimeStringToMinutes(match[1], match[2]);
+      const closeMinutes = parseTimeStringToMinutes(match[3], match[4]);
+      return {
+        openMinutes,
+        closeMinutes: closeMinutes <= openMinutes ? closeMinutes + (24 * 60) : closeMinutes,
+      };
+    })
+    .filter((window) => window.openMinutes > 0 || window.closeMinutes > 0)
+    .sort((left, right) => left.openMinutes - right.openMinutes);
 };
 
 const getMinutesInTimezone = (now: Date, timezone?: string): number => {
@@ -228,23 +227,18 @@ export const adjustWaitForClinicSchedule = ({
   now?: Date;
   timezone?: string;
 }): number => {
-  const parsedWindow = parseClinicOperatingWindow(operatingHours);
-  if (!parsedWindow) return Math.max(0, Math.round(queueWaitMinutes));
+  const parsedWindows = parseClinicOperatingWindows(operatingHours);
+  if (!parsedWindows.length) return Math.max(0, Math.round(queueWaitMinutes));
 
   const nowMinutes = getMinutesInTimezone(now, timezone);
-  const openMinutes = parsedWindow.openMinutes;
-  const closeMinutes = parsedWindow.closeMinutes;
-
-  if (nowMinutes < openMinutes) {
-    return Math.max(0, Math.round(queueWaitMinutes + (openMinutes - nowMinutes)));
+  const activeWindow = parsedWindows.find((window) => nowMinutes >= window.openMinutes && nowMinutes < window.closeMinutes);
+  if (activeWindow) {
+    return Math.max(0, Math.round(queueWaitMinutes));
   }
 
-  if (nowMinutes >= closeMinutes) {
-    const nextOpenMinutes = openMinutes + 24 * 60;
-    return Math.max(0, Math.round(queueWaitMinutes + (nextOpenMinutes - nowMinutes)));
-  }
-
-  return Math.max(0, Math.round(queueWaitMinutes));
+  const nextWindow = parsedWindows.find((window) => window.openMinutes > nowMinutes);
+  const nextOpenMinutes = nextWindow?.openMinutes ?? parsedWindows[0].openMinutes + (24 * 60);
+  return Math.max(0, Math.round(queueWaitMinutes + (nextOpenMinutes - nowMinutes)));
 };
 
 export const getPublicTrackingEstimatedWaitMinutes = ({
