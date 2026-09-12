@@ -27,50 +27,6 @@ const getQueuePosition = (tracking: TrackingData | null) => {
   return Math.max(1, tracking.patientsAhead + 1);
 };
 
-const getQueueStatusMessage = (tracking: TrackingData | null) => {
-  if (!tracking) return 'Queue is moving normally';
-
-  if (tracking.status === 'COMPLETED') {
-    return 'Consultation completed';
-  }
-
-  if (tracking.status === 'CALLED' || tracking.status === 'IN_CONSULTATION') {
-    return "It's your turn!";
-  }
-
-  if (tracking.doctorStatus !== 'IN' && !tracking.currentlyServingToken) {
-    return 'Doctor has not started the queue';
-  }
-
-  if (tracking.patientsAhead <= 1) {
-    return "You're next in line";
-  }
-
-  return 'Queue is moving normally';
-};
-
-const getQueueStatusSubtext = (tracking: TrackingData | null) => {
-  if (!tracking) return 'Track your turn live and come when it\'s time.';
-
-  if (tracking.status === 'COMPLETED') {
-    return 'Thank you for visiting NEXTQ.';
-  }
-
-  if (tracking.status === 'CALLED' || tracking.status === 'IN_CONSULTATION') {
-    return 'Please proceed to the consultation area.';
-  }
-
-  if (tracking.doctorStatus !== 'IN' && !tracking.currentlyServingToken) {
-    return 'Please wait for the doctor to check in.';
-  }
-
-  if (tracking.patientsAhead <= 1) {
-    return 'Please be ready when the doctor calls your token.';
-  }
-
-  return 'Track your turn live and come when it\'s time.';
-};
-
 interface PatientTrackingProps {
   onBack: () => void;
 }
@@ -241,11 +197,6 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
                   <p className="mt-1 text-xs text-slate-500">Wait: ~{tracking.estimatedWaitMinutes} min</p>
                   <p className="mt-2 text-xs text-slate-500">Approximate time based on your booking and clinic schedule.</p>
                 </div>
-              </div>
-
-              <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,#ecfdf5_0%,#f0fdf4_100%)] p-4 text-center shadow-inner shadow-emerald-100/70">
-                <p className="text-lg font-bold text-emerald-800">{getQueueStatusMessage(tracking)}</p>
-                <p className="mt-2 text-sm text-emerald-700">{getQueueStatusSubtext(tracking)}</p>
               </div>
 
               <div className="space-y-2 border-t border-slate-200 pt-3 text-sm text-slate-600">
