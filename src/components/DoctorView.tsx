@@ -383,14 +383,14 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
 
         {/* Doctor Profile */}
-        <div className="min-w-0 bg-slate-900/90 border border-slate-800/90 rounded-2xl p-3 shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-teal-400 ring-1 ring-teal-400/40">
-              {clinic.doctorPhoto ? <img src={clinic.doctorPhoto} alt={clinic.doctorName || 'Doctor'} className="h-full w-full rounded-xl object-cover" /> : <Stethoscope className="h-6 w-6" />}
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-teal-500/20 bg-gradient-to-br from-slate-900 to-slate-950 p-4 shadow-lg">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex aspect-square h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-950 text-teal-400 ring-1 ring-teal-400/40">
+              {clinic.doctorPhoto ? <img src={clinic.doctorPhoto} alt={clinic.doctorName || 'Doctor'} className="block h-full w-full object-cover object-center" /> : <Stethoscope className="h-7 w-7" />}
             </div>
             <div className="min-w-0">
-              <h2 className="break-words text-sm font-bold leading-tight text-white">{formatDoctorName(clinic.doctorName)}</h2>
-              <p className="mt-0.5 break-words text-[11px] leading-snug text-slate-400">{clinic.specialty || 'General Practice'}</p>
+              <h2 className="truncate text-sm font-bold leading-tight text-white">{formatDoctorName(clinic.doctorName)}</h2>
+              <p className="mt-0.5 truncate text-[11px] leading-snug text-slate-400">{clinic.specialty || 'General Practice'}</p>
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <span className="break-words text-[10px] font-mono leading-snug text-slate-500">
                   {roomNumber ? `Room ${roomNumber}` : 'No room number'}
@@ -639,7 +639,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                       <div>
                         <div className="text-sm font-semibold text-slate-200">{tok.patientName}</div>
                         <div className="text-xs text-slate-500">
-                          {tok.tokenType} â€¢ {tok.patientAge ? `${tok.patientAge}y` : 'Adult'}
+                          {tok.tokenType} - {tok.patientAge ? `${tok.patientAge}y` : 'Adult'}
                         </div>
                       </div>
                     </div>
@@ -887,7 +887,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                   </div>
                 </div>
 
-                {/* Temperature with predefined Â°F */}
+                {/* Temperature in Fahrenheit */}
                 <div>
                   <label className="text-[11px] text-slate-400 font-medium block mb-1 flex items-center gap-1">
                     <Thermometer className="w-3 h-3 text-amber-400" />
@@ -903,7 +903,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-3 pr-10 text-xs text-white placeholder-slate-600 focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono"
                     />
                     <span className="absolute right-3 text-xs font-bold text-amber-400 select-none pointer-events-none">
-                      Â°F
+                      F
                     </span>
                   </div>
                 </div>
