@@ -391,7 +391,11 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
             <div className="min-w-0">
               <h2 className="truncate text-sm font-bold leading-tight text-white">{formatDoctorName(clinic.doctorName)}</h2>
               <p className="mt-0.5 truncate text-[11px] leading-snug text-slate-400">{clinic.specialty || 'General Practice'}</p>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${clinic.doctorStatus === 'IN' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-slate-800 text-slate-400'}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${clinic.doctorStatus === 'IN' ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+                  {clinic.doctorStatus === 'IN' ? 'Available' : 'Not checked in'}
+                </span>
                 <span className="break-words text-[10px] font-mono leading-snug text-slate-500">
                   {roomNumber ? `Room ${roomNumber}` : 'No room number'}
                 </span>
@@ -601,7 +605,7 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
                 <h3 className="text-lg font-bold text-slate-200">No Patient Currently In Cabin</h3>
                 <p className="text-sm text-slate-400 max-w-md mx-auto mt-1">
                   {waitingTokens.length > 0
-                    ? `${waitingTokens.length} patient(s) waiting in queue. Click below to call the next patient into Cabin 2.`
+                    ? `${waitingTokens.length} patient(s) waiting in queue. Call the next patient${clinic.cabinNumber ? ` into Room ${clinic.cabinNumber}` : ''}.`
                     : 'The queue is currently empty. Patients will appear as they book online or check in at the reception desk.'}
                 </p>
 
@@ -620,17 +624,20 @@ export const DoctorView: React.FC<DoctorViewProps> = ({
 
           {/* Upcoming Queue Preview */}
           <div className="flex h-full min-h-0 flex-col bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
               <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
                 <Users className="w-4 h-4 text-teal-400" />
-                Next Up In Queue ({waitingTokens.length} waiting)
+                Next Up In Queue
               </h3>
+              <span className="shrink-0 rounded-full bg-teal-500/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-teal-300">
+                {waitingTokens.length} waiting
+              </span>
             </div>
 
             <div className="mt-4 min-h-0 flex-1 divide-y divide-slate-800/80">
               {waitingTokens.length > 0 ? (
                 waitingTokens.slice(0, 5).map((tok, idx) => (
-                  <div key={tok.id} className="py-3 flex items-center justify-between group hover:bg-slate-800/30 px-2 rounded-lg transition-colors">
+                  <div key={tok.id} className="group flex items-center justify-between gap-3 rounded-xl border border-transparent px-2 py-3 transition-colors hover:border-slate-700 hover:bg-slate-800/50">
                     <div className="flex items-center space-x-3">
                       <span className="w-6 text-xs font-mono font-bold text-slate-500">#{idx + 1}</span>
                       <span className="font-bold text-sm text-teal-300 font-mono bg-teal-950/40 px-2 py-0.5 rounded border border-teal-500/20">
