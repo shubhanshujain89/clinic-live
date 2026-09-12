@@ -19,6 +19,7 @@ export interface TrackingResult {
   estimatedConsultationMinutes: number;
   doctorStatus: string;
   delayMinutes: number;
+  appointmentSlot?: string;
 }
 
 export class TrackingService {
@@ -46,6 +47,7 @@ export class TrackingService {
         c.avg_consultation_minutes,
         c.operating_hours,
         d.available_hours AS doctor_available_hours,
+        a.scheduled_slot AS appointment_slot,
         t.session_id,
         t.clinic_id,
         t.doctor_id,
@@ -56,6 +58,7 @@ export class TrackingService {
       JOIN sessions s ON s.id = t.session_id
       JOIN clinics c ON c.id = t.clinic_id
       JOIN doctors d ON d.id = t.doctor_id
+      LEFT JOIN appointments a ON a.tracking_id = p.tracking_id
       WHERE (p.phone = ? OR p.phone = ? OR p.phone = ?)
       ORDER BY p.created_at DESC LIMIT 20
     `;
@@ -113,7 +116,7 @@ export class TrackingService {
     const estimatedWaitMinutes = getPublicTrackingEstimatedWaitMinutes({
       doctorStatus: result.doctor_status,
       status: result.status,
-      operatingHours: result.doctor_available_hours || result.operating_hours,
+      operatingHours: result.appointment_slot || result.doctor_available_hours || result.operating_hours,
       queueWaitMinutes: rawEstimatedWaitMinutes,
       now: new Date(),
       timezone: result.timezone,
@@ -140,6 +143,7 @@ export class TrackingService {
       estimatedConsultationMinutes: Math.max(1, Math.round(averageMinutes)),
       doctorStatus: result.doctor_status,
       delayMinutes: Number(result.delay_minutes) || 0,
+      appointmentSlot: result.appointment_slot || undefined,
     };
   }
 }

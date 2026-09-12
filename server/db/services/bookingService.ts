@@ -18,6 +18,7 @@ export interface BookingInput {
   phone: string;
   age?: number;
   reason?: string;
+  appointmentSlot?: string;
 }
 
 export interface BookingResult {
@@ -176,12 +177,12 @@ export class BookingService {
       // Create appointment
       await connection.execute(
         `INSERT INTO \`appointments\` 
-         (id, clinic_id, doctor_id, session_id, tracking_id, patient_name, patient_phone, patient_age, visit_reason, appointment_type, token_number, token_sequence, status, scheduled_time, estimated_time, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, clinic_id, doctor_id, session_id, tracking_id, patient_name, patient_phone, patient_age, visit_reason, appointment_type, token_number, token_sequence, scheduled_slot, status, scheduled_time, estimated_time, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           crypto.randomUUID(), input.clinicId, input.doctorId, session.id, trackingId,
           input.patientName.trim(), input.phone.trim(), input.age || null, input.reason?.trim() || null,
-          'ONLINE', tokenNumber, sequenceNumber, 'scheduled', now, now, now, now
+          'ONLINE', tokenNumber, sequenceNumber, input.appointmentSlot || null, 'scheduled', now, now, now, now
         ]
       );
 

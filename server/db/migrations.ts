@@ -80,6 +80,14 @@ export async function runMigrations(): Promise<void> {
     await executeQuery(`UPDATE clinics SET timezone = 'Asia/Kolkata' WHERE timezone IS NULL OR timezone = ''`);
     await executeQuery(`INSERT IGNORE INTO schema_migrations (version) VALUES (?)`, ['clinic-timezone-20260907']);
   };
+  const ensureAppointmentSlot = async () => {
+    try {
+      await executeQuery(`ALTER TABLE appointments ADD COLUMN scheduled_slot VARCHAR(100) NULL AFTER token_sequence`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes('Duplicate column') && !message.includes('already exists')) throw error;
+    }
+  };
   if (baseline.length > 0) {
     await ensureSubscriptionColumns();
     await ensureClinicTimezone();
@@ -113,6 +121,7 @@ export async function runMigrations(): Promise<void> {
 
   await ensureSubscriptionColumns();
   await ensureClinicTimezone();
+  await ensureAppointmentSlot();
 
   await executeQuery(`ALTER TABLE tokens MODIFY token_type ENUM('ONLINE', 'WALK_IN', 'VIP', 'EMERGENCY') DEFAULT 'ONLINE'`);
   await executeQuery(`UPDATE tokens SET token_type = 'EMERGENCY' WHERE token_type = 'VIP'`);

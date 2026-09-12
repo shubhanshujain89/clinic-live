@@ -20,6 +20,7 @@ export interface Appointment {
   appointmentType: 'ONLINE' | 'WALK_IN' | 'EMERGENCY';
   tokenNumber: string;
   tokenSequence: number;
+  appointmentSlot?: string;
   status: 'scheduled' | 'waiting' | 'serving' | 'completed' | 'cancelled' | 'no_show';
   scheduledTime?: Date;
   estimatedTime?: Date;
@@ -45,6 +46,7 @@ export class AppointmentRepository extends BaseRepository<Appointment> {
       appointmentType: row.appointment_type,
       tokenNumber: row.token_number,
       tokenSequence: row.token_sequence,
+      appointmentSlot: row.scheduled_slot || undefined,
       status: row.status,
       scheduledTime: row.scheduled_time ? new Date(row.scheduled_time) : undefined,
       estimatedTime: row.estimated_time ? new Date(row.estimated_time) : undefined,
@@ -68,6 +70,7 @@ export class AppointmentRepository extends BaseRepository<Appointment> {
     if (entity.appointmentType !== undefined) columns.appointment_type = entity.appointmentType;
     if (entity.tokenNumber !== undefined) columns.token_number = entity.tokenNumber;
     if (entity.tokenSequence !== undefined) columns.token_sequence = entity.tokenSequence;
+    if (entity.appointmentSlot !== undefined) columns.scheduled_slot = entity.appointmentSlot;
     if (entity.status !== undefined) columns.status = entity.status;
     if (entity.scheduledTime !== undefined) columns.scheduled_time = entity.scheduledTime instanceof Date ? entity.scheduledTime : entity.scheduledTime;
     if (entity.estimatedTime !== undefined) columns.estimated_time = entity.estimatedTime instanceof Date ? entity.estimatedTime : entity.estimatedTime;

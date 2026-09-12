@@ -43,6 +43,7 @@ export const createPublicBooking = async (input: {
   phone: string;
   age?: number;
   reason?: string;
+  appointmentSlot?: string;
 }) => {
   return services.booking.createPublicBooking(input);
 };

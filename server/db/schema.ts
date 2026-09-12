@@ -160,6 +160,7 @@ CREATE TABLE IF NOT EXISTS appointments (
     appointment_type ENUM('ONLINE', 'WALK_IN', 'EMERGENCY') DEFAULT 'ONLINE',
     token_number VARCHAR(50) NOT NULL,
     token_sequence INT NOT NULL,
+    scheduled_slot VARCHAR(100),
     status ENUM('scheduled', 'waiting', 'serving', 'completed', 'cancelled', 'no_show') DEFAULT 'scheduled',
     scheduled_time TIMESTAMP NULL,
     estimated_time TIMESTAMP NULL,

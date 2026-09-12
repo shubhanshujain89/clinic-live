@@ -737,10 +737,11 @@ app.post('/api/patient/book', async (req, res) => {
     if (!(await enforceRateLimit(res, `booking:${clientIp}`, 10))) {
       return;
     }
-    const { clinicId, doctorId, patientName, phone, age, reason } = req.body || {};
+    const { clinicId, doctorId, patientName, phone, age, reason, appointmentSlot } = req.body || {};
     const normalizedPatientName = String(patientName || '').trim();
     const normalizedPhone = String(phone || '').trim();
     const normalizedReason = String(reason || '').trim();
+    const normalizedAppointmentSlot = String(appointmentSlot || '').trim();
     const normalizedAge = age === undefined || age === null || age === '' ? undefined : Number(age);
     if (!clinicId || !doctorId || !normalizedPatientName || !normalizedPhone) {
       res.status(400).json({ error: 'Clinic, doctor, patient name, and mobile number are required.' });
@@ -749,7 +750,7 @@ app.post('/api/patient/book', async (req, res) => {
     if (!(await enforceRateLimit(res, `booking-phone:${normalizedPhone}`, 3))) {
       return;
     }
-    if (normalizedPatientName.length > 120 || normalizedPhone.length > 30 || normalizedReason.length > 500) {
+    if (normalizedPatientName.length > 120 || normalizedPhone.length > 30 || normalizedReason.length > 500 || normalizedAppointmentSlot.length > 100) {
       res.status(400).json({ error: 'Booking details exceed the allowed length.' });
       return;
     }
@@ -764,6 +765,7 @@ app.post('/api/patient/book', async (req, res) => {
       phone: normalizedPhone,
       age: normalizedAge,
       reason: normalizedReason || undefined,
+      appointmentSlot: normalizedAppointmentSlot || undefined,
     });
     res.status(201).json({
       tokenId: booking.tokenId,

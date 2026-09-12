@@ -17,6 +17,7 @@ interface TrackingData {
   doctorStatus: string;
   delayMinutes: number;
   estimatedConsultationMinutes: number;
+  appointmentSlot?: string;
 }
 
 const getQueuePosition = (tracking: TrackingData | null) => {
@@ -204,6 +205,7 @@ export const PatientTracking: React.FC<PatientTrackingProps> = ({ onBack }) => {
               <div className="space-y-2 text-center text-sm text-slate-600">
                 <p className="font-semibold text-slate-800">{tracking.doctor}</p>
                 <p>{tracking.clinic}</p>
+                {tracking.appointmentSlot && <p className="font-medium text-emerald-700">Booked timing: {tracking.appointmentSlot}</p>}
               </div>
 
               <div className="rounded-2xl border border-emerald-100 bg-[linear-gradient(180deg,#ecfdf5_0%,#f8fffd_100%)] p-5 text-center shadow-inner shadow-emerald-100/60">
