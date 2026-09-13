@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Plus, Edit, Trash2, Users, Clock, Search, Filter, Barcode, Link2, Unlink, Printer } from 'lucide-react';
+import { Building2, Plus, Edit, Trash2, Users, Clock, Search, Filter, Barcode, Link2, Unlink, Printer, ChevronDown, ChevronUp } from 'lucide-react';
 import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where, orderBy, auth, onAuthStateChanged, recordAuditEvent, hashPassword } from '../lib/firebase';
 import { defaultContentSections, defaultSiteSettings, loadContentSections, loadSiteSettings, saveContentSections, saveSiteSettings, initializeSiteConfig, loadSiteSettingsFromDatabase, loadContentSectionsFromDatabase } from '../lib/siteConfig';
 import { FeaturePlan } from '../types/queue';
@@ -39,10 +39,6 @@ const BarcodePreview: React.FC<{ value: string }> = ({ value }) => {
       <div className="flex h-40 items-center justify-center overflow-hidden">
         <img src={qrImageUrl} alt={`QR code for ${qrUrl}`} className="h-40 w-40 object-contain" />
       </div>
-      <div className="flex h-9 items-center justify-center border-y border-slate-100 bg-white">
-        <img src="/nextq-logo.png" alt="NEXTQ" className="h-8 w-32 object-contain" />
-      </div>
-      <div className="mt-1 text-center font-mono text-[10px] font-bold tracking-[0.18em] text-black">{normalizeCode39Value(value)}</div>
     </div>
   );
 };
@@ -251,6 +247,7 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
   const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; role: string; status: 'Active' | 'Offline' | 'Pending'; clinicId?: string; clinicName?: string; phone?: string; doctorId?: string; accessStatus?: 'Granted' | 'Hold' | 'Denied'; photoURL?: string; passwordReset?: string; source?: 'staff_users' | 'doctors' }>>([]);
   const [inventoryDoctors, setInventoryDoctors] = useState<InventoryDoctor[]>([]);
   const [barcodeInventory, setBarcodeInventory] = useState<BarcodeInventoryItem[]>([]);
+  const [expandedBarcodeId, setExpandedBarcodeId] = useState<string | null>(null);
   const [barcodeForm, setBarcodeForm] = useState({ barcodeValue: '', label: '', notes: '' });
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -1992,10 +1989,15 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                 <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/50 p-10 text-center text-sm text-slate-400 lg:col-span-2">No barcodes in inventory yet.</div>
               ) : barcodeInventory.map((item) => (
                 <div key={item.id} className="rounded-2xl border border-slate-700 bg-slate-900/70 p-5">
-                  <div className="flex items-start justify-between gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedBarcodeId((current) => current === item.id ? null : item.id)}
+                    className="flex w-full items-center justify-between gap-4 text-left"
+                    aria-expanded={expandedBarcodeId === item.id}
+                  >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <h4 className="truncate text-lg font-bold text-white">{item.barcodeValue}</h4>
+                        <h4 className="truncate text-lg font-bold text-white">{item.label || 'Preprinted QR'}</h4>
                         <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
                           item.status === 'ASSIGNED'
                             ? 'bg-emerald-500/15 text-emerald-300'
@@ -2004,53 +2006,59 @@ export const ClinicAdminDashboard: React.FC<ClinicAdminProps> = ({ adminId, onLo
                               : 'bg-amber-500/15 text-amber-300'
                         }`}>{item.status}</span>
                       </div>
-                      <p className="mt-1 text-xs text-slate-400">{item.label || 'Preprinted QR'} · Created {formatDashboardDate(item.createdAt)}</p>
+                      <p className="mt-1 text-xs text-slate-400">{item.assignedDoctorName || 'Available for assignment'} · Updated {formatDashboardDate(item.updatedAt)}</p>
                     </div>
-                    <button onClick={() => deleteBarcodeInventoryItem(item.id)} className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-500/10 hover:text-rose-300" title="Delete barcode">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+                    {expandedBarcodeId === item.id ? <ChevronUp className="h-5 w-5 shrink-0 text-slate-400" /> : <ChevronDown className="h-5 w-5 shrink-0 text-slate-400" />}
+                  </button>
 
-                  <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-center">
-                    <BarcodePreview value={item.barcodeValue} />
-                    <div className="space-y-3">
-                      <button onClick={() => printBarcode(item.barcodeValue)} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400">
-                        <Printer className="h-4 w-4" /> Save / Print Barcode
+                  {expandedBarcodeId === item.id && <>
+                    <div className="mt-4 flex justify-end">
+                      <button onClick={() => deleteBarcodeInventoryItem(item.id)} className="inline-flex items-center gap-1 rounded-lg p-2 text-xs font-semibold text-slate-400 transition hover:bg-rose-500/10 hover:text-rose-300" title="Delete barcode">
+                        <Trash2 className="h-4 w-4" /> Delete
                       </button>
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Status</label>
-                        <select
-                          value={item.status}
-                          onChange={(event) => updateBarcodeStatus(item.id, event.target.value as BarcodeInventoryItem['status'])}
-                          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
-                        >
-                          <option value="AVAILABLE">Available</option>
-                          <option value="ASSIGNED">Assigned</option>
-                          <option value="DISABLED">Disabled</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Assign doctor</label>
-                        <select
-                          value={item.assignedDoctorId || ''}
-                          onChange={(event) => assignBarcodeToDoctor(item.id, event.target.value)}
-                          disabled={item.status === 'DISABLED'}
-                          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <option value="">Available</option>
-                          {inventoryDoctors.map((doctor) => <option key={doctor.id} value={doctor.id}>{doctor.name}</option>)}
-                        </select>
-                      </div>
-
-                      <div className="text-xs text-slate-400">
-                        <p className="flex items-center gap-1"><Link2 className="h-3.5 w-3.5 text-emerald-400" /> {item.assignedDoctorName || (item.status === 'ASSIGNED' ? 'Assigned to a doctor' : 'Available for assignment')}</p>
-                        {item.assignedClinicId && <p className="mt-1">Clinic: {clinics.find((clinic) => clinic.id === item.assignedClinicId)?.name || item.assignedClinicId}</p>}
-                      </div>
-                      {item.status === 'ASSIGNED' && <button onClick={() => assignBarcodeToDoctor(item.id, '')} className="inline-flex items-center gap-1 text-xs font-semibold text-amber-300 hover:text-amber-200"><Unlink className="h-3.5 w-3.5" /> De-assign</button>}
                     </div>
-                  </div>
-                  {item.notes && <p className="mt-4 border-t border-slate-800 pt-3 text-xs text-slate-500">{item.notes}</p>}
+
+                    <div className="mt-1 grid gap-4 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-center">
+                      <BarcodePreview value={item.barcodeValue} />
+                      <div className="space-y-3">
+                        <button onClick={() => printBarcode(item.barcodeValue)} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400">
+                          <Printer className="h-4 w-4" /> Save / Print Barcode
+                        </button>
+                        <div>
+                          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Status</label>
+                          <select
+                            value={item.status}
+                            onChange={(event) => updateBarcodeStatus(item.id, event.target.value as BarcodeInventoryItem['status'])}
+                            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
+                          >
+                            <option value="AVAILABLE">Available</option>
+                            <option value="ASSIGNED">Assigned</option>
+                            <option value="DISABLED">Disabled</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Assign doctor</label>
+                          <select
+                            value={item.assignedDoctorId || ''}
+                            onChange={(event) => assignBarcodeToDoctor(item.id, event.target.value)}
+                            disabled={item.status === 'DISABLED'}
+                            className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <option value="">Available</option>
+                            {inventoryDoctors.map((doctor) => <option key={doctor.id} value={doctor.id}>{doctor.name}</option>)}
+                          </select>
+                        </div>
+
+                        <div className="text-xs text-slate-400">
+                          <p className="flex items-center gap-1"><Link2 className="h-3.5 w-3.5 text-emerald-400" /> {item.assignedDoctorName || (item.status === 'ASSIGNED' ? 'Assigned to a doctor' : 'Available for assignment')}</p>
+                          {item.assignedClinicId && <p className="mt-1">Clinic: {clinics.find((clinic) => clinic.id === item.assignedClinicId)?.name || item.assignedClinicId}</p>}
+                        </div>
+                        {item.status === 'ASSIGNED' && <button onClick={() => assignBarcodeToDoctor(item.id, '')} className="inline-flex items-center gap-1 text-xs font-semibold text-amber-300 hover:text-amber-200"><Unlink className="h-3.5 w-3.5" /> De-assign</button>}
+                      </div>
+                    </div>
+                    {item.notes && <p className="mt-4 border-t border-slate-800 pt-3 text-xs text-slate-500">{item.notes}</p>}
+                  </>}
                 </div>
               ))}
             </div>
